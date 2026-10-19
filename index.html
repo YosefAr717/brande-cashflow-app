@@ -3,132 +3,403 @@
 <head>
   <base target="_top">
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F2F2F7">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
   <title>Brande CashFlow</title>
   <style>
-    :root { --bg: #f4f5f7; --card: #fff; --txt: #1f2328; --mute: #6b7280; --line: #e5e7eb; --pri: #1a73e8; --ok: #137333; --warn: #b06000; --err: #c5221f; }
-    * { box-sizing: border-box; }
-    body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; margin: 0; background: var(--bg); color: var(--txt); font-size: 16px; }
-    header { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; align-items: center; gap: 8px; }
-    header h1 { font-size: 17px; margin: 0; flex: 1; }
-    header .who { font-size: 12px; color: var(--mute); }
-    main { max-width: 640px; margin: 0 auto; padding: 12px 16px 96px; }
-    nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--line); display: flex; z-index: 5; }
-    nav button { flex: 1; border: 0; background: none; padding: 10px 0 14px; font-size: 13px; color: var(--mute); position: relative; }
-    nav button.on { color: var(--pri); font-weight: bold; }
-    nav .dot { position: absolute; top: 4px; margin-right: 4px; background: var(--err); color: #fff; border-radius: 9px; font-size: 11px; padding: 0 5px; }
-    .card { background: var(--card); border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
-    .card h2 { font-size: 16px; margin: 0 0 10px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-    .stat { background: var(--card); border-radius: 12px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
-    .stat .k { font-size: 12px; color: var(--mute); }
-    .stat .v { font-size: 20px; font-weight: bold; margin-top: 4px; direction: ltr; text-align: right; }
-    .stat.click { cursor: pointer; }
-    .big { font-size: 34px; font-weight: bold; direction: ltr; text-align: right; }
-    .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
-    .row:last-child { border-bottom: 0; }
-    .row.click { cursor: pointer; }
-    .row .main { flex: 1; min-width: 0; }
-    .row .sub { font-size: 12px; color: var(--mute); }
-    .num { direction: ltr; white-space: nowrap; font-variant-numeric: tabular-nums; }
-    .muted { color: var(--mute); }
-    .warn { color: var(--warn); }
-    .err { color: var(--err); }
-    .ok { color: var(--ok); }
-    .tag { font-size: 11px; padding: 2px 6px; border-radius: 6px; background: #eef2ff; color: #3730a3; white-space: nowrap; }
-    .tag.g { background: #e6f4ea; color: var(--ok); } .tag.r { background: #fce8e6; color: var(--err); } .tag.y { background: #fef7e0; color: var(--warn); }
-    .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-    button.b { font-size: 15px; padding: 10px 14px; border: 0; border-radius: 8px; background: var(--pri); color: #fff; }
-    button.b.s { background: #e8eaed; color: var(--txt); }
-    button.b.sm { font-size: 13px; padding: 6px 10px; }
-    button.b.full { width: 100%; margin-top: 10px; }
-    button:disabled { opacity: .5; }
-    details { margin-bottom: 12px; background: var(--card); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
-    details summary { padding: 14px; font-weight: bold; cursor: pointer; }
-    details .in { padding: 0 14px 10px; }
-    label { display: block; font-size: 13px; color: var(--mute); margin: 10px 0 4px; }
-    input, select, textarea { width: 100%; font-size: 16px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; background: #fff; font-family: inherit; }
-    input[type=checkbox] { width: auto; transform: scale(1.3); margin-left: 8px; }
-    .chk { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
-    .chk span { flex: 1; }
-    .ltr { direction: ltr; text-align: left; }
-    #modal { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 10; display: flex; align-items: flex-end; justify-content: center; }
-    #modal .sheet { background: var(--card); width: 100%; max-width: 640px; max-height: 92vh; overflow: auto; border-radius: 16px 16px 0 0; padding: 16px 16px 28px; }
-    #modal h2 { margin: 0 0 8px; font-size: 18px; }
-    .msg { padding: 10px; border-radius: 8px; margin: 8px 0; font-size: 14px; }
-    .msg.e { background: #fce8e6; color: var(--err); } .msg.w { background: #fef7e0; color: var(--warn); } .msg.o { background: #e6f4ea; color: var(--ok); }
-    ul.lines { padding-right: 18px; margin: 6px 0; } ul.lines li { margin-bottom: 4px; }
-    .hidden { display: none !important; }
-    #toast { position: fixed; bottom: 80px; left: 16px; right: 16px; max-width: 600px; margin: auto; background: #323232; color: #fff; padding: 12px; border-radius: 8px; z-index: 20; }
-    .center { text-align: center; padding: 40px 0; color: var(--mute); }
-    a { color: var(--pri); }
-
-    /* טעינה: skeleton בגובה קבוע — בלי קפיצות */
-    .sk { background: linear-gradient(90deg, #eceef1 25%, #f6f7f9 37%, #eceef1 63%); background-size: 400% 100%; animation: sk 1.3s ease infinite; border-radius: 8px; }
-    @keyframes sk { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
-    .sk.l { height: 14px; margin: 10px 0; } .sk.l.s { width: 40%; } .sk.l.m { width: 70%; }
-    .sk.v { height: 24px; width: 60%; margin-top: 8px; } .sk.c { height: 180px; width: 180px; border-radius: 50%; margin: 8px auto; }
-    @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
-    .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: rot .7s linear infinite; vertical-align: -3px; }
-    @keyframes rot { to { transform: rotate(360deg); } }
-
-    /* בורר תקופה */
-    .seg { display: flex; background: #e8eaed; border-radius: 10px; padding: 3px; margin-bottom: 12px; gap: 2px; }
-    .seg button { flex: 1; border: 0; background: none; padding: 8px 4px; border-radius: 8px; font-size: 14px; color: var(--txt); font-family: inherit; cursor: pointer; }
-    .seg button.on { background: var(--card); box-shadow: 0 1px 2px rgba(0,0,0,.12); font-weight: bold; }
-
-    /* עוגה */
-    .pie { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
-    .pie svg { width: 180px; height: 180px; flex: none; margin: 0 auto; }
-    .pie svg path { stroke: var(--card); stroke-width: 2; }
-    .pie svg path:hover { opacity: .85; }
-    .legend { flex: 1; min-width: 220px; }
-    .legend .row { padding: 7px 0; }
-    .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-left: 6px; vertical-align: 0; flex: none; }
-    .pct { color: var(--mute); font-size: 12px; min-width: 44px; text-align: left; direction: ltr; }
-    .ded .row { padding: 6px 0; font-size: 14px; }
-    .total { font-size: 26px; font-weight: bold; direction: ltr; text-align: right; }
-    .ed-pie { padding: 4px 0 10px; }
-    .cols { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
-
-    /* דסקטופ: תוכן ממורכז עד 1100px, ניווט עליון, גרידים */
-    @media (min-width: 900px) {
-      header { padding: 12px 24px; }
-      header h1 { font-size: 19px; }
-      main { max-width: 1100px; padding: 20px 24px 40px; }
-      header { position: static; }
-      nav { position: sticky; top: 0; bottom: auto; justify-content: center; border-top: 0; border-bottom: 1px solid var(--line); }
-      nav button { flex: none; padding: 12px 22px; font-size: 15px; }
-      nav button.on::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 0; height: 2px; background: var(--pri); }
-      .grid { grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
-      .stat { padding: 16px; } .stat .v { font-size: 24px; }
-      .card { padding: 18px 20px; margin-bottom: 16px; } .card h2 { font-size: 17px; }
-      .cols { grid-template-columns: 1fr 1fr; gap: 0 16px; align-items: start; }
-      .cols.three { grid-template-columns: 1fr 1fr 1fr; }
-      .seg { max-width: 460px; }
-      .big { font-size: 40px; }
-      #modal { align-items: center; }
-      #modal .sheet { border-radius: 16px; }
-      #toast { bottom: 24px; }
+    /* ===== טוקנים (Apple HIG, iOS קלאסי). צבעים קשיחים רק בבלוקים האלה ===== */
+    :root {
+      --bg: #F2F2F7; --bg2: #FFFFFF; --bg3: #F2F2F7; --bar: rgba(249,249,249,.94);
+      --label: #000000; --label2: rgba(60,60,67,.76); --label3: rgba(60,60,67,.3); --sep: rgba(60,60,67,.29);
+      --fill: rgba(120,120,128,.2); --fill2: rgba(118,118,128,.12);
+      --blue: rgb(0,136,255); --red: rgb(255,56,60); --green: rgb(52,199,89); --orange: rgb(255,141,40); --yellow: rgb(255,204,0);
+      --purple: rgb(203,48,224); --teal: rgb(0,195,208); --pink: rgb(255,45,85); --indigo: rgb(97,85,245); --mint: rgb(0,200,179);
+      --brown: rgb(172,127,94); --gray: rgb(142,142,147); --gray3: rgb(199,199,204); --gray5: rgb(229,229,234);
+      --white: #FFFFFF;
+      --tint: var(--blue); --danger: var(--red); --success: var(--green); --warn: var(--orange);
+      --link-text: #0A66C2;
+      /* טקסט צבעוני נגיש (נגזר; ניגודיות 4.5:1 על לבן ועל רקע תג/הודעה) */
+      --danger-text: rgb(200,0,20); --warn-text: rgb(160,68,0); --success-text: rgb(0,112,30); --gray-text: rgba(60,60,67,.85);
+      --tint-bg: rgba(0,136,255,.15); --side-on: rgba(0,136,255,.12);
+      --shadow-seg: 0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04); --seg-on: #FFFFFF;
+      --shadow-toast: 0 8px 24px rgba(0,0,0,.18);
+      --scrim: rgba(0,0,0,.4);
+      --knob-shadow: 0 3px 8px rgba(0,0,0,.15), 0 1px 1px rgba(0,0,0,.16);
     }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000; --bg2: #1C1C1E; --bg3: #2C2C2E; --bar: rgba(29,29,31,.94);
+        --label: #FFFFFF; --label2: rgba(235,235,245,.6); --label3: rgba(235,235,245,.3); --sep: rgba(84,84,88,.6);
+        --fill: rgba(120,120,128,.36); --fill2: rgba(118,118,128,.24);
+        --blue: rgb(0,145,255); --red: rgb(255,66,69); --green: rgb(48,209,88); --orange: rgb(255,146,48); --yellow: rgb(255,214,0);
+        --purple: rgb(219,52,242); --teal: rgb(0,210,224); --pink: rgb(255,55,95); --indigo: rgb(109,124,255); --mint: rgb(0,218,195);
+        --brown: rgb(183,138,102); --gray3: rgb(72,72,74); --gray5: rgb(44,44,46);
+        --link-text: var(--blue);
+        --danger-text: rgb(255,105,97); --warn-text: var(--orange); --success-text: var(--green); --gray-text: rgba(235,235,245,.7);
+        --tint-bg: rgba(0,136,255,.25); --side-on: rgba(0,136,255,.12); --seg-on: rgb(99,99,102);
+      }
+    }
+    @media (prefers-contrast: more) {
+      :root { --label2: rgba(60,60,67,.85); --sep: rgba(60,60,67,.5); }
+    }
+    @media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+      :root { --label2: rgba(235,235,245,.85); --sep: rgba(84,84,88,.9); }
+    }
+    /* ===== סוף טוקנים ===== */
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; background: var(--bg); color: var(--label);
+      font-family: system-ui, -apple-system, "SF Hebrew", "Segoe UI", Roboto, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased; font-size: 1.0625rem; line-height: 1.375rem; font-weight: 400;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    h1, h2, h3, p { margin: 0; font-weight: inherit; font-size: inherit; }
+
+    /* טיפוגרפיה (rem: 16px = 1rem, כדי שהגדלת טקסט ל-200% תעבוד) */
+    .t-large  { font-size: 2.125rem;  line-height: 2.5625rem; font-weight: 700; }
+    .t-title1 { font-size: 1.75rem;   line-height: 2.125rem;  font-weight: 700; }
+    .t-title2 { font-size: 1.375rem;  line-height: 1.75rem;   font-weight: 700; }
+    .t-title3 { font-size: 1.25rem;   line-height: 1.5625rem; font-weight: 600; }
+    .t-head   { font-size: 1.0625rem; line-height: 1.375rem;  font-weight: 600; }
+    .t-body   { font-size: 1.0625rem; line-height: 1.375rem;  font-weight: 400; }
+    .t-sub    { font-size: .9375rem;  line-height: 1.25rem;   font-weight: 400; }
+    .t-foot   { font-size: .8125rem;  line-height: 1.125rem;  font-weight: 400; }
+    .t-cap1   { font-size: .75rem;    line-height: 1rem;      font-weight: 400; }
+    .t-cap2   { font-size: .6875rem;  line-height: .8125rem;  font-weight: 500; }
+    .num { font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; white-space: nowrap; }
+    .ltr { direction: ltr; text-align: left; }
+    .nw { white-space: nowrap; }
+    .em { direction: ltr; text-align: end; unicode-bidi: isolate; }
+    .sec { color: var(--label2); }
+    .danger { color: var(--danger-text); }
+    .warn { color: var(--warn-text); }
+    .ok { color: var(--success-text); }
+    .hidden { display: none !important; }
+    .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    /* ===== מבנה: סרגל עליון, תוכן, tab bar / sidebar ===== */
+    #bar {
+      position: sticky; top: 0; z-index: 6; min-height: calc(44px + env(safe-area-inset-top)); padding-top: env(safe-area-inset-top);
+      background: var(--bar); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: .5px solid var(--sep); display: flex; align-items: center; justify-content: space-between; padding-inline: 8px;
+    }
+    #bar-title { position: absolute; inset-inline: 96px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none;
+      opacity: 1; transition: opacity 150ms cubic-bezier(.2,.8,.2,1); }
+    #bar-title.fade { opacity: 0; }
+    .bar-slot { display: flex; align-items: center; min-width: 44px; position: relative; z-index: 1; }
+    #bar-back { gap: 4px; }
+    #bar-back .chev { transform: scaleX(-1); background: var(--tint); width: 10px; height: 18px; }
+    main { padding: 0 16px calc(49px + 32px + env(safe-area-inset-bottom)); }
+    .ltitle { padding: 8px 0 8px; }
+    #ltitle-wrap { padding-top: 8px; }
+
+    nav#nav {
+      position: fixed; bottom: 0; inset-inline: 0; z-index: 6; display: flex;
+      min-height: calc(49px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom);
+      background: var(--bar); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+      border-top: .5px solid var(--sep);
+    }
+    nav#nav button {
+      flex: 1; min-height: 49px; border: 0; background: none; color: var(--label2); padding: 4px 0 2px; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    }
+    nav#nav button.on { color: var(--tint); }
+    nav#nav button.on .tl { color: var(--link-text); }
+    nav .ic { position: relative; display: inline-flex; }
+    nav .ic svg { width: 24px; height: 24px; }
+    nav .on .ic .f { fill: currentColor; }
+    nav .ic .dots { fill: currentColor; }
+    nav .on .ic .dots { fill: var(--bg2); }
+    nav .tl { white-space: nowrap; }
+    .dot { position: absolute; top: -4px; inset-inline-end: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+      background: var(--danger); color: var(--white); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+    .sb-head, .sb-prof { display: none !important; }
+
+    /* בינוני: עמודת תוכן עד 640 */
+    @media (min-width: 600px) {
+      main { max-width: 640px; margin-inline: auto; }
+    }
+    /* רחב: sidebar */
+    @media (min-width: 1024px) {
+      body:has(#nav:not(.hidden)) { display: grid; grid-template-columns: 240px minmax(0, 1fr); grid-template-rows: auto 1fr; }
+      body:has(#nav:not(.hidden)) #nav { grid-column: 1; grid-row: 1 / span 2; }
+      body:has(#nav:not(.hidden)) #bar, body:has(#nav:not(.hidden)) main { grid-column: 2; }
+      nav#nav {
+        position: sticky; top: 0; height: 100vh; flex-direction: column; gap: 2px; padding: 0 8px 8px; border-top: 0;
+        background: var(--bg2); -webkit-backdrop-filter: none; backdrop-filter: none; border-inline-end: .5px solid var(--sep);
+      }
+      nav#nav button { flex: none; min-height: 44px; flex-direction: row; justify-content: flex-start; gap: 12px; padding: 0 12px; border-radius: 8px; color: var(--label); }
+      nav#nav button:hover { background: var(--fill2); }
+      nav#nav button.on { background: var(--side-on); color: var(--tint); }
+      nav .ic svg { width: 20px; height: 20px; }
+      nav .tl { font-size: 1.0625rem; line-height: 1.375rem; font-weight: 400; }
+      .sb-head { display: block !important; padding: 16px 12px; }
+      .sb-prof { display: flex !important; margin-top: auto; }
+      nav#nav .sb-prof.on { background: none; color: var(--label); }
+      .sb-prof .tl, nav#nav .sb-prof.on .tl { overflow: hidden; text-overflow: ellipsis; color: var(--label2); }
+      .dot { top: -6px; }
+      main { max-width: 1100px; width: 100%; margin-inline: auto; padding: 0 24px 48px; }
+      main.narrow { max-width: 760px; }
+    }
+
+    /* ===== קבוצות (inset grouped) ===== */
+    .grp { margin-top: 32px; }
+    .grp:first-child, .ltitle + .grp, .seg + .grp, .tiles + .grp { margin-top: 24px; }
+    .search + .grp { margin-top: 16px; }
+    details.grp + details.grp { margin-top: 12px; }
+    .gh { color: var(--label2); padding: 0 16px 7px; }
+    .gf { color: var(--label2); padding: 7px 16px 0; }
+    .gbody { background: var(--bg2); border-radius: 10px; overflow: hidden; }
+    .gbody.pad, .pad { padding: 12px 16px; }
+    .row {
+      position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 44px; padding: 11px 16px;
+      width: 100%; border: 0; background: none; text-align: start; color: var(--label);
+    }
+    .row + .row::before, .row + details::before, details + .row::before, details + details::before {
+      content: ''; position: absolute; top: 0; inset-inline-start: 16px; inset-inline-end: 0; border-top: .5px solid var(--sep);
+    }
+    .row.swr + .row::before, .row + .row.swr::before { inset-inline-start: 16px; }
+    .row.click, button.row { cursor: pointer; transition: background-color 150ms cubic-bezier(.2,.8,.2,1); }
+    .row.click:active, button.row:active { background: var(--fill2); }
+    .row .main { flex: 1 1 8rem; min-width: 0; }
+    .row .main > * { overflow: hidden; text-overflow: ellipsis; }
+    .row .val { text-align: end; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+    .row .ico { width: 28px; height: 28px; border-radius: 7px; background: var(--tint); color: var(--white); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+    .row .ico svg { width: 18px; height: 18px; }
+    .row.red .ico { background: var(--danger); }
+    .row.red .ico svg { transform: scaleX(-1); }
+    .row.row-c { justify-content: center; }
+    .row.danger, .row .danger { color: var(--danger-text); }
+    .chev { display: inline-block; flex: none; width: 7px; height: 12px; background: var(--label3);
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 12'%3E%3Cpath d='M6 1 1 6l5 5' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 12'%3E%3Cpath d='M6 1 1 6l5 5' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
+    .row .chev { order: 9; }
+    .row.open > .chev { transform: rotate(-90deg); }
+    .empty { padding: 16px; color: var(--label2); display: flex; align-items: center; gap: 12px; }
+    .empty svg { width: 28px; height: 28px; flex: none; }
+    .empty.ok-state svg { color: var(--success); }
+
+    details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
+    details.grp > summary { cursor: pointer; }
+    details.grp > summary .chev { transform: rotate(0deg); transition: transform 200ms cubic-bezier(.2,.8,.2,1); }
+    details.grp[open] > summary .chev { transform: rotate(-90deg); }
+    details.grp > summary.gbody { border-radius: 10px; background: var(--bg2); }
+    details.grp[open] > summary.gbody { border-end-start-radius: 0; border-end-end-radius: 0; }
+    details.grp > .in { background: var(--bg2); border-radius: 0 0 10px 10px; overflow: hidden; position: relative; }
+    details.grp > .in::before { content: ''; position: absolute; top: 0; inset-inline: 16px 0; border-top: .5px solid var(--sep); }
+    .subh { padding: 12px 16px 4px; color: var(--label2); }
+
+    /* ===== אריחי מספרים ===== */
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); gap: 12px; margin-top: 24px; }
+    @media (min-width: 600px) and (max-width: 1023px) { .tiles { grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); } }
+    @media (min-width: 1024px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } .tiles.one { grid-template-columns: minmax(0, 1fr); } }
+    .tile { background: var(--bg2); border-radius: 10px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; border: 0; text-align: start; width: 100%; }
+    .tile .k { color: var(--label2); display: flex; align-items: center; gap: 4px; justify-content: space-between; }
+    .tile .v { text-align: end; overflow-wrap: anywhere; }
+    .tile.click { cursor: pointer; transition: opacity 150ms; }
+    .tile.click:active { background: var(--fill2); }
+    .tile .tag { align-self: flex-start; }
+
+    .cols { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 24px; }
+    @media (min-width: 1024px) { .cols { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; } .cols > .grp { display: flex; flex-direction: column; } .cols > .grp > .gbody { flex: 1; } }
+
+    /* ===== כפתורים ===== */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; padding: 0 16px; border: 0; border-radius: 12px;
+      cursor: pointer; transition: opacity 150ms cubic-bezier(.2,.8,.2,1); text-align: center; }
+    .btn.full { width: 100%; }
+    .btn-fill { background: var(--tint); color: var(--white); }
+    .btn-fill.btn-danger { background: var(--danger); }
+    .btn-tint { background: var(--tint-bg); color: var(--link-text); }
+    .btn-tint.m { min-height: 44px; }
+    .btn-plain { background: none; color: var(--link-text); min-height: 44px; padding: 0 8px; border: 0; cursor: pointer; display: inline-flex; align-items: center; }
+    .btn-plain.danger { color: var(--danger-text); }
+    .btn-sm { position: relative; min-height: 32px; padding: 0 12px; border-radius: 8px; border: 0; background: var(--tint-bg); color: var(--link-text); cursor: pointer; white-space: nowrap; font-weight: 600; }
+    .btn-sm::before { content: ''; position: absolute; inset: -6px 0; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+    .actions .btn { flex: 1 1 10rem; }
+    .actions .btn.full { flex-basis: 100%; }
+    .actions:has(+ #code-box:not(.hidden)) #b-send { background: var(--tint-bg); color: var(--link-text); }
+    .btn:hover, .btn-plain:hover, .btn-sm:hover { opacity: .9; }
+    .btn:active, .btn-plain:active, .btn-sm:active { opacity: .7; }
+    button:disabled, .btn:disabled { opacity: .4; cursor: default; }
+    :focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+    a { color: var(--link-text); position: relative; }
+    a::before { content: ''; position: absolute; inset: -14px -8px; }
+    .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid currentColor; border-inline-end-color: transparent; border-radius: 50%; animation: rot .7s linear infinite; vertical-align: -3px; }
+    @keyframes rot { to { transform: rotate(360deg); } }
+    .center { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 32px 16px; color: var(--label2); }
+
+    /* ===== segmented ===== */
+    .seg { display: flex; background: var(--fill2); border-radius: 9px; padding: 2px; gap: 2px; margin-top: 16px; min-height: 32px; }
+    .seg button { flex: 1; min-height: 32px; border: 0; background: none; border-radius: 7px; color: var(--label); cursor: pointer; padding: 0 4px;
+      font-size: .8125rem; line-height: 1.125rem; font-weight: 500; transition: background-color 150ms, box-shadow 150ms; }
+    .seg button.on { background: var(--seg-on); box-shadow: var(--shadow-seg); font-weight: 600; }
+    @media (min-width: 1024px) { .seg { max-width: 460px; } }
+    .gbody .seg { margin: 0 0 12px; }
+
+    /* ===== תגיות והודעות ===== */
+    .tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 6px; font-size: .75rem; line-height: 1rem; font-weight: 500;
+      background: color-mix(in srgb, var(--gray) 15%, transparent); color: var(--gray-text); white-space: nowrap; vertical-align: 1px; }
+    .tag.g { background: color-mix(in srgb, var(--green) 15%, transparent); color: var(--success-text); }
+    .tag.r { background: color-mix(in srgb, var(--red) 15%, transparent); color: var(--danger-text); }
+    .tag.y { background: color-mix(in srgb, var(--orange) 15%, transparent); color: var(--warn-text); }
+    .msg { display: flex; gap: 12px; align-items: flex-start; padding: 12px 16px; border-radius: 10px; margin-top: 12px; color: var(--label);
+      font-size: .9375rem; line-height: 1.25rem; }
+    .msg::before { flex: none; width: 20px; height: 20px; border-radius: 50%; color: var(--white); font-weight: 700; font-size: .8125rem; line-height: 20px; text-align: center; }
+    .msg.e { background: color-mix(in srgb, var(--red) 12%, transparent); } .msg.e::before { content: '!'; background: var(--danger); }
+    .msg.w { background: color-mix(in srgb, var(--orange) 12%, transparent); } .msg.w::before { content: '!'; background: var(--warn); }
+    .msg.o { background: color-mix(in srgb, var(--green) 12%, transparent); } .msg.o::before { content: '✓'; background: var(--success); }
+    ul.lines { margin: 0; padding: 0; list-style: none; } ul.lines li + li { margin-top: 6px; }
+    .note { color: var(--label2); padding: 12px 16px 0; }
+
+    /* ===== sheet ===== */
+    #modal { position: fixed; inset: 0; background: var(--scrim); z-index: 10; display: flex; align-items: flex-end; justify-content: center; }
+    #modal:not(.hidden) .sheet { animation: up 250ms cubic-bezier(.2,.8,.2,1); }
+    #modal .sheet { position: relative; background: var(--bg); width: 100%; max-width: 640px; max-height: 92vh; overflow: auto; border-radius: 16px 16px 0 0;
+      padding: 0 0 calc(16px + env(safe-area-inset-bottom)); }
+    @keyframes up { from { transform: translateY(100%); } to { transform: none; } }
+    /* כהה: sheet הוא משטח "מוגבה" — בהיר יותר מהרקע, וקבוצות בתוכו עוד דרגה */
+    @media (prefers-color-scheme: dark) {
+      #modal .sheet { background: var(--bg2); }
+      #modal .gbody, #modal details.grp > .in, #modal details.grp > summary.gbody { background: var(--bg3); }
+    }
+    .grab { width: 36px; height: 5px; border-radius: 3px; background: var(--label3); margin: 8px auto 0; }
+    .sh-head { display: grid; grid-template-columns: minmax(64px, auto) 1fr minmax(64px, auto); align-items: center; min-height: 44px; padding: 0 8px; }
+    .sh-head h2 { text-align: center; overflow: hidden; text-overflow: ellipsis; }
+    .sh-body { padding: 0 16px; }
+    .sh-body > .grp:first-child { margin-top: 12px; }
+    .sh-foot { padding: 16px 16px 0; display: flex; flex-direction: column; gap: 8px; }
+    @media (min-width: 600px) {
+      #modal { align-items: center; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+      #modal .sheet { max-width: 520px; border-radius: 14px; padding-bottom: 16px; }
+      #modal:not(.hidden) .sheet { animation: pop 200ms cubic-bezier(.2,.8,.2,1); }
+      .grab { display: none; }
+    }
+    @keyframes pop { from { transform: scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+
+    /* ===== טפסים ===== */
+    .fld { position: relative; padding: 8px 16px; display: flex; flex-direction: column; }
+    .fld + .fld::before { content: ''; position: absolute; top: 0; inset-inline: 16px 0; border-top: .5px solid var(--sep); }
+    .fld > label, .fld > .lbl { color: var(--label2); font-size: .8125rem; line-height: 1.125rem; }
+    .fld:focus-within > label { color: var(--link-text); }
+    .fld input:not([type=checkbox]), .fld select, .fld textarea, .search input {
+      width: 100%; min-height: 44px; border: 0; background: transparent; color: var(--label); padding: 0; outline: none;
+      font-size: 1.0625rem; line-height: 1.375rem; }
+    .fld input:focus-visible, .fld select:focus-visible, .fld textarea:focus-visible { outline: none; }
+    .fld input.ltr, .fld .ltr, .fld input[type=date] { text-align: end; }
+    .fld textarea { min-height: 88px; padding: 8px 0; resize: vertical; }
+    ::placeholder { color: var(--label3); }
+    .selw { position: relative; display: block; }
+    .selw select { appearance: none; -webkit-appearance: none; padding-inline-end: 24px; cursor: pointer; }
+    .selw::after { content: ''; position: absolute; inset-inline-end: 0; top: 50%; width: 12px; height: 14px; margin-top: -7px; background: var(--label3); pointer-events: none;
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Cpath d='M2 5l4-4 4 4M2 9l4 4 4-4' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Cpath d='M2 5l4-4 4 4M2 9l4 4 4-4' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
+    .hint { color: var(--label2); padding-bottom: 4px; }
+    .swr { flex-wrap: nowrap; }
+    .swr > label { flex: 1; min-height: 22px; cursor: pointer; }
+    input.switch { appearance: none; -webkit-appearance: none; position: relative; flex: none; width: 51px; height: 31px; margin: 0; border-radius: 16px;
+      background: var(--fill); cursor: pointer; transition: background-color 200ms cubic-bezier(.2,.8,.2,1); }
+    input.switch::before { content: ''; position: absolute; inset: -7px -2px; }
+    input.switch::after { content: ''; position: absolute; top: 2px; inset-inline-start: 2px; width: 27px; height: 27px; border-radius: 50%; background: var(--white);
+      box-shadow: var(--knob-shadow); transition: inset-inline-start 200ms cubic-bezier(.2,.8,.2,1); }
+    input.switch:checked { background: var(--success); }
+    input.switch:checked::after { inset-inline-start: 22px; }
+    input.switch:disabled { opacity: .4; }
+    .filerow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .filerow label.btn-plain { padding: 0; }
+    .search { display: flex; align-items: center; gap: 8px; min-height: 36px; border-radius: 10px; background: var(--fill2); padding: 0 8px; margin-top: 8px; color: var(--label2); }
+    .search svg { width: 16px; height: 16px; flex: none; }
+    .search input { min-height: 44px; }
+    .search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+    /* ===== Toast ===== */
+    #toast { position: fixed; top: calc(12px + env(safe-area-inset-top)); inset-inline: 16px; margin-inline: auto; max-width: 360px; z-index: 20;
+      background: var(--bg2); color: var(--label); border-radius: 20px; box-shadow: var(--shadow-toast); padding: 10px 16px;
+      display: flex; align-items: center; gap: 8px; animation: down 200ms cubic-bezier(.2,.8,.2,1); }
+    #toast::before { content: '!'; flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--warn); color: var(--white); text-align: center; line-height: 20px; font-weight: 700; font-size: .8125rem; }
+    @media (prefers-color-scheme: dark) { #toast { background: var(--gray5); } }
+    @keyframes down { from { transform: translateY(-120%); } to { transform: none; } }
+
+    /* ===== עוגות ===== */
+    .pie { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; }
+    .ring { position: relative; width: 180px; height: 180px; flex: none; margin-inline: auto; }
+    .ring svg { width: 100%; height: 100%; display: block; }
+    .ring path { stroke: var(--bg2); stroke-width: 2; }
+    .ring .ctr { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+    .ring .ctr .t-cap1 { color: var(--label2); }
+    @media (min-width: 1024px) { .ring { width: 200px; height: 200px; } }
+    .legend { flex: 1 1 14rem; min-width: min(100%, 14rem); }
+    .lrow { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-height: 36px; padding: 6px 0; }
+    .lrow + .lrow::before { content: ''; position: absolute; top: 0; inset-inline: 18px 0; border-top: .5px solid var(--sep); }
+    .lrow .main { flex: 1 1 8rem; min-width: 0; }
+    .lrow .pct { color: var(--label2); min-width: 44px; text-align: end; }
+    .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; flex: none; margin-inline-end: 8px; vertical-align: 0; }
+    .pc0 { fill: var(--blue); background: var(--blue); } .pc1 { fill: var(--green); background: var(--green); }
+    .pc2 { fill: var(--orange); background: var(--orange); } .pc3 { fill: var(--purple); background: var(--purple); }
+    .pc4 { fill: var(--teal); background: var(--teal); } .pc5 { fill: var(--pink); background: var(--pink); }
+    .pc6 { fill: var(--indigo); background: var(--indigo); } .pc7 { fill: var(--yellow); background: var(--yellow); }
+    .pc8 { fill: var(--mint); background: var(--mint); } .pc9 { fill: var(--brown); background: var(--brown); }
+    .pc-oth { fill: var(--gray3); background: var(--gray3); }
+    .ed-pie { padding: 12px 16px; position: relative; background: var(--bg3); }
+    .ed-pie .ring path { stroke: var(--bg3); }
+    .ed-pie::before { content: ''; position: absolute; top: 0; inset-inline: 16px 0; border-top: .5px solid var(--sep); }
+
+    /* ===== skeleton ===== */
+    .sk { background: var(--fill2); border-radius: 6px; animation: shimmer 1.3s ease-in-out infinite alternate; }
+    @keyframes shimmer { from { background: var(--fill2); } to { background: var(--fill); } }
+    .sk.l { height: 14px; width: 60%; }
+    .sk.v { height: 28px; width: 50%; margin-inline-start: auto; }
+    .sk.c { width: 180px; height: 180px; border-radius: 50%; margin: 8px auto; }
+    .skrow { min-height: 44px; display: flex; align-items: center; padding: 0 16px; }
+
+    /* ===== כניסה ===== */
+    .login { max-width: 400px; margin-inline: auto; padding-top: 15vh; }
+    .login .brand { text-align: center; }
+    .login .brand p { color: var(--label2); margin-top: 4px; }
+    .codein { text-align: center; letter-spacing: 8px; direction: ltr; font-size: 1.375rem !important; line-height: 1.75rem !important; font-weight: 700; }
+    .or { display: flex; align-items: center; gap: 12px; color: var(--label2); margin: 24px 0 16px; }
+    .or::before, .or::after { content: ''; flex: 1; border-top: .5px solid var(--sep); }
+    #g-btn { display: flex; justify-content: center; min-height: 44px; }
+    .foot-link { text-align: center; margin-top: 32px; color: var(--label2); }
+    .foot-link a { color: var(--label2); }
+
+    /* פרופיל */
+    .av { width: 40px; height: 40px; border-radius: 50%; background: var(--fill); display: inline-flex; align-items: center; justify-content: center; flex: none; color: var(--label); font-weight: 600; }
+    .sb-prof .av { width: 32px; height: 32px; }
+
+    /* ===== תנועה מופחתת ===== */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; animation-iteration-count: 1 !important; }
+      #modal:not(.hidden) .sheet, #toast { animation: fade 120ms ease-out !important; }
+      .sk { animation: none !important; }
+    }
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Brande CashFlow</h1>
-    <span class="who" id="who"></span>
-    <button class="b s sm hidden" id="b-logout">יציאה</button>
-  </header>
-  <nav id="nav" class="hidden">
-    <button data-v="home">בית</button>
-    <button data-v="clients">לקוחות</button>
-    <button data-v="editors">עורכים</button>
-    <button data-v="alerts">התראות<span class="dot hidden" id="alert-dot"></span></button>
-    <button data-v="more">עוד</button>
+  <nav id="nav" class="hidden" aria-label="ניווט ראשי">
+    <div class="sb-head t-head">Brande CashFlow</div>
+    <button data-v="home" aria-label="בית"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="f" d="M3.5 10.5 12 3.8l8.5 6.7V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg></span><span class="tl t-cap2">בית</span></button>
+    <button data-v="clients" aria-label="לקוחות"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="f" cx="9" cy="8" r="3.2"/><path class="f" d="M3 19.5c.6-3.3 3-5.2 6-5.2s5.4 1.9 6 5.2z"/><path d="M15.5 4.9a3.2 3.2 0 0 1 0 6.2M17.6 14.6c1.8.7 3 2.4 3.4 4.9"/></svg></span><span class="tl t-cap2">לקוחות</span></button>
+    <button data-v="editors" aria-label="עורכים"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="f" cx="6.5" cy="17" r="2.8"/><circle class="f" cx="17.5" cy="17" r="2.8"/><path d="M8.6 15.2 18.5 3.5M15.4 15.2 5.5 3.5"/></svg></span><span class="tl t-cap2">עורכים</span></button>
+    <button data-v="alerts" aria-label="התראות"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="f" d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.8a2.2 2.2 0 0 0 4 0"/></svg><span class="dot t-cap2 hidden" id="alert-dot"></span></span><span class="tl t-cap2">התראות</span></button>
+    <button data-v="more" aria-label="עוד"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="f" cx="12" cy="12" r="9"/><g class="dots" stroke="none"><circle cx="8" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="16" cy="12" r="1.3"/></g></svg></span><span class="tl t-cap2">עוד</span></button>
+    <button data-v="more" class="sb-prof" aria-label="חשבון"><span class="av t-foot" id="av" aria-hidden="true"></span><span class="tl t-foot" id="who"></span></button>
   </nav>
-  <main id="main"><div class="card"><div class="sk l s"></div><div class="sk l m"></div><div class="sk l"></div></div></main>
-  <div id="modal" class="hidden"><div class="sheet" id="sheet"></div></div>
-  <div id="toast" class="hidden"></div>
+  <header id="bar" class="hidden">
+    <div class="bar-slot"><button class="btn-plain t-body hidden" id="bar-back"><span class="chev" aria-hidden="true"></span><span id="bar-back-t"></span></button></div>
+    <div id="bar-title" class="t-head" aria-live="polite"></div>
+    <div class="bar-slot" id="bar-end"></div>
+  </header>
+  <main id="main"><div class="grp"><div class="gbody"><div class="skrow"><div class="sk l"></div></div><div class="skrow"><div class="sk l"></div></div></div></div></main>
+  <div id="modal" class="hidden"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+  <div id="toast" class="hidden t-sub" role="status" aria-live="polite"></div>
 
 <script>
   // ---------- בסיס ----------
@@ -150,12 +421,54 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function money(n) { return n === null || n === undefined ? '—' : '₪' + Number(n).toLocaleString('he-IL', { maximumFractionDigits: 2 }); }
-  function partial(missing) { return missing ? ' <span class="tag y">חלקי: ' + missing + ' חסרים</span>' : ''; }
+  /** "1 סרטון" / "3 סרטונים" (תצוגה בלבד). */
+  function nOf(n, one, many) { return n === 1 ? '1 ' + one : n + ' ' + many; }
+  function partial(missing) { return missing ? ' <span class="tag y">⚠ חלקי: ' + nOf(missing, 'חסר', 'חסרים') + '</span>' : ''; }
   function date(s) { if (!s) return '—'; var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s); return m ? m[3] + '/' + m[2] + '/' + m[1] : esc(s); }
   function month(s) { var m = /^(\d{4})-(\d{2})$/.exec(s || ''); return m ? m[2] + '/' + m[1] : esc(s || 'ללא תאריך'); }
   function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function toast(t) { var el = $('toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.add('hidden'); }, 3500); }
-  function setMain(html) { $('main').innerHTML = html; window.scrollTo(0, 0); }
+
+  // ---------- מבנה מסך: סרגל עליון + Large Title (UI בלבד) ----------
+  var SCREENS = { home: { t: 'בית', large: 1, wide: 1 }, clients: { t: 'לקוחות', large: 1 }, editors: { t: 'עורכים', large: 1 },
+    alerts: { t: 'התראות', large: 1 }, more: { t: 'עוד', large: 1 }, partners: { t: 'שותפים', back: 'more' },
+    client: { back: 'clients' }, editor: { back: 'editors' } };
+  var CHEV = '<span class="chev" aria-hidden="true"></span>';
+  function setMain(html) {
+    var sc = S.screen || {};
+    $('bar').classList.toggle('hidden', !!sc.login);
+    $('bar-title').textContent = sc.t || '';
+    $('bar-back').classList.toggle('hidden', !sc.back);
+    if (sc.back) { $('bar-back-t').textContent = SCREENS[sc.back].t; $('bar-back').onclick = function () { go(sc.back); }; }
+    $('bar-end').innerHTML = sc.action || '';
+    $('main').classList.toggle('narrow', !sc.wide);
+    $('main').innerHTML = (sc.large ? '<h1 class="t-large ltitle" id="ltitle">' + esc(sc.t) + '</h1>' : '') + html;
+    window.scrollTo(0, 0);
+    barTitle();
+  }
+  /** הכותרת הקטנה בסרגל מופיעה רק אחרי שה-Large Title נגלל מתחת לסרגל. */
+  function barTitle() {
+    var lt = $('ltitle');
+    $('bar-title').classList.toggle('fade', !!lt && lt.getBoundingClientRect().bottom > $('bar').getBoundingClientRect().bottom);
+  }
+  window.addEventListener('scroll', barTitle, { passive: true });
+  /** קבוצה בסגנון iOS: כותרת מעל, גוף, הסבר מתחת. */
+  function grp(title, body, foot, cls) {
+    return '<section class="grp' + (cls ? ' ' + cls : '') + '">' + (title ? '<h2 class="gh t-foot">' + title + '</h2>' : '') +
+      '<div class="gbody">' + body + '</div>' + (foot ? '<p class="gf t-foot">' + foot + '</p>' : '') + '</section>';
+  }
+  function emptyRow(t) { return '<div class="empty t-sub">' + (t || 'אין') + '</div>'; }
+  // לחיצה במקלדת על שורות לחיצות
+  document.addEventListener('keydown', function (e) {
+    var t = e.target;
+    if ((e.key === 'Enter' || e.key === ' ') && t && t.getAttribute && t.getAttribute('role') === 'button' && t.tagName !== 'BUTTON') { e.preventDefault(); t.click(); }
+    if (e.key === 'Escape' && !$('modal').classList.contains('hidden')) closeModal();
+  });
+  // שם הקובץ שנבחר בשדה קובץ
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t && t.type === 'file') { var n = document.querySelector('[data-for="' + t.id + '"]'); if (n) n.textContent = t.files && t.files[0] ? t.files[0].name : ''; }
+  });
 
   // בתוך Apps Script (doGet) → google.script.run. כדף סטטי (cashflow.brandemedia.co.il) → POST ל-doPost.
   var API_URL = 'https://script.google.com/macros/s/AKfycbyIid2Z0N_dfKbPgkCjmkKb2FnmgxxSi3PWzrk-WeqoL8iDoYOyqdOIFDCMLSIO8k22/exec';
@@ -187,15 +500,17 @@
 
   // ---------- כניסה ----------
   function loginView(note) {
-    $('nav').classList.add('hidden'); $('b-logout').classList.add('hidden'); $('who').textContent = '';
-    setMain('<div class="card"><h2>כניסה</h2>' + (note ? '<div class="msg w">' + esc(note) + '</div>' : '') +
-      '<label>מייל</label><input id="email" type="email" class="ltr" autocomplete="email" inputmode="email">' +
-      '<button class="b full" id="b-send">שלח לי קוד</button>' +
-      '<div id="code-box" class="hidden"><label>קוד מהמייל (6 ספרות)</label><input id="code" class="ltr" inputmode="numeric" autocomplete="one-time-code" maxlength="6">' +
-      '<button class="b full" id="b-verify">כניסה</button></div>' +
-      (GOOGLE_CLIENT_ID && !GAS ? '<div class="sub muted" style="text-align:center;margin:12px 0 8px">או</div><div id="g-btn" style="display:flex;justify-content:center"></div>' : '') +
-      '<div id="login-msg"></div></div>' +
-      '<div class="sub muted" style="text-align:center"><a href="https://cashflow.brandemedia.co.il/privacy.html" target="_blank" rel="noopener" style="color:inherit">מדיניות פרטיות</a></div>');
+    $('nav').classList.add('hidden');
+    S.screen = { login: 1 };
+    setMain('<div class="login"><div class="brand"><h1 class="t-large">Brande CashFlow</h1><p class="t-foot">ניהול תזרים</p></div>' +
+      (note ? '<div class="msg w">' + esc(note) + '</div>' : '') +
+      '<section class="grp"><div class="gbody"><div class="fld"><label for="email">מייל</label><input id="email" type="email" class="ltr t-body" autocomplete="email" inputmode="email" placeholder="name@example.com"></div></div></section>' +
+      '<div class="actions"><button class="btn btn-fill full t-head" id="b-send">שלח לי קוד</button></div>' +
+      '<div id="code-box" class="hidden"><section class="grp"><div class="gbody"><div class="fld"><label for="code">קוד מהמייל (6 ספרות)</label><input id="code" class="codein" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456"></div></div></section>' +
+      '<div class="actions"><button class="btn btn-fill full t-head" id="b-verify">כניסה</button></div></div>' +
+      '<div id="login-msg"></div>' +
+      (GOOGLE_CLIENT_ID && !GAS ? '<div class="or t-foot">או</div><div id="g-btn"></div>' : '') +
+      '<p class="foot-link t-foot"><a href="https://cashflow.brandemedia.co.il/privacy.html" target="_blank" rel="noopener">מדיניות פרטיות</a></p></div>');
     var lm = function (t, cls) { $('login-msg').innerHTML = t ? '<div class="msg ' + cls + '">' + esc(t) + '</div>' : ''; };
     if ($('g-btn')) googleButton(function (cred) {
       lm('מתחבר...', 'o');
@@ -228,7 +543,8 @@
     var render = function () {
       if (!$('g-btn')) return;
       google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: function (r) { if (r && r.credential) onCred(r.credential); } });
-      google.accounts.id.renderButton($('g-btn'), { theme: 'outline', size: 'large', text: 'signin_with', locale: 'he' });
+      google.accounts.id.renderButton($('g-btn'), { theme: matchMedia('(prefers-color-scheme: dark)').matches ? 'filled_black' : 'outline', size: 'large', shape: 'pill', text: 'signin_with', locale: 'he',
+        width: Math.min(400, $('g-btn').offsetWidth || 360) });
     };
     if (window.google && google.accounts && google.accounts.id) return render();
     var sc = document.createElement('script');
@@ -237,15 +553,19 @@
     document.head.appendChild(sc);
   }
 
-  $('b-logout').onclick = function () {
+  function logout() {
     call('logout', [getToken()], function () { setToken(null); loginView(); }, function () { setToken(null); loginView(); });
-  };
+  }
+  /** שורת "התנתקות" (#b-logout) — במסך "עוד" ובדף העורך. */
+  function logoutGroup() {
+    return grp('', '<button class="row row-c t-body danger" id="b-logout" onclick="logout()">התנתקות</button>');
+  }
 
   /** 6.1.2 ניתוב לפי תפקיד. */
   function start(user) {
     S.user = user;
     $('who').textContent = user.email;
-    $('b-logout').classList.remove('hidden');
+    $('av').textContent = String(user.email || '?').charAt(0).toUpperCase();
     if (user.role === 'admin') { $('nav').classList.remove('hidden'); go('home'); }
     else { $('nav').classList.add('hidden'); myPage(); }
   }
@@ -254,6 +574,11 @@
   function openModal(html) { $('sheet').innerHTML = html; $('modal').classList.remove('hidden'); $('sheet').scrollTop = 0; }
   function closeModal() { $('modal').classList.add('hidden'); $('sheet').innerHTML = ''; }
   $('modal').onclick = function (e) { if (e.target === $('modal')) closeModal(); };
+  /** sheet: grabber, שורת כותרת עם כפתור סגירה (plain), גוף, כפתור ראשי למטה. */
+  function sheetHtml(title, body, foot, closeLabel) {
+    return '<div class="grab" aria-hidden="true"></div><div class="sh-head"><button class="btn-plain t-body" onclick="closeModal()">' + (closeLabel || 'ביטול') + '</button>' +
+      '<h2 class="t-head">' + esc(title) + '</h2><span></span></div><div class="sh-body">' + body + '</div>' + (foot ? '<div class="sh-foot">' + foot + '</div>' : '');
+  }
 
   function linesHtml(lines, cls) {
     if (!lines || !lines.length) return '';
@@ -265,21 +590,22 @@
    * שלב 1: קריאה בלי confirm → תצוגה מקדימה. שלב 2: "אישור" → אותה קריאה עם confirm.
    */
   function runAct(act) {
-    openModal('<h2>' + esc(act.title) + '</h2><div class="center">מכין תצוגה מקדימה…</div>');
+    var danger = act.fn === 'actionUndoLast';
+    openModal(sheetHtml(act.title, '<div class="center t-sub"><span class="spin" aria-hidden="true"></span>מכין תצוגה מקדימה…</div>'));
     call(act.fn, act.args(undefined), function (r) {
-      if (!r.ok) return openModal('<h2>' + esc(act.title) + '</h2>' + linesHtml([r.message], 'e') + '<button class="b s full" onclick="closeModal()">סגור</button>');
-      openModal('<h2>' + esc(act.title) + ' — לבדוק ולאשר</h2>' + linesHtml(r.preview, 'o') + linesHtml(r.warnings, 'w') +
-        '<button class="b full" id="b-confirm">אישור וביצוע</button><button class="b s full" onclick="closeModal()">ביטול</button>');
+      if (!r.ok) return openModal(sheetHtml(act.title, linesHtml([r.message], 'e'), '', 'סגור'));
+      openModal(sheetHtml(act.title + ' — לבדוק ולאשר', linesHtml(r.preview, 'o') + linesHtml(r.warnings, 'w'),
+        '<button class="btn btn-fill full t-head' + (danger ? ' btn-danger' : '') + '" id="b-confirm">אישור וביצוע</button>'));
       $('b-confirm').onclick = function () {
         $('b-confirm').disabled = true; $('b-confirm').textContent = 'מבצע…';
         call(act.fn, act.args(r.confirm), function (d) {
-          if (!d.ok) return openModal('<h2>' + esc(act.title) + '</h2>' + linesHtml([d.message], 'e') + '<button class="b s full" onclick="closeModal()">סגור</button>');
-          openModal('<h2>בוצע ✓</h2>' + linesHtml(d.done, 'o') + linesHtml(d.warnings, 'w') + '<div class="sub muted">מזהה: ' + esc(d.id) + '</div>' +
-            '<button class="b full" id="b-done">סגור</button>');
+          if (!d.ok) return openModal(sheetHtml(act.title, linesHtml([d.message], 'e'), '', 'סגור'));
+          openModal(sheetHtml('בוצע ✓', linesHtml(d.done, 'o') + linesHtml(d.warnings, 'w') + '<p class="note t-foot">מזהה: <span class="ltr">' + esc(d.id) + '</span></p>',
+            '<button class="btn btn-fill full t-head" id="b-done">סגור</button>', 'סגור'));
           $('b-done').onclick = function () { closeModal(); (act.after || reload)(); };
-        }, function (m) { openModal('<h2>' + esc(act.title) + '</h2>' + linesHtml([m], 'e') + '<button class="b s full" onclick="closeModal()">סגור</button>'); });
+        }, function (m) { openModal(sheetHtml(act.title, linesHtml([m], 'e'), '', 'סגור')); });
       };
-    }, function (m) { openModal('<h2>' + esc(act.title) + '</h2>' + linesHtml([m], 'e') + '<button class="b s full" onclick="closeModal()">סגור</button>'); });
+    }, function (m) { openModal(sheetHtml(act.title, linesHtml([m], 'e'), '', 'סגור')); });
   }
 
   /**
@@ -290,19 +616,21 @@
     return fields.map(function (f) {
       var id = 'f-' + f.k.replace(/\W/g, '_') + '-' + fields.indexOf(f);
       f._id = id;
-      var hint = f.hint ? '<div class="sub muted">' + esc(f.hint) + '</div>' : '';
-      if (f.type === 'check') return '<div class="chk"><input type="checkbox" id="' + id + '"' + (f.value ? ' checked' : '') + (f.disabled ? ' disabled' : '') + '><span>' + esc(f.label) + '</span></div>' + hint;
+      var hint = f.hint ? '<div class="hint t-foot">' + esc(f.hint) + '</div>' : '';
+      if (f.type === 'check') return '<div class="fld"><div class="row swr" style="padding:0;min-height:44px"><label for="' + id + '" class="t-body">' + esc(f.label) + '</label>' +
+        '<input type="checkbox" class="switch" id="' + id + '"' + (f.value ? ' checked' : '') + (f.disabled ? ' disabled' : '') + '></div>' + hint + '</div>';
       var lab = '<label for="' + id + '">' + esc(f.label) + '</label>';
       if (f.type === 'select') {
-        return lab + '<select id="' + id + '">' + (f.blank ? '<option value=""></option>' : '') + f.options.map(function (o) {
+        return '<div class="fld">' + lab + '<span class="selw"><select id="' + id + '">' + (f.blank ? '<option value=""></option>' : '') + f.options.map(function (o) {
           var v = typeof o === 'object' ? o.v : o, t = typeof o === 'object' ? o.t : o;
           return '<option value="' + esc(v) + '"' + (String(v) === String(f.value) ? ' selected' : '') + '>' + esc(t) + '</option>';
-        }).join('') + '</select>' + hint;
+        }).join('') + '</select></span>' + hint + '</div>';
       }
-      if (f.type === 'textarea') return lab + '<textarea id="' + id + '" rows="2">' + esc(f.value) + '</textarea>' + hint;
-      if (f.type === 'file') return lab + '<input type="file" id="' + id + '" accept="image/*,application/pdf">' + hint;
+      if (f.type === 'textarea') return '<div class="fld">' + lab + '<textarea id="' + id + '" rows="2">' + esc(f.value) + '</textarea>' + hint + '</div>';
+      if (f.type === 'file') return '<div class="fld"><span class="lbl">' + esc(f.label) + '</span><div class="filerow"><label for="' + id + '" class="btn-plain t-head">בחירת קובץ</label>' +
+        '<span class="t-foot sec" data-for="' + id + '"></span><input type="file" class="vh" id="' + id + '" accept="image/*,application/pdf"></div>' + hint + '</div>';
       var attrs = f.type === 'number' ? ' type="number" inputmode="decimal" step="any" class="ltr"' : f.type === 'date' ? ' type="date"' : f.type === 'email' ? ' type="email" class="ltr"' : ' type="text"';
-      return lab + '<input id="' + id + '"' + attrs + ' value="' + esc(f.value) + '"' + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + '>' + hint;
+      return '<div class="fld">' + lab + '<input id="' + id + '"' + attrs + ' value="' + esc(f.value) + '"' + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + '>' + hint + '</div>';
     }).join('');
   }
   function formValues(fields) {
@@ -316,8 +644,8 @@
     return { values: v, files: files };
   }
   function openForm(title, fields, onSubmit, extraHtml) {
-    openModal('<h2>' + esc(title) + '</h2>' + (extraHtml || '') + formHtml(fields) + '<div id="form-msg"></div>' +
-      '<button class="b full" id="b-next">המשך לתצוגה מקדימה</button><button class="b s full" onclick="closeModal()">ביטול</button>');
+    openModal(sheetHtml(title, (extraHtml || '') + grp('', formHtml(fields)) + '<div id="form-msg"></div>',
+      '<button class="btn btn-fill full t-head" id="b-next">המשך לתצוגה מקדימה</button>'));
     $('b-next').onclick = function () { var fv = formValues(fields); onSubmit(fv.values, fv.files); };
   }
   function formErr(m) { $('form-msg') && ($('form-msg').innerHTML = linesHtml([m], 'e')); }
@@ -345,7 +673,13 @@
   function go(view, arg) {
     S.view = view; S.arg = arg;
     var tab = { client: 'clients', editor: 'editors', partners: 'more' }[view] || view;
-    Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) { b.classList.toggle('on', b.getAttribute('data-v') === tab); });
+    Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) {
+      var on = b.getAttribute('data-v') === tab;
+      b.classList.toggle('on', on);
+      if (on && !b.classList.contains('sb-prof')) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+    S.screen = Object.assign({}, SCREENS[view], arg ? { t: arg } : {});
+    if (view === 'editors') S.screen.action = '<button class="btn-plain t-body" id="b-new-ed">+ עורך חדש</button>';
     setMain(skeleton(view));
     ({ home: homeView, clients: clientsView, editors: editorsView, alerts: alertsView, more: moreView, partners: partnersView,
       client: clientView, editor: editorView })[view](arg);
@@ -361,6 +695,13 @@
     });
   }
 
+  /** אריח מספר. go = מסך ללחיצה (או ריק). */
+  function tile(label, value, extra, view, valueCls) {
+    var click = view ? ' click" role="button" tabindex="0" onclick="go(\'' + view + '\')' : '';
+    return '<div class="tile' + click + '"><div class="k t-foot"><span>' + label + '</span>' + (view ? CHEV : '') + '</div>' +
+      '<div class="v t-title1 num' + (valueCls ? ' ' + valueCls : '') + '">' + value + '</div>' + (extra || '') + '</div>';
+  }
+
   // ---------- 6.2 דשבורד ----------
   function homeView() { loadHome(renderHome); }
   function renderHome(h) {
@@ -372,63 +713,63 @@
       slices: P.ours.slices.map(function (x) { return Object.assign({}, x, { key: x.key === 'העסק' ? '__biz' : x.key, label: oursName(x) }); }) };
     setMain(
       periodSeg(function () { renderHome(h); }) +
-      '<div class="grid">' +
-      '<div class="stat click" onclick="go(\'clients\')"><div class="k">לגבייה מלקוחות</div><div class="v">' + money(h.debtTotal.amount) + '</div>' + partial(h.debtTotal.missing) + '</div>' +
-      '<div class="stat click" onclick="go(\'editors\')"><div class="k">לתשלום לעורכים</div><div class="v">' + money(h.dueTotal.amount) + '</div>' + partial(h.dueTotal.missing) + '</div>' +
-      '<div class="stat"><div class="k">רווח העסק · ' + esc(PERIODS.filter(function (x) { return x[0] === S.period; })[0][1]) + '</div><div class="v">' + money(P.business.total) + '</div>' + partial(P.business.missing) + '</div>' +
-      '<div class="stat click" onclick="go(\'alerts\')"><div class="k">התראות פתוחות</div><div class="v ' + (h.alertsOpen ? 'err' : 'ok') + '">' + h.alertsOpen + '</div></div>' +
+      '<div class="tiles">' +
+      tile('לגבייה מלקוחות', money(h.debtTotal.amount), partial(h.debtTotal.missing), 'clients') +
+      tile('לתשלום לעורכים', money(h.dueTotal.amount), partial(h.dueTotal.missing), 'editors') +
+      tile('רווח העסק · ' + esc(PERIODS.filter(function (x) { return x[0] === S.period; })[0][1]), money(P.business.total), partial(P.business.missing)) +
+      tile('התראות פתוחות', String(h.alertsOpen), '', 'alerts', h.alertsOpen ? 'danger' : '') +
       '</div>' +
       '<div class="cols">' +
-      '<div class="card"><h2>רווח העסק</h2><div class="sub muted">' + esc(pn) + ' · שני המנהלים ביחד</div><div class="total">' + money(P.business.total) + '</div>' + partial(P.business.missing) +
-      '<div class="sub muted" style="margin:6px 0 4px">לפי לקוח</div>' + pieBlock(P.business, D.colors, 'רווח העסק לפי לקוח') + '</div>' +
-      '<div class="card"><h2>סה"כ שלנו</h2><div class="sub muted">' + esc(pn) + ' · רווח העסק + עריכות של המנהלים</div><div class="total">' + money(P.ours.total) + '</div>' + partial(P.ours.missing) +
-      '<div style="margin-top:6px"></div>' + pieBlock(oursPie, oursColors, 'סה"כ שלנו') + '</div>' +
+      grp('רווח העסק · ' + esc(pn) + ' · שני המנהלים ביחד', '<div class="pad">' + partial(P.business.missing) + pieBlock(P.business, D.colors, 'רווח העסק לפי לקוח') + '</div>') +
+      grp('סה״כ שלנו · ' + esc(pn) + ' · רווח העסק + עריכות של המנהלים', '<div class="pad">' + partial(P.ours.missing) + pieBlock(oursPie, oursColors, 'סה"כ שלנו') + '</div>') +
       '</div>' +
-      '<div class="card"><h2>עורכים · ' + esc(pn) + '</h2><div class="sub muted">לפי עלות עורך, כולל מה שכבר שולם. לחיצה על עורך → פירוט לפי לקוח</div>' +
-      (P.editors.map(function (e) {
-        return '<div class="row click" data-ed="' + esc(e.name) + '"><div class="main"><span class="sw" style="background:' + colorOf(e.name, D.editorColors) + '"></span><b>' + esc(e.name) + '</b>' +
-          '<div class="sub">' + counts(e) + '</div></div><div class="num"><b>' + money(e.amount) + '</b>' + partial(e.missing) + '</div></div>' +
+      grp('עורכים · ' + esc(pn), (P.editors.map(function (e) {
+        return '<div class="row click" role="button" tabindex="0" aria-expanded="false" data-ed="' + esc(e.name) + '"><span class="sw ' + colorOf(e.name, D.editorColors) + '"></span>' +
+          '<div class="main"><div class="t-head">' + esc(e.name) + '</div><div class="t-foot sec">' + counts(e) + '</div></div>' +
+          '<div class="val"><span class="t-body num">' + money(e.amount) + '</span>' + partial(e.missing) + '</div>' + CHEV + '</div>' +
           '<div class="ed-pie hidden" data-edp="' + esc(e.name) + '">' + pieBlock(e.pie, D.colors, 'מה ' + e.name + ' עשה לפי לקוח') + '</div>';
-      }).join('') || '<div class="muted">אין עבודה בתקופה</div>') + '</div>' +
+      }).join('') || emptyRow('אין עבודה בתקופה')), 'לפי עלות עורך, כולל מה שכבר שולם. לחיצה על עורך → פירוט לפי לקוח') +
       '<div class="cols">' +
-      '<div class="card"><h2>חלוקת שותפים · ' + month(h.month) + '</h2>' + partnerRows(p) + '</div>' +
-      '<div class="card"><h2>חוב לפי לקוח</h2>' + h.clients.filter(function (c) { return c.debt || c.missing; }).slice(0, 6).map(clientRow).join('') +
-      '<button class="b s full" onclick="go(\'clients\')">כל הלקוחות</button></div>' +
+      grp('חלוקת שותפים · ' + month(h.month), partnerRows(p)) +
+      grp('חוב לפי לקוח', h.clients.filter(function (c) { return c.debt || c.missing; }).slice(0, 6).map(clientRow).join('') +
+        '<div class="row click" role="button" tabindex="0" onclick="go(\'clients\')"><div class="main t-body">כל הלקוחות</div>' + CHEV + '</div>') +
       '</div>' +
-      '<div class="card"><h2>מגיע לעורכים</h2>' + (h.editors.filter(function (e) { return e.due || e.missing; }).map(editorRow).join('') || '<div class="muted">אין</div>') + '</div>'
+      grp('מגיע לעורכים', h.editors.filter(function (e) { return e.due || e.missing; }).map(editorRow).join('') || emptyRow())
     );
     Array.prototype.forEach.call(document.querySelectorAll('[data-ed]'), function (row) {
       row.onclick = function () {
         var n = row.getAttribute('data-ed');
         Array.prototype.forEach.call(document.querySelectorAll('[data-edp]'), function (d) { if (d.getAttribute('data-edp') === n) d.classList.toggle('hidden'); });
+        row.classList.toggle('open'); row.setAttribute('aria-expanded', row.classList.contains('open') ? 'true' : 'false');
       };
     });
   }
   function partnerRows(p) {
-    if (!p) return '<div class="muted">אין נתונים לחודש</div>';
-    if (p.error) return '<div class="msg w">' + esc(p.error) + '</div>';
-    return '<div class="row"><div class="main">רווח החודש</div><b class="num">' + money(p.profit) + '</b></div>' +
-      p.partners.map(function (x) { return '<div class="row"><div class="main">' + esc(x.email) + ' <span class="muted">(' + x.pct + '%)</span></div><b class="num">' + money(x.amount) + '</b></div>'; }).join('') +
-      (p.missing ? '<div class="msg w">חלקי: ' + p.missing + ' פריטים בלי מחיר/עלות</div>' : '');
+    if (!p) return emptyRow('אין נתונים לחודש');
+    if (p.error) return '<div class="pad"><div class="msg w" style="margin:0">' + esc(p.error) + '</div></div>';
+    return '<div class="row"><div class="main t-body">רווח החודש</div><span class="t-head num">' + money(p.profit) + '</span></div>' +
+      p.partners.map(function (x) { return '<div class="row"><div class="main"><div class="t-body em">' + esc(x.email) + '</div><div class="t-foot sec">' + x.pct + '%</div></div><span class="t-body num">' + money(x.amount) + '</span></div>'; }).join('') +
+      (p.missing ? '<div class="row"><div class="msg w" style="margin:0;flex:1">חלקי: ' + p.missing + ' פריטים בלי מחיר/עלות</div></div>' : '');
   }
   function clientRow(c) {
-    return '<div class="row click" onclick="go(\'client\',' + esc(JSON.stringify(c.name)) + ')"><div class="main"><b>' + esc(c.name) + '</b>' +
-      (c.active ? '' : ' <span class="tag">לא פעיל</span>') + '<div class="sub">' + c.openVideos + ' סרטונים פתוחים · רווח החודש ' + money(c.monthProfit) + '</div></div>' +
-      '<div class="num"><b>' + money(c.debt) + '</b>' + partial(c.missing) + '</div></div>';
+    return '<div class="row click" role="button" tabindex="0" onclick="go(\'client\',' + esc(JSON.stringify(c.name)) + ')"><div class="main"><div class="t-head">' + esc(c.name) +
+      (c.active ? '' : ' <span class="tag">לא פעיל</span>') + '</div><div class="t-foot sec">' + nOf(c.openVideos, 'סרטון פתוח', 'סרטונים פתוחים') + ' · <span class="nw">רווח החודש ' + money(c.monthProfit) + '</span></div></div>' +
+      '<div class="val"><span class="t-body num ' + (c.debt > 0 ? 'danger' : 'sec') + '">' + money(c.debt) + '</span>' + partial(c.missing) + '</div>' + CHEV + '</div>';
   }
   function editorRow(e) {
-    return '<div class="row click" onclick="go(\'editor\',' + esc(JSON.stringify(e.name)) + ')"><div class="main"><b>' + esc(e.name) + '</b>' +
-      (e.active ? '' : ' <span class="tag">לא פעיל</span>') + '<div class="sub">' + e.count + ' פריטים פתוחים</div></div>' +
-      '<div class="num"><b>' + money(e.due) + '</b>' + partial(e.missing) + '</div></div>';
+    return '<div class="row click" role="button" tabindex="0" onclick="go(\'editor\',' + esc(JSON.stringify(e.name)) + ')"><div class="main"><div class="t-head">' + esc(e.name) +
+      (e.active ? '' : ' <span class="tag">לא פעיל</span>') + '</div><div class="t-foot sec">' + nOf(e.count, 'פריט פתוח', 'פריטים פתוחים') + '</div></div>' +
+      '<div class="val"><span class="t-body num">' + money(e.due) + '</span>' + partial(e.missing) + '</div>' + CHEV + '</div>';
   }
 
   // ---------- 6.3 לקוחות ----------
   function clientsView() {
     loadHome(function (h) {
-      setMain('<input id="q" placeholder="חיפוש לקוח" style="margin-bottom:12px"><div class="card" id="list"></div>');
+      setMain('<label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></svg>' +
+        '<span class="vh">חיפוש לקוח</span><input id="q" type="search" placeholder="חיפוש" class="t-body"></label>' + grp('', '<div id="list"></div>'));
       var draw = function () {
         var q = $('q').value.trim().toLowerCase();
-        $('list').innerHTML = h.clients.filter(function (c) { return !q || c.name.toLowerCase().indexOf(q) !== -1; }).map(clientRow).join('') || '<div class="muted">אין</div>';
+        $('list').innerHTML = h.clients.filter(function (c) { return !q || c.name.toLowerCase().indexOf(q) !== -1; }).map(clientRow).join('') || emptyRow();
       };
       $('q').oninput = draw; draw();
     });
@@ -441,35 +782,35 @@
       var openCount = o.videos.length + o.projects.length + o.retainers.length;
       S.client = c;
       setMain(
-        '<div class="btns"><button class="b s sm" onclick="go(\'clients\')">→ לקוחות</button></div>' +
-        '<div class="card"><h2>' + esc(c.name) + ' <span class="tag">' + esc(c.status || '—') + '</span></h2>' +
-        '<div class="k muted">חוב פתוח</div><div class="big">' + money(d.total) + '</div>' + partial(d.missing) +
-        '<div class="sub">' + o.videos.length + ' סרטונים (' + money(o.totals.videos.amount) + ') · ' + o.projects.length + ' פרויקטים (' + money(o.totals.projects.amount) + ') · ' +
-        o.retainers.length + ' ריטיינרים (' + money(o.totals.retainers.amount) + ')</div>' +
-        (c.contentUrl ? '<div class="sub"><a href="' + esc(c.contentUrl) + '" target="_blank" rel="noopener">טבלת התוכן</a> · טאב ' + esc(c.tab) + '</div>' : '') + '</div>' +
-        '<div class="btns"><button class="b" id="b-paid"' + (openCount ? '' : ' disabled') + '>לקוח שילם</button>' +
-        '<button class="b s" id="b-proj">פרויקט חדש</button><button class="b s" id="b-exp">הוצאה</button><button class="b s" id="b-set">הגדרות ומחירים</button></div>' +
+        '<div class="tiles one">' +
+        tile('חוב פתוח', money(d.total), '<span class="tag">' + esc(c.status || '—') + '</span>' + partial(d.missing), '', d.total > 0 ? 'danger' : '') +
+        '</div>' +
+        grp('', '<div class="row"><div class="main t-sub"><span class="nw">' + nOf(o.videos.length, 'סרטון', 'סרטונים') + ' (' + money(o.totals.videos.amount) + ')</span> · <span class="nw">' + nOf(o.projects.length, 'פרויקט', 'פרויקטים') + ' (' + money(o.totals.projects.amount) + ')</span> · <span class="nw">' +
+          nOf(o.retainers.length, 'ריטיינר', 'ריטיינרים') + ' (' + money(o.totals.retainers.amount) + ')</span></div></div>' +
+          (c.contentUrl ? '<div class="row"><div class="main t-sub"><a href="' + esc(c.contentUrl) + '" target="_blank" rel="noopener">טבלת התוכן</a> · טאב ' + esc(c.tab) + '</div></div>' : '')) +
+        '<div class="actions"><button class="btn btn-fill full t-head" id="b-paid"' + (openCount ? '' : ' disabled') + '>לקוח שילם</button>' +
+        '<button class="btn btn-tint m t-head" id="b-proj">פרויקט חדש</button><button class="btn btn-tint m t-head" id="b-exp">הוצאה</button><button class="btn btn-tint m t-head" id="b-set">הגדרות ומחירים</button></div>' +
         sect('פתוח (' + openCount + ')', o.videos.map(function (v) {
-          return '<div class="row"><div class="main">#' + esc(v.num) + ' <span class="sub">' + esc(v.type || 'בלי סוג') + (v.date ? ' · ' + esc(v.date) : '') + '</span></div><span class="num">' + money(v.price) + '</span></div>';
-        }).concat(o.projects.map(function (p) { return '<div class="row"><div class="main">פרויקט: ' + esc(p.name) + '</div><span class="num">' + money(p.price) + '</span></div>'; }),
-          o.retainers.map(function (x) { return '<div class="row"><div class="main">ריטיינר ' + month(x.month) + '</div><span class="num">' + money(x.amount) + '</span></div>'; })).join(''), openCount > 0) +
+          return '<div class="row"><div class="main"><div class="t-body">#' + esc(v.num) + '</div><div class="t-foot sec">' + esc(v.type || 'בלי סוג') + (v.date ? ' · ' + esc(v.date) : '') + '</div></div><span class="t-body num">' + money(v.price) + '</span></div>';
+        }).concat(o.projects.map(function (p) { return '<div class="row"><div class="main t-body">פרויקט: ' + esc(p.name) + '</div><span class="t-body num">' + money(p.price) + '</span></div>'; }),
+          o.retainers.map(function (x) { return '<div class="row"><div class="main t-body">ריטיינר ' + month(x.month) + '</div><span class="t-body num">' + money(x.amount) + '</span></div>'; })).join(''), openCount > 0) +
         sect('פרויקטים (' + c.projects.length + ')', c.projects.map(function (p) {
-          return '<div class="row"><div class="main"><b>' + esc(p.name) + '</b> <span class="tag ' + (p.paid ? 'g' : 'r') + '">' + (p.paid ? 'שולם' : 'לא שולם') + '</span>' +
-            '<div class="sub">' + esc(p.type) + ' · ' + date(p.date) + ' · עלות ' + money(p.cost) + ' (' + esc(p.costOwner) + (p.editor ? ': ' + esc(p.editor) : '') + ')' + (p.editorPaid ? ' · שולם לעורך' : '') + '</div></div>' +
-            '<div><div class="num">' + money(p.price) + '</div><button class="b s sm" onclick="editProject(' + esc(JSON.stringify(p.id)) + ')">עריכה</button></div></div>';
+          return '<div class="row"><div class="main"><div class="t-head">' + esc(p.name) + ' <span class="tag ' + (p.paid ? 'g' : 'r') + '">' + (p.paid ? 'שולם' : 'לא שולם') + '</span></div>' +
+            '<div class="t-foot sec">' + esc(p.type) + ' · ' + date(p.date) + ' · עלות ' + money(p.cost) + ' (' + esc(p.costOwner) + (p.editor ? ': ' + esc(p.editor) : '') + ')' + (p.editorPaid ? ' · שולם לעורך' : '') + '</div></div>' +
+            '<span class="t-body num">' + money(p.price) + '</span><button class="btn-sm t-sub" onclick="editProject(' + esc(JSON.stringify(p.id)) + ')">עריכה</button></div>';
         }).join('')) +
         sect('ריטיינרים', c.retainers.map(function (x) {
-          return '<div class="row"><div class="main">' + month(x.month) + ' <span class="tag ' + (x.paid ? 'g' : 'r') + '">' + (x.paid ? 'שולם' : 'לא שולם') + '</span></div><span class="num">' + money(x.amount) + '</span></div>';
+          return '<div class="row"><div class="main t-body">' + month(x.month) + ' <span class="tag ' + (x.paid ? 'g' : 'r') + '">' + (x.paid ? 'שולם' : 'לא שולם') + '</span></div><span class="t-body num ' + (x.paid ? 'sec' : '') + '">' + money(x.amount) + '</span></div>';
         }).join('')) +
         sect('היסטוריית תשלומים', c.payments.map(function (p) {
-          return '<div class="row"><div class="main">' + date(p.date) + ' · ' + esc(p.method) + (p.label ? ' · קו "' + esc(p.label) + '"' : '') + '<div class="sub">' + esc(p.covered) + (p.ref ? ' · ' + esc(p.ref) : '') + '</div></div><b class="num">' + money(p.amount) + '</b></div>';
+          return '<div class="row"><div class="main"><div class="t-body">' + date(p.date) + ' · ' + esc(p.method) + (p.label ? ' · קו "' + esc(p.label) + '"' : '') + '</div><div class="t-foot sec">' + esc(p.covered) + (p.ref ? ' · ' + esc(p.ref) : '') + '</div></div><span class="t-body num">' + money(p.amount) + '</span></div>';
         }).join('')) +
         sect('הוצאות', c.expenses.map(function (x) {
-          return '<div class="row"><div class="main">' + date(x.date) + ' · ' + esc(x.category) + (x.notes ? '<div class="sub">' + esc(x.notes) + '</div>' : '') +
-            (x.ref ? '<div class="sub">' + (/^https?:/.test(x.ref) ? '<a href="' + esc(x.ref) + '" target="_blank" rel="noopener">אסמכתא</a>' : esc(x.ref)) + '</div>' : '') + '</div><span class="num">' + money(x.amount) + '</span></div>';
+          return '<div class="row"><div class="main"><div class="t-body">' + date(x.date) + ' · ' + esc(x.category) + '</div>' + (x.notes ? '<div class="t-foot sec">' + esc(x.notes) + '</div>' : '') +
+            (x.ref ? '<div class="t-foot sec">' + (/^https?:/.test(x.ref) ? '<a href="' + esc(x.ref) + '" target="_blank" rel="noopener">אסמכתא</a>' : esc(x.ref)) + '</div>' : '') + '</div><span class="t-body num">' + money(x.amount) + '</span></div>';
         }).join('')) +
         sect('רווח לפי חודש · סה"כ ' + money(c.pnl.total.profit), c.pnl.months.map(function (m) {
-          return '<div class="row"><div class="main">' + month(m.month) + '<div class="sub">הכנסות ' + money(m.revenue) + ' · עלויות ' + money(m.cost) + partial(m.missing) + '</div></div><b class="num">' + money(m.profit) + '</b></div>';
+          return '<div class="row"><div class="main"><div class="t-body">' + month(m.month) + '</div><div class="t-foot sec">הכנסות ' + money(m.revenue) + ' · עלויות ' + money(m.cost) + partial(m.missing) + '</div></div><span class="t-head num">' + money(m.profit) + '</span></div>';
         }).join(''))
       );
       $('b-paid').onclick = function () { clientPaidForm(c); };
@@ -481,19 +822,22 @@
   // ---------- טעינה ----------
   /** skeleton בצורת המסך שייטען (בערך), כדי שהתוכן לא יקפוץ. */
   function skeleton(view) {
-    var stat = '<div class="stat"><div class="sk l s"></div><div class="sk v"></div></div>';
-    var card = function (n) { var r = ''; for (var i = 0; i < n; i++) r += '<div class="sk l' + (i % 3 === 0 ? ' m' : '') + '"></div>'; return '<div class="card"><div class="sk l s"></div>' + r + '</div>'; };
-    var pieCard = '<div class="card"><div class="sk l s"></div><div class="sk v"></div><div class="sk c"></div><div class="sk l"></div><div class="sk l m"></div></div>';
-    if (view === 'home') return '<div class="seg"><button class="on">&nbsp;</button><button>&nbsp;</button><button>&nbsp;</button><button>&nbsp;</button></div>' +
-      '<div class="grid">' + stat + stat + stat + stat + '</div><div class="cols">' + pieCard + pieCard + '</div>' + card(4);
-    if (view === 'my') return card(2) + pieCard + card(4);
+    var stat = '<div class="tile"><div class="sk l"></div><div class="sk v"></div></div>';
+    var rows = function (n) { var r = ''; for (var i = 0; i < n; i++) r += '<div class="skrow"><div class="sk l"' + (i % 2 ? ' style="width:40%"' : '') + '></div></div>'; return r; };
+    var card = function (n) { return '<section class="grp"><div class="gh"><div class="sk l" style="width:30%;height:12px"></div></div><div class="gbody">' + rows(n) + '</div></section>'; };
+    var pieCard = '<section class="grp"><div class="gh"><div class="sk l" style="width:40%;height:12px"></div></div><div class="gbody pad"><div class="sk c"></div>' + rows(3) + '</div></section>';
+    if (view === 'home') return '<div class="seg"><button class="on" tabindex="-1">&nbsp;</button><button tabindex="-1">&nbsp;</button><button tabindex="-1">&nbsp;</button><button tabindex="-1">&nbsp;</button></div>' +
+      '<div class="tiles">' + stat + stat + stat + stat + '</div><div class="cols">' + pieCard + pieCard + '</div>' + card(4);
+    if (view === 'my') return '<div class="tiles one">' + stat + '</div>' + pieCard + card(4);
+    if (view === 'client' || view === 'editor' || view === 'partners') return '<div class="tiles one">' + stat + '</div>' + card(2) + card(5);
     return card(6);
   }
 
   // ---------- גרפים (SVG, בלי ספרייה). צבע קבוע לכל שם; הסכומים מהשרת ----------
-  var PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
-  var C_BUSINESS = '#374151', C_OTHER = '#9ca3af', MAX_SLICES = 8;
-  function colorOf(key, colors) { return key === '__biz' ? C_BUSINESS : key === '__other' ? C_OTHER : PALETTE[((colors && colors[key]) || 0) % PALETTE.length]; }
+  // צבעי פרוסות = מחלקות pc0–pc9 (טוקנים: כחול, ירוק, כתום, סגול, טורקיז, ורוד, אינדיגו, צהוב, מנטה, חום). אדום לא בעוגה.
+  var PALETTE_N = 10, MAX_SLICES = 8;
+  function colorIdx(key, colors) { return key === '__biz' ? 0 : key === '__other' ? 'oth' : ((colors && colors[key]) || 0) % PALETTE_N; }
+  function colorOf(key, colors) { return 'pc' + (typeof colorIdx(key, colors) === 'number' ? colorIdx(key, colors) : '-' + colorIdx(key, colors)); }
   /** מעל 8 פרוסות → 7 הגדולות + "אחר". */
   function fold(slices) {
     if (slices.length <= MAX_SLICES) return slices;
@@ -506,7 +850,7 @@
     var R = 86, r = 54, c = 90, total = slices.reduce(function (a, x) { return a + x.amount; }, 0), a0 = -Math.PI / 2;
     var pt = function (rad, a) { return (c + rad * Math.cos(a)).toFixed(2) + ' ' + (c + rad * Math.sin(a)).toFixed(2); };
     var paths = slices.map(function (x) {
-      var tip = '<title>' + esc(x.label || x.key) + ': ' + money(x.amount) + ' (' + x.pct + '%)</title>', fill = ' fill="' + colors[x.key] + '"';
+      var tip = '<title>' + esc(x.label || x.key) + ': ' + money(x.amount) + ' (' + x.pct + '%)</title>', fill = ' class="' + colors[x.key] + '"';
       if (slices.length === 1) return '<path' + fill + ' fill-rule="evenodd" d="M' + pt(R, 0) + ' A' + R + ' ' + R + ' 0 1 1 ' + pt(R, Math.PI) + ' A' + R + ' ' + R + ' 0 1 1 ' + pt(R, 0) +
         ' M' + pt(r, 0) + ' A' + r + ' ' + r + ' 0 1 0 ' + pt(r, Math.PI) + ' A' + r + ' ' + r + ' 0 1 0 ' + pt(r, 0) + 'Z">' + tip + '</path>';
       var a1 = a0 + 2 * Math.PI * x.amount / total, big = a1 - a0 > Math.PI ? 1 : 0;
@@ -518,32 +862,34 @@
   }
   function counts(x) {
     var p = [];
-    if (x.videos) p.push(x.videos + ' סרטונים');
-    if (x.projects) p.push(x.projects + ' פרויקטים');
+    if (x.videos) p.push(nOf(x.videos, 'סרטון', 'סרטונים'));
+    if (x.projects) p.push(nOf(x.projects, 'פרויקט', 'פרויקטים'));
     return p.join(' · ');
   }
   /** עוגה + מקרא (שם, סכום, אחוז) + ניכויים. pie = { slices, deductions, total } מהשרת. */
   function pieBlock(pie, colors, label, opts) {
     opts = opts || {};
     var slices = fold(pie.slices.map(function (x) { return Object.assign({ label: opts.name ? opts.name(x) : x.key }, x); }));
-    if (!slices.length && !(pie.deductions || []).length) return '<div class="muted" style="padding:20px 0">אין נתונים לתקופה</div>';
-    // צבע לפי ישות; אם שתי ישויות באותה עוגה נופלות על אותו צבע (יותר מ-8) → הצבע הפנוי הבא
+    if (!slices.length && !(pie.deductions || []).length) return '<div class="empty t-sub">אין נתונים לתקופה</div>';
+    // צבע לפי ישות; אם שתי ישויות באותה עוגה נופלות על אותו צבע (יותר מ-10) → הצבע הפנוי הבא
     var used = {}, col = {};
-    slices.forEach(function (x) {
-      var c = colorOf(x.key, colors), i = PALETTE.indexOf(c);
-      for (var n = 0; i !== -1 && used[c] && n < PALETTE.length; n++) c = PALETTE[(i + n + 1) % PALETTE.length];
-      used[c] = 1; col[x.key] = c;
+    // "רווח העסק" (אם יש) מקבל ראשון את הצבע הראשון; השאר עוברים לצבע הפנוי הבא
+    slices.slice().sort(function (a, b) { return (b.key === '__biz') - (a.key === '__biz'); }).forEach(function (x) {
+      var i = colorIdx(x.key, colors);
+      if (typeof i === 'number') { for (var n = 0; used[i] && n < PALETTE_N; n++) i = (i + 1) % PALETTE_N; used[i] = 1; col[x.key] = 'pc' + i; }
+      else col[x.key] = 'pc-' + i;
     });
     var leg = slices.map(function (x) {
       var sub = counts(x) + (x.missing ? (counts(x) ? ' · ' : '') + '<span class="warn">' + x.missing + ' בלי סכום</span>' : '');
-      return '<div class="row"><div class="main"><span class="sw" style="background:' + col[x.key] + '"></span>' + esc(x.label) +
-        (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div><span class="num">' + money(x.amount) + '</span><span class="pct">' + x.pct + '%</span></div>';
+      return '<div class="lrow"><div class="main"><div class="t-sub"><span class="sw ' + col[x.key] + '"></span>' + esc(x.label) + '</div>' +
+        (sub ? '<div class="t-foot sec">' + sub + '</div>' : '') + '</div><span class="t-sub num">' + money(x.amount) + '</span><span class="pct t-cap1 num">' + x.pct + '%</span></div>';
     }).join('');
     var ded = (pie.deductions || []).map(function (x) {
-      return '<div class="row"><div class="main muted">פחות: ' + esc(opts.name ? opts.name(x) : x.key) + '</div><span class="num err">−' + money(x.amount) + '</span></div>';
+      return '<div class="lrow"><div class="main t-sub sec">פחות: ' + esc(opts.name ? opts.name(x) : x.key) + '</div><span class="t-sub num danger">−' + money(x.amount) + '</span></div>';
     }).join('');
-    return (slices.length ? '<div class="pie">' + donut(slices, col, label) + '<div class="legend">' + leg + '</div></div>' : '') +
-      (ded ? '<div class="ded">' + ded + '</div>' : '');
+    return (slices.length ? '<div class="pie"><div class="ring">' + donut(slices, col, label) +
+      '<div class="ctr"><span class="t-title2 num">' + money(pie.total) + '</span><span class="t-cap1">סה״כ</span></div></div><div class="legend">' + leg + '</div></div>' : '') +
+      (ded ? '<div class="ded" style="margin-top:12px">' + ded + '</div>' : '');
   }
   var PERIODS = [['month', 'החודש'], ['prev', 'חודש קודם'], ['year', 'השנה'], ['all', 'הכול']];
   S.period = 'month';
@@ -553,8 +899,8 @@
         b.onclick = function () { var y = window.scrollY; S.period = b.getAttribute('data-p'); onPick(); window.scrollTo(0, y); };
       });
     });
-    return '<div class="seg" role="tablist">' + PERIODS.map(function (p) {
-      return '<button role="tab" data-p="' + p[0] + '"' + (S.period === p[0] ? ' class="on" aria-selected="true"' : '') + '>' + p[1] + '</button>';
+    return '<div class="seg" role="tablist" aria-label="תקופה">' + PERIODS.map(function (p) {
+      return '<button role="tab" data-p="' + p[0] + '"' + (S.period === p[0] ? ' class="on" aria-selected="true"' : ' aria-selected="false"') + '>' + p[1] + '</button>';
     }).join('') + '</div>';
   }
   function periodName(labels) {
@@ -562,14 +908,14 @@
   }
 
   function sect(title, body, open) {
-    return '<details' + (open ? ' open' : '') + '><summary>' + title + '</summary><div class="in">' + (body || '<div class="muted">אין</div>') + '</div></details>';
+    return '<details class="grp"' + (open ? ' open' : '') + '><summary class="gbody row t-head"><span class="main">' + title + '</span>' + CHEV + '</summary><div class="in">' + (body || emptyRow()) + '</div></details>';
   }
 
   /** 5.1 — לקוח שילם. קודם קוראים את טבלת התוכן (קריאה בלבד) כדי לבחור עד איזה סרטון. */
   function clientPaidForm(c) {
-    openModal('<h2>לקוח שילם — ' + esc(c.name) + '</h2><div class="center">קורא את טבלת התוכן…</div>');
+    openModal(sheetHtml('לקוח שילם — ' + c.name, '<div class="center t-sub"><span class="spin" aria-hidden="true"></span>קורא את טבלת התוכן…</div>'));
     call('getClientContentInfo', [getToken(), c.name], function (r) {
-      if (!r.ok) return openModal('<h2>לקוח שילם</h2>' + linesHtml([r.message], 'e') + '<button class="b s full" onclick="closeModal()">סגור</button>');
+      if (!r.ok) return openModal(sheetHtml('לקוח שילם', linesHtml([r.message], 'e'), '', 'סגור'));
       var info = r.info, o = c.open;
       var nums = info.belowNums.slice().reverse();
       var fields = [
@@ -589,7 +935,7 @@
       o.retainers.forEach(function (x) { fields.push({ k: 'r:' + x.key, label: 'ריטיינר ' + month(x.month) + ' · ' + money(x.amount), type: 'check', value: true }); });
       fields.push({ k: 'manualDivider', label: info.allowed ? 'אני אוסיף את הקו ידנית (לא לכתוב בטבלה)' : 'הקו יתווסף ידנית (הטבלה הזו לא ברשימת ההיתר)',
         type: 'check', value: !info.allowed, disabled: !info.allowed });
-      var extra = info.lastDivider ? '<div class="sub muted">קו אחרון בטבלה: "' + esc(info.lastDivider.label) + '" (עמודה ' + esc(info.lastDivider.colLetter) + ')</div>' : '';
+      var extra = info.lastDivider ? '<p class="note t-foot">קו אחרון בטבלה: "' + esc(info.lastDivider.label) + '" (עמודה ' + esc(info.lastDivider.colLetter) + ')</p>' : '';
       if (!nums.length) extra += '<div class="msg w">אין סרטונים מתחת לקו האחרון בטבלה</div>';
       openForm('לקוח שילם — ' + c.name, fields, function (v) {
         var params = { client: c.name, amount: v.amount, date: v.date, method: v.method, ref: v.ref, upToVideo: v.upToVideo, label: v.label,
@@ -664,13 +1010,13 @@
       });
       if (!Object.keys(changed).length) return formErr('לא שונה כלום');
       runAct({ title: 'הגדרות לקוח', fn: 'actionClientSettings', args: function (cf) { return [getToken(), c.name, changed, cf]; } });
-    }, '<div class="sub muted">שדה ריק = אין מחיר (התראה). 0 = חינם במפורש.</div>');
+    }, '<p class="note t-foot">שדה ריק = אין מחיר (התראה). 0 = חינם במפורש.</p>');
   }
 
   // ---------- 6.4 עורכים ----------
   function editorsView() {
     loadHome(function (h) {
-      setMain('<div class="btns"><button class="b s" id="b-new-ed">+ עורך חדש</button></div><div class="card">' + (h.editors.map(editorRow).join('') || '<div class="muted">אין</div>') + '</div>');
+      setMain(grp('', h.editors.map(editorRow).join('') || emptyRow()));
       $('b-new-ed').onclick = newEditorForm;
     });
   }
@@ -680,19 +1026,20 @@
       if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>');
       var e = r.page, o = e.open;
       var total = o.totals.videos.amount + o.totals.projects.amount, miss = o.totals.videos.missing + o.totals.projects.missing;
-      var items = o.videos.map(function (v) { return { k: 'v:' + v.key, label: v.key + ' · ' + (v.type || 'בלי סוג') + (v.date ? ' · ' + v.date : ''), amount: v.cost }; })
-        .concat(o.projects.map(function (p) { return { k: 'p:' + p.id, label: 'פרויקט: ' + p.client + ' — ' + p.name, amount: p.cost }; }));
+      var items = o.videos.map(function (v) { return { k: 'v:' + v.key, name: esc(v.client) + ' <span class="num">#' + esc(String(v.key).split('#').slice(1).join('#')) + '</span>',
+          sub: esc(v.type || 'בלי סוג') + (v.date ? ' · ' + esc(v.date) : ''), amount: v.cost }; })
+        .concat(o.projects.map(function (p) { return { k: 'p:' + p.id, name: 'פרויקט: ' + esc(p.client) + ' — ' + esc(p.name), sub: '', amount: p.cost }; }));
       setMain(
-        '<div class="btns"><button class="b s sm" onclick="go(\'editors\')">→ עורכים</button></div>' +
-        '<div class="card"><h2>' + esc(e.name) + '</h2><div class="k muted">מגיע עכשיו</div><div class="big">' + money(total) + '</div>' + partial(miss) +
-        '<div class="sub">' + items.length + ' פריטים פתוחים</div></div>' +
-        '<div class="btns"><button class="b" id="b-pay"' + (items.length ? '' : ' disabled') + '>שילמתי לעורך</button><button class="b s" id="b-eset">הגדרות</button></div>' +
-        sect('פתוח (' + items.length + ')', items.map(function (i) {
-          return '<div class="chk"><input type="checkbox" class="pick" data-k="' + esc(i.k) + '" data-a="' + (i.amount === null ? '' : i.amount) + '" checked><span>' + esc(i.label) + '</span><span class="num">' + money(i.amount) + '</span></div>';
-        }).join('') + (items.length ? '<div class="row"><div class="main">נבחר</div><b class="num" id="picked"></b></div>' : ''), items.length > 0) +
+        '<div class="tiles one">' + tile('מגיע עכשיו', money(total), partial(miss) + '<span class="t-foot sec">' + items.length + ' פריטים פתוחים</span>') + '</div>' +
+        '<div class="actions"><button class="btn btn-fill full t-head" id="b-pay"' + (items.length ? '' : ' disabled') + '>שילמתי לעורך</button><button class="btn btn-tint m t-head" id="b-eset">הגדרות</button></div>' +
+        sect('פתוח (' + items.length + ')', items.map(function (i, n) {
+          return '<div class="row swr"><label for="pk-' + n + '" class="main"><span class="t-body" style="display:block">' + i.name + '</span>' + (i.sub ? '<span class="t-foot sec" style="display:block">' + i.sub + '</span>' : '') + '</label>' +
+            (i.amount === null ? '<span class="tag y">⚠ בלי עלות</span>' : '<span class="t-body num">' + money(i.amount) + '</span>') +
+            '<input type="checkbox" class="pick switch" id="pk-' + n + '" data-k="' + esc(i.k) + '" data-a="' + (i.amount === null ? '' : i.amount) + '" checked></div>';
+        }).join('') + (items.length ? '<div class="row"><div class="main t-head">נבחר</div><span class="t-head num" id="picked"></span></div>' : ''), items.length > 0) +
         sect('היסטוריית תשלומים', e.payments.map(function (p) {
-          return '<div class="row"><div class="main">' + date(p.date) + ' · ' + p.count + ' פריטים' + (p.notes ? '<div class="sub">' + esc(p.notes) + '</div>' : '') +
-            '<div class="sub">' + (p.invoice ? '<a href="' + esc(p.invoice) + '" target="_blank" rel="noopener">חשבונית</a>' : '<span class="warn">אין חשבונית</span>') + ' · ' + esc(p.id) + '</div></div><b class="num">' + money(p.amount) + '</b></div>';
+          return '<div class="row"><div class="main"><div class="t-body">' + date(p.date) + ' · ' + p.count + ' פריטים</div>' + (p.notes ? '<div class="t-foot sec">' + esc(p.notes) + '</div>' : '') +
+            '<div class="t-foot sec">' + (p.invoice ? '<a href="' + esc(p.invoice) + '" target="_blank" rel="noopener">חשבונית</a>' : '<span class="warn">⚠ אין חשבונית</span>') + ' · <span class="ltr">' + esc(p.id) + '</span></div></div><span class="t-body num">' + money(p.amount) + '</span></div>';
         }).join(''))
       );
       var picks = function () { return Array.prototype.filter.call(document.querySelectorAll('.pick'), function (x) { return x.checked; }); };
@@ -730,7 +1077,7 @@
           fields.forEach(function (f) { if (String(v[f.k]) !== String(s[f.k])) changed[f.k] = v[f.k]; });
           if (!Object.keys(changed).length) return formErr('לא שונה כלום');
           runAct({ title: 'הגדרות עורך', fn: 'actionEditorSettings', args: function (cf) { return [getToken(), e.name, changed, cf]; } });
-        }, '<div class="sub muted">עלות עורך נקבעת בהגדרות הלקוח.</div>');
+        }, '<p class="note t-foot">עלות עורך נקבעת בהגדרות הלקוח.</p>');
       };
     }, function (m) { setMain('<div class="msg e">' + esc(m) + '</div>'); });
   }
@@ -740,18 +1087,19 @@
       { k: 'Gmail', label: 'מייל', type: 'email', value: '' }];
     openForm('עורך חדש', fields, function (v) {
       runAct({ title: 'עורך חדש', fn: 'actionAddEditor', args: function (cf) { return [getToken(), v, cf]; } });
-    }, '<div class="sub muted">כדי שהעורך יוכל להיכנס: להוסיף את המייל שלו בטאב הרשאות (editor + שם עורך מקושר).</div>');
+    }, '<p class="note t-foot">כדי שהעורך יוכל להיכנס: להוסיף את המייל שלו בטאב הרשאות (editor + שם עורך מקושר).</p>');
   }
 
   // ---------- התראות ----------
+  var ICON_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="m7.5 12.3 3 3 6-6.3"/></svg>';
   function alertsView() {
     call('getAlerts', [getToken()], function (r) {
       var dot = $('alert-dot'); dot.textContent = r.alerts.length; dot.classList.toggle('hidden', !r.alerts.length);
-      setMain('<div class="card"><h2>התראות פתוחות (' + r.alerts.length + ')</h2>' + (r.alerts.map(function (a) {
-        return '<div class="row"><div class="main"><span class="tag r">' + esc(a.type) + '</span> <b>' + esc(a.who) + '</b><div class="sub">' + esc(a.detail) + ' · ' + date(a.date) + '</div></div>' +
-          '<button class="b s sm" onclick="resolveAlert(' + esc(JSON.stringify(a.id)) + ')">טופל</button></div>';
-      }).join('') || '<div class="ok">אין התראות פתוחות ✓</div>') + '</div>' +
-        '<div class="sub muted">התראה שהבעיה שלה עדיין קיימת תיפתח מחדש בריצה הבאה.</div>');
+      setMain(grp('התראות פתוחות (' + r.alerts.length + ')', r.alerts.map(function (a) {
+        return '<div class="row"><div class="main"><div class="t-head"><span class="tag r">' + esc(a.type) + '</span> ' + esc(a.who) + '</div><div class="t-foot sec">' + esc(a.detail) + ' · ' + date(a.date) + '</div></div>' +
+          '<button class="btn-sm t-sub" onclick="resolveAlert(' + esc(JSON.stringify(a.id)) + ')">טופל</button></div>';
+      }).join('') || '<div class="empty ok-state t-sub">' + ICON_OK + '<span>אין התראות פתוחות</span></div>',
+        'התראה שהבעיה שלה עדיין קיימת תיפתח מחדש בריצה הבאה.'));
     });
   }
   function resolveAlert(id) {
@@ -759,22 +1107,35 @@
   }
 
   // ---------- עוד + 6.6 שותפים ----------
+  function iconRow(icon, label, onclick, opts) {
+    opts = opts || {};
+    return '<button class="row' + (opts.cls ? ' ' + opts.cls : '') + '"' + (opts.id ? ' id="' + opts.id + '"' : '') + (onclick ? ' onclick="' + onclick + '"' : '') + '>' +
+      (icon ? '<span class="ico" aria-hidden="true">' + icon + '</span>' : '') + '<span class="main t-body">' + label + '</span>' + (opts.chev ? CHEV : '') + '</button>';
+  }
+  var IC = function (d) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; };
   function moreView() {
     loadHome(function () {
-      setMain('<div class="card">' +
-        '<button class="b full" onclick="go(\'partners\')">שותפים — רווח לפי חודש</button>' +
-        '<button class="b s full" onclick="projectForm(null, \'\')">פרויקט חדש</button>' +
-        '<button class="b s full" onclick="expenseForm(\'\')">הוצאה חדשה</button>' +
-        '<button class="b s full" onclick="newEditorForm()">עורך חדש</button>' +
-        '<button class="b s full" id="b-refresh">רענון עכשיו (קריאת טבלאות התוכן)</button>' +
-        '<button class="b s full" onclick="undoLast()">ביטול הפעולה האחרונה</button>' +
-        '</div>');
+      var u = S.user || {};
+      setMain(
+        grp('חשבון', '<div class="row"><span class="av t-head" aria-hidden="true">' + esc(String(u.email || '?').charAt(0).toUpperCase()) + '</span>' +
+          '<div class="main"><div class="t-body em">' + esc(u.email) + '</div><div class="t-foot sec">' + (u.role === 'admin' ? 'מנהל' : 'עורך') + '</div></div></div>') +
+        grp('פעולות',
+          iconRow(IC('<path d="M4 19V9M10 19V5M16 19v-7M21 19H3"/>'), 'שותפים — רווח לפי חודש', "go('partners')", { chev: 1 }) +
+          iconRow(IC('<path d="M12 5v14M5 12h14"/>'), 'פרויקט חדש', "projectForm(null, '')") +
+          iconRow(IC('<path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6"/>'), 'הוצאה חדשה', "expenseForm('')") +
+          iconRow(IC('<circle cx="10" cy="8" r="3.5"/><path d="M3.5 20c.6-3.6 3.2-5.6 6.5-5.6M18 14v6M15 17h6"/>'), 'עורך חדש', 'newEditorForm()')) +
+        grp('תחזוקה',
+          iconRow(IC('<path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/>'), 'רענון עכשיו', '', { id: 'b-refresh' }) +
+          iconRow(IC('<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>'), 'ביטול הפעולה האחרונה', 'undoLast()', { cls: 'danger red' }),
+          'רענון קורא את טבלאות התוכן. עד דקה.') +
+        logoutGroup() +
+        '<p class="foot-link t-foot"><a href="https://cashflow.brandemedia.co.il/privacy.html" target="_blank" rel="noopener">מדיניות פרטיות</a></p>');
       $('b-refresh').onclick = function () {
-        var b = $('b-refresh'); b.disabled = true; b.textContent = 'קורא טבלאות… (עד דקה)';
+        var b = $('b-refresh'), t = b.querySelector('.main'); b.disabled = true; t.textContent = 'קורא טבלאות…';
         call('refreshNow', [getToken()], function (r) {
-          b.disabled = false; b.textContent = 'רענון עכשיו (קריאת טבלאות התוכן)';
-          openModal('<h2>רענון</h2>' + linesHtml(r.ok ? r.summary : [r.message], r.ok ? 'o' : 'e') + '<button class="b s full" onclick="closeModal()">סגור</button>');
-        }, function (m) { b.disabled = false; toast(m); });
+          b.disabled = false; t.textContent = 'רענון עכשיו';
+          openModal(sheetHtml('רענון', linesHtml(r.ok ? r.summary : [r.message], r.ok ? 'o' : 'e'), '', 'סגור'));
+        }, function (m) { b.disabled = false; t.textContent = 'רענון עכשיו'; toast(m); });
       };
     });
   }
@@ -782,20 +1143,20 @@
 
   function partnersView() {
     loadHome(function (h) {
-      setMain('<div class="btns"><button class="b s sm" onclick="go(\'more\')">→ עוד</button></div>' +
-        '<div class="card"><h2>רווח מצטבר</h2><div class="big">' + money(h.totalPnl.profit) + '</div>' + partial(h.totalPnl.missing) +
-        '<div class="sub">הכנסות ' + money(h.totalPnl.revenue) + ' · עלויות ' + money(h.totalPnl.cost) + '</div></div>' +
+      setMain('<div class="tiles one">' + tile('רווח מצטבר', money(h.totalPnl.profit), partial(h.totalPnl.missing)) + '</div>' +
+        '<p class="gf t-foot">הכנסות ' + money(h.totalPnl.revenue) + ' · עלויות ' + money(h.totalPnl.cost) + '</p>' +
         h.partners.map(function (p) {
-          return sect(month(p.month) + ' · ' + money(p.profit), '<div class="sub">הכנסות ' + money(p.revenue) + ' · עלויות ' + money(p.cost) + '</div>' + partnerRows(p), p.month === h.month);
+          return sect(month(p.month) + ' · ' + money(p.profit), '<div class="row"><div class="main t-foot sec">הכנסות ' + money(p.revenue) + ' · עלויות ' + money(p.cost) + '</div></div>' + partnerRows(p), p.month === h.month);
         }).join(''));
     });
   }
 
   // ---------- 6.5 דף עורך אישי ----------
   function myPage() {
+    S.screen = { t: 'שלום', large: 1 };
     setMain(skeleton('my'));
     call('getMyPage', [getToken()], function (r) {
-      if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>');
+      if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>' + logoutGroup());
       renderMy(r.page);
     });
   }
@@ -806,31 +1167,30 @@
     // צבע קבוע ללקוח בכל התקופות: לפי הסדר הא״ב של כל הלקוחות שלו
     var keys = {}; Object.keys(E.periods).forEach(function (k) { E.periods[k].slices.forEach(function (x) { keys[x.key] = 1; }); });
     Object.keys(keys).sort().forEach(function (k, i) { colors[k] = i; });
+    S.screen = { t: 'שלום ' + p.name, large: 1 };
     setMain(
-      '<div class="cols">' +
-      '<div class="card"><h2>שלום ' + esc(p.name) + '</h2><div class="k muted">מגיע לך עכשיו</div><div class="big">' + money(p.due.amount) + '</div>' +
+      '<div class="tiles one">' + tile('מגיע לך עכשיו', money(p.due.amount), '<span class="t-foot sec">' + p.due.count + ' פריטים מאז התשלום האחרון</span>') + '</div>' +
       (p.due.missing ? '<div class="msg w">' + p.due.missing + ' פריטים עוד בלי מחיר. הסכום יתעדכן כשיוסף ישלים.</div>' : '') +
-      '<div class="sub">' + p.due.count + ' פריטים מאז התשלום האחרון</div></div>' +
-      '<div class="card"><h2>מאיפה הגיע הכסף שלי</h2>' + periodSeg(function () { renderMy(p); }) +
-      '<div class="sub muted">' + esc(periodName(E.labels)) + ' · כולל מה שכבר שולם</div><div class="total">' + money(X.amount) + '</div>' + partial(X.missing) +
-      '<div style="margin-top:6px"></div>' + pieBlock({ slices: X.slices, deductions: [], total: X.amount }, colors, 'הכסף שלי לפי לקוח') +
-      (X.pending.length ? '<div class="ded">' + X.pending.map(function (x) {
-        return '<div class="row"><div class="main muted">' + esc(x.key) + '<div class="sub">' + counts(x) + '</div></div><span class="warn sub">עוד בלי מחיר</span></div>';
-      }).join('') + '</div>' : '') + '</div>' +
-      '</div>' +
+      grp('מאיפה הגיע הכסף שלי · ' + esc(periodName(E.labels)) + ' · כולל מה שכבר שולם',
+        '<div class="pad">' + periodSeg(function () { renderMy(p); }) + partial(X.missing) +
+        pieBlock({ slices: X.slices, deductions: [], total: X.amount }, colors, 'הכסף שלי לפי לקוח') +
+        (X.pending.length ? '<div class="ded" style="margin-top:12px">' + X.pending.map(function (x) {
+          return '<div class="lrow"><div class="main"><div class="t-sub">' + esc(x.key) + '</div><div class="t-foot sec">' + counts(x) + '</div></div><span class="tag y">עוד בלי מחיר</span></div>';
+        }).join('') + '</div>' : '') + '</div>') +
       sect('סרטונים שלא שולמו (' + p.videos.length + ')', Object.keys(byClient).sort().map(function (c) {
-        return '<div class="sub" style="margin-top:8px"><b>' + esc(c) + '</b></div>' + byClient[c].map(function (v) {
-          return '<div class="row"><div class="main">#' + esc(v.num) + ' <span class="sub">' + esc(v.type || '') + '</span></div><span class="num">' + money(v.amount) + '</span></div>';
+        return '<div class="subh t-foot">' + esc(c) + '</div>' + byClient[c].map(function (v) {
+          return '<div class="row"><div class="main"><div class="t-body">#' + esc(v.num) + '</div><div class="t-foot sec">' + esc(v.type || '') + '</div></div><span class="t-body num">' + money(v.amount) + '</span></div>';
         }).join('');
       }).join(''), true) +
       (p.projects.length ? sect('פרויקטים (' + p.projects.length + ')', p.projects.map(function (x) {
-        return '<div class="row"><div class="main">' + esc(x.client) + ' — ' + esc(x.name) + '</div><span class="num">' + money(x.amount) + '</span></div>';
+        return '<div class="row"><div class="main t-body">' + esc(x.client) + ' — ' + esc(x.name) + '</div><span class="t-body num">' + money(x.amount) + '</span></div>';
       }).join(''), true) : '') +
       sect('היסטוריית תשלומים', p.payments.map(function (x) {
-        return '<div class="row"><div class="main">' + date(x.date) + ' · ' + x.count + ' פריטים<div class="sub">' +
-          (x.hasInvoice ? '<span class="ok">חשבונית ✓</span>' : '<button class="b sm" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">העלאת חשבונית</button>') +
-          '</div></div><b class="num">' + money(x.amount) + '</b></div>';
-      }).join(''), true)
+        return '<div class="row"><div class="main"><div class="t-body">' + date(x.date) + ' · ' + x.count + ' פריטים</div><div class="t-foot">' +
+          (x.hasInvoice ? '<span class="ok">חשבונית ✓</span>' : '<span class="warn">⚠ אין חשבונית</span>') + '</div></div><span class="t-body num">' + money(x.amount) + '</span>' +
+          (x.hasInvoice ? '' : '<button class="btn-sm t-sub" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">העלאת חשבונית</button>') + '</div>';
+      }).join(''), true) +
+      logoutGroup()
     );
   }
   function myInvoice(paymentId) {
