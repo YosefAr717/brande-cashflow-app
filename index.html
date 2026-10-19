@@ -418,7 +418,7 @@
   function setToken(t) {
     memToken = t;
     STORES.forEach(function (s) { try { t ? s.setItem(TOKEN_KEY, t) : s.removeItem(TOKEN_KEY); } catch (e) {} });
-    if (!t) setRole(null);
+    if (!t) { setRole(null); clearSnaps(); }
   }
   // התפקיד (לא סוד) נשמר ליד הטוקן: טעינה ראשונה בבקשה אחת (getAdminHome / getMyPage) במקום getCurrentUser + עוד אחת.
   var ROLE_KEY = 'brande_role', memRole = null;
@@ -429,6 +429,46 @@
   function setRole(r) {
     memRole = r;
     STORES.forEach(function (s) { try { r ? s.setItem(ROLE_KEY, r) : s.removeItem(ROLE_KEY); } catch (e) {} });
+  }
+
+  // ---------- snapshot במכשיר: ציור מיידי בפתיחה, רענון ברקע ----------
+  // מפתח לכל משתמש: brande_snap_<hash קצר של המייל>. משתמש אחר / יציאה / AUTH_REQUIRED → כל ה-snapshots נמחקים.
+  // אדמין: getAdminHome (home + lists + user). עורך: getMyPage בלבד (מה שהשרת כבר סינן לו).
+  var SNAP_PREFIX = 'brande_snap', UID_KEY = 'brande_uid', SNAP_MAX = 1000000, SNAP_OLD_MS = 10 * 60 * 1000;
+  function lsGet(k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { window.localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+  function lsRemove(k) { try { window.localStorage.removeItem(k); } catch (e) {} }
+  /** FNV-1a 32 ביט → 8 תווי hex. רק להפרדת מפתחות בין משתמשים, לא אבטחה. */
+  function emailHash(email) {
+    var h = 0x811c9dc5, s = String(email || '').trim().toLowerCase();
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    return ('0000000' + h.toString(16)).slice(-8);
+  }
+  function snapKey() { var u = lsGet(UID_KEY); return u ? SNAP_PREFIX + '_' + u : null; }
+  function readSnap() {
+    var k = snapKey(), raw = k && lsGet(k);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (e) { lsRemove(k); return null; }
+  }
+  function saveSnap(role, data) {
+    var k = snapKey(); if (!k) return;
+    var json = JSON.stringify({ at: Date.now(), role: role, data: data });
+    if (json.length > SNAP_MAX) { console.warn('snapshot גדול מ-1MB (' + json.length + ') — לא נשמר'); lsRemove(k); return; }
+    if (!lsSet(k, json)) lsRemove(k);
+  }
+  function clearSnaps() {
+    try {
+      var ls = window.localStorage, keys = [];
+      for (var i = 0; i < ls.length; i++) { var k = ls.key(i); if (k && k.indexOf(SNAP_PREFIX) === 0) keys.push(k); }
+      keys.forEach(function (k) { ls.removeItem(k); });
+      ls.removeItem(UID_KEY);
+    } catch (e) {}
+  }
+  /** המשתמש המחובר. אם זה משתמש אחר מהשמור — מוחקים קודם את כל ה-snapshots. */
+  function setUid(email) {
+    var u = emailHash(email);
+    if (lsGet(UID_KEY) !== u) clearSnaps();
+    lsSet(UID_KEY, u);
   }
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -516,7 +556,7 @@
 
   // ---------- כניסה ----------
   function loginView(note) {
-    $('nav').classList.add('hidden');
+    $('nav').classList.add('hidden'); $('sync').classList.add('hidden');
     S.screen = { login: 1 };
     setMain('<div class="login"><div class="brand"><h1 class="t-large">Brande CashFlow</h1><p class="t-foot">ניהול תזרים</p></div>' +
       (note ? '<div class="msg w">' + esc(note) + '</div>' : '') +
@@ -585,17 +625,23 @@
   }
   /** זמן טעינת הדף: מתחילת הניווט עד שהמסך הראשון עם נתונים צויר. */
   function perfLoaded(fn) {
-    if (!S.pageLoad && /^(getAdminHome|getMyPage)$/.test(fn)) S.pageLoad = Math.round(performance.now());
     if (/^(getAdminHome|getMyPage)$/.test(fn)) S.boot = false;
+  }
+  /** טעינת הדף: מתחילת הניווט עד סוף הציור הראשון של מסך עם נתונים. מקור: snapshot או שרת. */
+  function markPaint() {
+    if (S.pageLoad) return;
+    S.pageLoad = Math.round(performance.now()); S.loadSrc = S.renderSrc || 'שרת';
   }
   function perfRows() {
     var t = S.timing || {}, ms = function (v) { return v === null || v === undefined ? '—' : v + ' ms'; };
     var row = function (k, v) { return '<div class="row"><div class="main t-body">' + k + '</div><span class="t-body num">' + v + '</span></div>'; };
     return row('בקשה אחרונה', '<span class="ltr">' + esc(t.fn || '—') + '</span>') + row('שרת (סה״כ)', ms(t.total)) +
-      row('טעינת נתונים', ms(t.load) + (t.cache ? ' · ' + esc(t.cache) : '')) + row('הלוך-חזור', ms(t.rt)) + row('טעינת הדף', ms(S.pageLoad));
+      row('טעינת נתונים', ms(t.load) + (t.cache ? ' · ' + esc(t.cache) : '')) + row('הלוך-חזור', ms(t.rt)) + row('טעינת הדף', ms(S.pageLoad)) +
+      row('מקור', esc(S.loadSrc || '—'));
   }
 
   function applyUser(user) {
+    setUid(user.email);
     S.user = user;
     $('who').textContent = user.email;
     $('av').textContent = String(user.email || '?').charAt(0).toUpperCase();
@@ -732,16 +778,22 @@
    */
   var HOME_TTL_MS = 120000;
   function homeFresh() { return !!S.home && Date.now() - S.homeAt < HOME_TTL_MS; }
-  function setSync(on) { $('sync').classList.toggle('hidden', !on); }
+  function setSync(on) {
+    var old = on && S.snapAt && Date.now() - S.snapAt > SNAP_OLD_MS;
+    $('sync').textContent = old ? 'עודכן לפני ' + Math.round((Date.now() - S.snapAt) / 60000) + ' דקות · מתעדכן…' : 'מתעדכן…';
+    $('sync').classList.toggle('hidden', !on);
+  }
   function loadHome(cb, opts) {
     opts = opts || {};
     var seq = S.navSeq, fresh = homeFresh();
-    if (fresh) { cb(S.home); setSync(true); }
+    if (fresh) { S.renderSrc = S.fromSnap ? 'snapshot' : 'cache'; cb(S.home); setSync(true); }
     call('getAdminHome', [getToken()], function (r) {
+      S.fromSnap = false; S.snapAt = null; S.renderSrc = 'שרת';
       setSync(false);
       var changed = !S.home || JSON.stringify(r.home) !== JSON.stringify(S.home) || JSON.stringify(r.lists) !== JSON.stringify(S.lists);
       S.home = r.home; S.lists = r.lists; S.homeAt = Date.now();
-      if (r.user && !S.user) applyUser(r.user);
+      if (r.user && (!S.user || S.user.email !== r.user.email)) applyUser(r.user);
+      saveSnap('admin', { home: r.home, lists: r.lists, user: r.user || S.user });
       var dot = $('alert-dot'); dot.textContent = r.home.alertsOpen; dot.classList.toggle('hidden', !r.home.alertsOpen);
       if (!fresh) return cb(r.home);
       if (seq !== S.navSeq || !changed) return;
@@ -798,6 +850,7 @@
         row.classList.toggle('open'); row.setAttribute('aria-expanded', row.classList.contains('open') ? 'true' : 'false');
       };
     });
+    markPaint();
   }
   function partnerRows(p) {
     if (!p) return emptyRow('אין נתונים לחודש');
@@ -1213,12 +1266,20 @@
   // ---------- 6.5 דף עורך אישי ----------
   function myPage() {
     S.screen = { t: 'שלום', large: 1 };
-    setMain(skeleton('my'));
+    var snapPage = S.mySnap; S.mySnap = null;
+    if (snapPage) { S.renderSrc = 'snapshot'; renderMy(snapPage); setSync(true); }
+    else setMain(skeleton('my'));
     call('getMyPage', [getToken()], function (r) {
+      S.snapAt = null; setSync(false);
       if (!r.ok && S.boot) { S.boot = false; setRole(null); return bootSlow(); }   // התפקיד השמור כבר לא נכון
       if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>' + logoutGroup());
+      saveSnap('editor', { page: r.page });
+      if (snapPage && JSON.stringify(snapPage) === JSON.stringify(r.page)) return;   // לא השתנה
+      S.renderSrc = 'שרת';
+      var y = snapPage ? window.scrollY : 0;
       renderMy(r.page);
-    });
+      if (snapPage) window.scrollTo(0, y);
+    }, function (m) { setSync(false); toast('שגיאה: ' + m); });
   }
   function renderMy(p) {
     var byClient = {};
@@ -1252,6 +1313,7 @@
       }).join(''), true) +
       logoutGroup()
     );
+    markPaint();
   }
   function myInvoice(paymentId) {
     var fields = [{ k: 'file', label: 'קובץ חשבונית (PDF / תמונה)', type: 'file' }];
@@ -1277,8 +1339,22 @@
     var t = getToken(), role = getRole();
     if (!t) return loginView();
     // תפקיד שמור → בקשה אחת. השרת מאמת את הטוקן בכל מקרה (AUTH_REQUIRED → כניסה, FORBIDDEN → bootSlow).
-    if (role === 'admin') { S.boot = true; $('nav').classList.remove('hidden'); return go('home'); }
-    if (role === 'editor') { S.boot = true; return myPage(); }
+    var snap = role ? readSnap() : null;
+    if (snap && snap.role !== role) snap = null;
+    if (role === 'admin') {
+      S.boot = true; $('nav').classList.remove('hidden');
+      if (snap && snap.data && snap.data.home) {   // ציור מיידי מה-snapshot; go('home') מרענן ברקע
+        S.home = snap.data.home; S.lists = snap.data.lists; S.homeAt = Date.now(); S.fromSnap = true; S.snapAt = snap.at;
+        if (snap.data.user) applyUser(snap.data.user);
+        var dot = $('alert-dot'); dot.textContent = S.home.alertsOpen; dot.classList.toggle('hidden', !S.home.alertsOpen);
+      }
+      return go('home');
+    }
+    if (role === 'editor') {
+      S.boot = true;
+      if (snap && snap.data && snap.data.page) { S.mySnap = snap.data.page; S.snapAt = snap.at; }
+      return myPage();
+    }
     bootSlow();
   })();
 </script>
