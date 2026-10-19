@@ -62,6 +62,55 @@
     #toast { position: fixed; bottom: 80px; left: 16px; right: 16px; max-width: 600px; margin: auto; background: #323232; color: #fff; padding: 12px; border-radius: 8px; z-index: 20; }
     .center { text-align: center; padding: 40px 0; color: var(--mute); }
     a { color: var(--pri); }
+
+    /* טעינה: skeleton בגובה קבוע — בלי קפיצות */
+    .sk { background: linear-gradient(90deg, #eceef1 25%, #f6f7f9 37%, #eceef1 63%); background-size: 400% 100%; animation: sk 1.3s ease infinite; border-radius: 8px; }
+    @keyframes sk { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+    .sk.l { height: 14px; margin: 10px 0; } .sk.l.s { width: 40%; } .sk.l.m { width: 70%; }
+    .sk.v { height: 24px; width: 60%; margin-top: 8px; } .sk.c { height: 180px; width: 180px; border-radius: 50%; margin: 8px auto; }
+    @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+    .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: rot .7s linear infinite; vertical-align: -3px; }
+    @keyframes rot { to { transform: rotate(360deg); } }
+
+    /* בורר תקופה */
+    .seg { display: flex; background: #e8eaed; border-radius: 10px; padding: 3px; margin-bottom: 12px; gap: 2px; }
+    .seg button { flex: 1; border: 0; background: none; padding: 8px 4px; border-radius: 8px; font-size: 14px; color: var(--txt); font-family: inherit; cursor: pointer; }
+    .seg button.on { background: var(--card); box-shadow: 0 1px 2px rgba(0,0,0,.12); font-weight: bold; }
+
+    /* עוגה */
+    .pie { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; }
+    .pie svg { width: 180px; height: 180px; flex: none; margin: 0 auto; }
+    .pie svg path { stroke: var(--card); stroke-width: 2; }
+    .pie svg path:hover { opacity: .85; }
+    .legend { flex: 1; min-width: 220px; }
+    .legend .row { padding: 7px 0; }
+    .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-left: 6px; vertical-align: 0; flex: none; }
+    .pct { color: var(--mute); font-size: 12px; min-width: 44px; text-align: left; direction: ltr; }
+    .ded .row { padding: 6px 0; font-size: 14px; }
+    .total { font-size: 26px; font-weight: bold; direction: ltr; text-align: right; }
+    .ed-pie { padding: 4px 0 10px; }
+    .cols { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
+
+    /* דסקטופ: תוכן ממורכז עד 1100px, ניווט עליון, גרידים */
+    @media (min-width: 900px) {
+      header { padding: 12px 24px; }
+      header h1 { font-size: 19px; }
+      main { max-width: 1100px; padding: 20px 24px 40px; }
+      header { position: static; }
+      nav { position: sticky; top: 0; bottom: auto; justify-content: center; border-top: 0; border-bottom: 1px solid var(--line); }
+      nav button { flex: none; padding: 12px 22px; font-size: 15px; }
+      nav button.on::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: 0; height: 2px; background: var(--pri); }
+      .grid { grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; }
+      .stat { padding: 16px; } .stat .v { font-size: 24px; }
+      .card { padding: 18px 20px; margin-bottom: 16px; } .card h2 { font-size: 17px; }
+      .cols { grid-template-columns: 1fr 1fr; gap: 0 16px; align-items: start; }
+      .cols.three { grid-template-columns: 1fr 1fr 1fr; }
+      .seg { max-width: 460px; }
+      .big { font-size: 40px; }
+      #modal { align-items: center; }
+      #modal .sheet { border-radius: 16px; }
+      #toast { bottom: 24px; }
+    }
   </style>
 </head>
 <body>
@@ -70,7 +119,6 @@
     <span class="who" id="who"></span>
     <button class="b s sm hidden" id="b-logout">יציאה</button>
   </header>
-  <main id="main"><div class="center">טוען…</div></main>
   <nav id="nav" class="hidden">
     <button data-v="home">בית</button>
     <button data-v="clients">לקוחות</button>
@@ -78,6 +126,7 @@
     <button data-v="alerts">התראות<span class="dot hidden" id="alert-dot"></span></button>
     <button data-v="more">עוד</button>
   </nav>
+  <main id="main"><div class="card"><div class="sk l s"></div><div class="sk l m"></div><div class="sk l"></div></div></main>
   <div id="modal" class="hidden"><div class="sheet" id="sheet"></div></div>
   <div id="toast" class="hidden"></div>
 
@@ -297,7 +346,7 @@
     S.view = view; S.arg = arg;
     var tab = { client: 'clients', editor: 'editors', partners: 'more' }[view] || view;
     Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) { b.classList.toggle('on', b.getAttribute('data-v') === tab); });
-    setMain('<div class="center">טוען…</div>');
+    setMain(skeleton(view));
     ({ home: homeView, clients: clientsView, editors: editorsView, alerts: alertsView, more: moreView, partners: partnersView,
       client: clientView, editor: editorView })[view](arg);
   }
@@ -313,22 +362,46 @@
   }
 
   // ---------- 6.2 דשבורד ----------
-  function homeView() {
-    loadHome(function (h) {
-      var p = h.partners.filter(function (x) { return x.month === h.month; })[0];
-      setMain(
-        '<div class="grid">' +
-        '<div class="stat click" onclick="go(\'clients\')"><div class="k">לגבייה מלקוחות</div><div class="v">' + money(h.debtTotal.amount) + '</div>' + partial(h.debtTotal.missing) + '</div>' +
-        '<div class="stat click" onclick="go(\'editors\')"><div class="k">לתשלום לעורכים</div><div class="v">' + money(h.dueTotal.amount) + '</div>' + partial(h.dueTotal.missing) + '</div>' +
-        '<div class="stat click" onclick="go(\'partners\')"><div class="k">רווח ' + month(h.month) + '</div><div class="v">' + money(h.monthPnl.profit) + '</div>' + partial(h.monthPnl.missing) + '</div>' +
-        '<div class="stat click" onclick="go(\'alerts\')"><div class="k">התראות פתוחות</div><div class="v ' + (h.alertsOpen ? 'err' : 'ok') + '">' + h.alertsOpen + '</div></div>' +
-        '</div>' +
-        '<div class="card"><h2>חלוקת שותפים · ' + month(h.month) + '</h2>' + partnerRows(p) + '</div>' +
-        '<div class="card"><h2>חוב לפי לקוח</h2>' + h.clients.filter(function (c) { return c.debt || c.missing; }).slice(0, 6).map(clientRow).join('') +
-        '<button class="b s full" onclick="go(\'clients\')">כל הלקוחות</button></div>' +
-        '<div class="card"><h2>מגיע לעורכים</h2>' + h.editors.filter(function (e) { return e.due || e.missing; }).map(editorRow).join('') + '</div>' +
-        '<div class="sub muted center">רווח מצטבר: ' + money(h.totalPnl.profit) + partial(h.totalPnl.missing) + '</div>'
-      );
+  function homeView() { loadHome(renderHome); }
+  function renderHome(h) {
+    var p = h.partners.filter(function (x) { return x.month === h.month; })[0];
+    var D = h.dash, P = D.periods[S.period], pn = periodName(D.labels);
+    var oursName = function (x) { return x.key === 'העסק' ? 'רווח העסק' : 'עריכות של ' + x.key; };
+    var oursColors = D.editorColors;
+    var oursPie = { total: P.ours.total, deductions: P.ours.deductions,
+      slices: P.ours.slices.map(function (x) { return Object.assign({}, x, { key: x.key === 'העסק' ? '__biz' : x.key, label: oursName(x) }); }) };
+    setMain(
+      periodSeg(function () { renderHome(h); }) +
+      '<div class="grid">' +
+      '<div class="stat click" onclick="go(\'clients\')"><div class="k">לגבייה מלקוחות</div><div class="v">' + money(h.debtTotal.amount) + '</div>' + partial(h.debtTotal.missing) + '</div>' +
+      '<div class="stat click" onclick="go(\'editors\')"><div class="k">לתשלום לעורכים</div><div class="v">' + money(h.dueTotal.amount) + '</div>' + partial(h.dueTotal.missing) + '</div>' +
+      '<div class="stat"><div class="k">רווח העסק · ' + esc(PERIODS.filter(function (x) { return x[0] === S.period; })[0][1]) + '</div><div class="v">' + money(P.business.total) + '</div>' + partial(P.business.missing) + '</div>' +
+      '<div class="stat click" onclick="go(\'alerts\')"><div class="k">התראות פתוחות</div><div class="v ' + (h.alertsOpen ? 'err' : 'ok') + '">' + h.alertsOpen + '</div></div>' +
+      '</div>' +
+      '<div class="cols">' +
+      '<div class="card"><h2>רווח העסק</h2><div class="sub muted">' + esc(pn) + ' · שני המנהלים ביחד</div><div class="total">' + money(P.business.total) + '</div>' + partial(P.business.missing) +
+      '<div class="sub muted" style="margin:6px 0 4px">לפי לקוח</div>' + pieBlock(P.business, D.colors, 'רווח העסק לפי לקוח') + '</div>' +
+      '<div class="card"><h2>סה"כ שלנו</h2><div class="sub muted">' + esc(pn) + ' · רווח העסק + עריכות של המנהלים</div><div class="total">' + money(P.ours.total) + '</div>' + partial(P.ours.missing) +
+      '<div style="margin-top:6px"></div>' + pieBlock(oursPie, oursColors, 'סה"כ שלנו') + '</div>' +
+      '</div>' +
+      '<div class="card"><h2>עורכים · ' + esc(pn) + '</h2><div class="sub muted">לפי עלות עורך, כולל מה שכבר שולם. לחיצה על עורך → פירוט לפי לקוח</div>' +
+      (P.editors.map(function (e) {
+        return '<div class="row click" data-ed="' + esc(e.name) + '"><div class="main"><span class="sw" style="background:' + colorOf(e.name, D.editorColors) + '"></span><b>' + esc(e.name) + '</b>' +
+          '<div class="sub">' + counts(e) + '</div></div><div class="num"><b>' + money(e.amount) + '</b>' + partial(e.missing) + '</div></div>' +
+          '<div class="ed-pie hidden" data-edp="' + esc(e.name) + '">' + pieBlock(e.pie, D.colors, 'מה ' + e.name + ' עשה לפי לקוח') + '</div>';
+      }).join('') || '<div class="muted">אין עבודה בתקופה</div>') + '</div>' +
+      '<div class="cols">' +
+      '<div class="card"><h2>חלוקת שותפים · ' + month(h.month) + '</h2>' + partnerRows(p) + '</div>' +
+      '<div class="card"><h2>חוב לפי לקוח</h2>' + h.clients.filter(function (c) { return c.debt || c.missing; }).slice(0, 6).map(clientRow).join('') +
+      '<button class="b s full" onclick="go(\'clients\')">כל הלקוחות</button></div>' +
+      '</div>' +
+      '<div class="card"><h2>מגיע לעורכים</h2>' + (h.editors.filter(function (e) { return e.due || e.missing; }).map(editorRow).join('') || '<div class="muted">אין</div>') + '</div>'
+    );
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ed]'), function (row) {
+      row.onclick = function () {
+        var n = row.getAttribute('data-ed');
+        Array.prototype.forEach.call(document.querySelectorAll('[data-edp]'), function (d) { if (d.getAttribute('data-edp') === n) d.classList.toggle('hidden'); });
+      };
     });
   }
   function partnerRows(p) {
@@ -405,6 +478,89 @@
       $('b-set').onclick = function () { clientSettingsForm(c); };
     }, function (m) { setMain('<div class="msg e">' + esc(m) + '</div>'); });
   }
+  // ---------- טעינה ----------
+  /** skeleton בצורת המסך שייטען (בערך), כדי שהתוכן לא יקפוץ. */
+  function skeleton(view) {
+    var stat = '<div class="stat"><div class="sk l s"></div><div class="sk v"></div></div>';
+    var card = function (n) { var r = ''; for (var i = 0; i < n; i++) r += '<div class="sk l' + (i % 3 === 0 ? ' m' : '') + '"></div>'; return '<div class="card"><div class="sk l s"></div>' + r + '</div>'; };
+    var pieCard = '<div class="card"><div class="sk l s"></div><div class="sk v"></div><div class="sk c"></div><div class="sk l"></div><div class="sk l m"></div></div>';
+    if (view === 'home') return '<div class="seg"><button class="on">&nbsp;</button><button>&nbsp;</button><button>&nbsp;</button><button>&nbsp;</button></div>' +
+      '<div class="grid">' + stat + stat + stat + stat + '</div><div class="cols">' + pieCard + pieCard + '</div>' + card(4);
+    if (view === 'my') return card(2) + pieCard + card(4);
+    return card(6);
+  }
+
+  // ---------- גרפים (SVG, בלי ספרייה). צבע קבוע לכל שם; הסכומים מהשרת ----------
+  var PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
+  var C_BUSINESS = '#374151', C_OTHER = '#9ca3af', MAX_SLICES = 8;
+  function colorOf(key, colors) { return key === '__biz' ? C_BUSINESS : key === '__other' ? C_OTHER : PALETTE[((colors && colors[key]) || 0) % PALETTE.length]; }
+  /** מעל 8 פרוסות → 7 הגדולות + "אחר". */
+  function fold(slices) {
+    if (slices.length <= MAX_SLICES) return slices;
+    var rest = slices.slice(MAX_SLICES - 1), o = { key: '__other', label: 'אחר (' + rest.length + ')', amount: 0, pct: 0, videos: 0, projects: 0, missing: 0 };
+    rest.forEach(function (x) { o.amount += x.amount; o.pct += x.pct; o.videos += x.videos || 0; o.projects += x.projects || 0; o.missing += x.missing || 0; });
+    o.amount = Math.round(o.amount * 100) / 100; o.pct = Math.round(o.pct * 10) / 10;
+    return slices.slice(0, MAX_SLICES - 1).concat([o]);
+  }
+  function donut(slices, colors, label) {
+    var R = 86, r = 54, c = 90, total = slices.reduce(function (a, x) { return a + x.amount; }, 0), a0 = -Math.PI / 2;
+    var pt = function (rad, a) { return (c + rad * Math.cos(a)).toFixed(2) + ' ' + (c + rad * Math.sin(a)).toFixed(2); };
+    var paths = slices.map(function (x) {
+      var tip = '<title>' + esc(x.label || x.key) + ': ' + money(x.amount) + ' (' + x.pct + '%)</title>', fill = ' fill="' + colors[x.key] + '"';
+      if (slices.length === 1) return '<path' + fill + ' fill-rule="evenodd" d="M' + pt(R, 0) + ' A' + R + ' ' + R + ' 0 1 1 ' + pt(R, Math.PI) + ' A' + R + ' ' + R + ' 0 1 1 ' + pt(R, 0) +
+        ' M' + pt(r, 0) + ' A' + r + ' ' + r + ' 0 1 0 ' + pt(r, Math.PI) + ' A' + r + ' ' + r + ' 0 1 0 ' + pt(r, 0) + 'Z">' + tip + '</path>';
+      var a1 = a0 + 2 * Math.PI * x.amount / total, big = a1 - a0 > Math.PI ? 1 : 0;
+      var d = 'M' + pt(R, a0) + ' A' + R + ' ' + R + ' 0 ' + big + ' 1 ' + pt(R, a1) + ' L' + pt(r, a1) + ' A' + r + ' ' + r + ' 0 ' + big + ' 0 ' + pt(r, a0) + 'Z';
+      a0 = a1;
+      return '<path' + fill + ' d="' + d + '">' + tip + '</path>';
+    }).join('');
+    return '<svg viewBox="0 0 180 180" role="img" aria-label="' + esc(label) + '">' + paths + '</svg>';
+  }
+  function counts(x) {
+    var p = [];
+    if (x.videos) p.push(x.videos + ' סרטונים');
+    if (x.projects) p.push(x.projects + ' פרויקטים');
+    return p.join(' · ');
+  }
+  /** עוגה + מקרא (שם, סכום, אחוז) + ניכויים. pie = { slices, deductions, total } מהשרת. */
+  function pieBlock(pie, colors, label, opts) {
+    opts = opts || {};
+    var slices = fold(pie.slices.map(function (x) { return Object.assign({ label: opts.name ? opts.name(x) : x.key }, x); }));
+    if (!slices.length && !(pie.deductions || []).length) return '<div class="muted" style="padding:20px 0">אין נתונים לתקופה</div>';
+    // צבע לפי ישות; אם שתי ישויות באותה עוגה נופלות על אותו צבע (יותר מ-8) → הצבע הפנוי הבא
+    var used = {}, col = {};
+    slices.forEach(function (x) {
+      var c = colorOf(x.key, colors), i = PALETTE.indexOf(c);
+      for (var n = 0; i !== -1 && used[c] && n < PALETTE.length; n++) c = PALETTE[(i + n + 1) % PALETTE.length];
+      used[c] = 1; col[x.key] = c;
+    });
+    var leg = slices.map(function (x) {
+      var sub = counts(x) + (x.missing ? (counts(x) ? ' · ' : '') + '<span class="warn">' + x.missing + ' בלי סכום</span>' : '');
+      return '<div class="row"><div class="main"><span class="sw" style="background:' + col[x.key] + '"></span>' + esc(x.label) +
+        (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div><span class="num">' + money(x.amount) + '</span><span class="pct">' + x.pct + '%</span></div>';
+    }).join('');
+    var ded = (pie.deductions || []).map(function (x) {
+      return '<div class="row"><div class="main muted">פחות: ' + esc(opts.name ? opts.name(x) : x.key) + '</div><span class="num err">−' + money(x.amount) + '</span></div>';
+    }).join('');
+    return (slices.length ? '<div class="pie">' + donut(slices, col, label) + '<div class="legend">' + leg + '</div></div>' : '') +
+      (ded ? '<div class="ded">' + ded + '</div>' : '');
+  }
+  var PERIODS = [['month', 'החודש'], ['prev', 'חודש קודם'], ['year', 'השנה'], ['all', 'הכול']];
+  S.period = 'month';
+  function periodSeg(onPick) {
+    setTimeout(function () {
+      Array.prototype.forEach.call(document.querySelectorAll('.seg button[data-p]'), function (b) {
+        b.onclick = function () { var y = window.scrollY; S.period = b.getAttribute('data-p'); onPick(); window.scrollTo(0, y); };
+      });
+    });
+    return '<div class="seg" role="tablist">' + PERIODS.map(function (p) {
+      return '<button role="tab" data-p="' + p[0] + '"' + (S.period === p[0] ? ' class="on" aria-selected="true"' : '') + '>' + p[1] + '</button>';
+    }).join('') + '</div>';
+  }
+  function periodName(labels) {
+    return { month: 'החודש · ' + month(labels.month), prev: 'חודש קודם · ' + month(labels.prev), year: 'השנה · ' + labels.year, all: 'כל הזמן' }[S.period];
+  }
+
   function sect(title, body, open) {
     return '<details' + (open ? ' open' : '') + '><summary>' + title + '</summary><div class="in">' + (body || '<div class="muted">אין</div>') + '</div></details>';
   }
@@ -637,31 +793,45 @@
 
   // ---------- 6.5 דף עורך אישי ----------
   function myPage() {
-    setMain('<div class="center">טוען…</div>');
+    setMain(skeleton('my'));
     call('getMyPage', [getToken()], function (r) {
       if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>');
-      var p = r.page;
-      var byClient = {};
-      p.videos.forEach(function (v) { (byClient[v.client] = byClient[v.client] || []).push(v); });
-      setMain(
-        '<div class="card"><h2>שלום ' + esc(p.name) + '</h2><div class="k muted">מגיע לך עכשיו</div><div class="big">' + money(p.due.amount) + '</div>' +
-        (p.due.missing ? '<div class="msg w">' + p.due.missing + ' פריטים עוד בלי מחיר. הסכום יתעדכן כשיוסף ישלים.</div>' : '') +
-        '<div class="sub">' + p.due.count + ' פריטים מאז התשלום האחרון</div></div>' +
-        sect('סרטונים שלא שולמו (' + p.videos.length + ')', Object.keys(byClient).sort().map(function (c) {
-          return '<div class="sub" style="margin-top:8px"><b>' + esc(c) + '</b></div>' + byClient[c].map(function (v) {
-            return '<div class="row"><div class="main">#' + esc(v.num) + ' <span class="sub">' + esc(v.type || '') + '</span></div><span class="num">' + money(v.amount) + '</span></div>';
-          }).join('');
-        }).join(''), true) +
-        (p.projects.length ? sect('פרויקטים (' + p.projects.length + ')', p.projects.map(function (x) {
-          return '<div class="row"><div class="main">' + esc(x.client) + ' — ' + esc(x.name) + '</div><span class="num">' + money(x.amount) + '</span></div>';
-        }).join(''), true) : '') +
-        sect('היסטוריית תשלומים', p.payments.map(function (x) {
-          return '<div class="row"><div class="main">' + date(x.date) + ' · ' + x.count + ' פריטים<div class="sub">' +
-            (x.hasInvoice ? '<span class="ok">חשבונית ✓</span>' : '<button class="b sm" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">העלאת חשבונית</button>') +
-            '</div></div><b class="num">' + money(x.amount) + '</b></div>';
-        }).join(''), true)
-      );
+      renderMy(r.page);
     });
+  }
+  function renderMy(p) {
+    var byClient = {};
+    p.videos.forEach(function (v) { (byClient[v.client] = byClient[v.client] || []).push(v); });
+    var E = p.earnings, X = E.periods[S.period], colors = {};
+    // צבע קבוע ללקוח בכל התקופות: לפי הסדר הא״ב של כל הלקוחות שלו
+    var keys = {}; Object.keys(E.periods).forEach(function (k) { E.periods[k].slices.forEach(function (x) { keys[x.key] = 1; }); });
+    Object.keys(keys).sort().forEach(function (k, i) { colors[k] = i; });
+    setMain(
+      '<div class="cols">' +
+      '<div class="card"><h2>שלום ' + esc(p.name) + '</h2><div class="k muted">מגיע לך עכשיו</div><div class="big">' + money(p.due.amount) + '</div>' +
+      (p.due.missing ? '<div class="msg w">' + p.due.missing + ' פריטים עוד בלי מחיר. הסכום יתעדכן כשיוסף ישלים.</div>' : '') +
+      '<div class="sub">' + p.due.count + ' פריטים מאז התשלום האחרון</div></div>' +
+      '<div class="card"><h2>מאיפה הגיע הכסף שלי</h2>' + periodSeg(function () { renderMy(p); }) +
+      '<div class="sub muted">' + esc(periodName(E.labels)) + ' · כולל מה שכבר שולם</div><div class="total">' + money(X.amount) + '</div>' + partial(X.missing) +
+      '<div style="margin-top:6px"></div>' + pieBlock({ slices: X.slices, deductions: [], total: X.amount }, colors, 'הכסף שלי לפי לקוח') +
+      (X.pending.length ? '<div class="ded">' + X.pending.map(function (x) {
+        return '<div class="row"><div class="main muted">' + esc(x.key) + '<div class="sub">' + counts(x) + '</div></div><span class="warn sub">עוד בלי מחיר</span></div>';
+      }).join('') + '</div>' : '') + '</div>' +
+      '</div>' +
+      sect('סרטונים שלא שולמו (' + p.videos.length + ')', Object.keys(byClient).sort().map(function (c) {
+        return '<div class="sub" style="margin-top:8px"><b>' + esc(c) + '</b></div>' + byClient[c].map(function (v) {
+          return '<div class="row"><div class="main">#' + esc(v.num) + ' <span class="sub">' + esc(v.type || '') + '</span></div><span class="num">' + money(v.amount) + '</span></div>';
+        }).join('');
+      }).join(''), true) +
+      (p.projects.length ? sect('פרויקטים (' + p.projects.length + ')', p.projects.map(function (x) {
+        return '<div class="row"><div class="main">' + esc(x.client) + ' — ' + esc(x.name) + '</div><span class="num">' + money(x.amount) + '</span></div>';
+      }).join(''), true) : '') +
+      sect('היסטוריית תשלומים', p.payments.map(function (x) {
+        return '<div class="row"><div class="main">' + date(x.date) + ' · ' + x.count + ' פריטים<div class="sub">' +
+          (x.hasInvoice ? '<span class="ok">חשבונית ✓</span>' : '<button class="b sm" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">העלאת חשבונית</button>') +
+          '</div></div><b class="num">' + money(x.amount) + '</b></div>';
+      }).join(''), true)
+    );
   }
   function myInvoice(paymentId) {
     var fields = [{ k: 'file', label: 'קובץ חשבונית (PDF / תמונה)', type: 'file' }];
