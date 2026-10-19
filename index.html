@@ -126,7 +126,10 @@
     // text/plain → בלי preflight. credentials: omit → בלי עוגיות Google.
     fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, credentials: 'omit', redirect: 'follow',
       body: JSON.stringify({ fn: fn, args: args }) })
-      .then(function (res) { if (!res.ok) throw new Error('שגיאת רשת (' + res.status + ')'); return res.json(); })
+      .then(function (res) {
+        if (!res.ok) throw new Error('שגיאת שרת (' + res.status + '). לנסות שוב.');
+        return res.text().then(function (t) { try { return JSON.parse(t); } catch (e) { throw new Error('תשובה לא תקינה מהשרת. לנסות שוב.'); } });
+      }, function () { throw new Error('אין חיבור לשרת. לנסות שוב.'); })
       .then(function (d) { if (d && d.ok) onOk(d.result); else fail((d && d.error) || 'תשובה לא תקינה מהשרת'); })
       .catch(function (e) { fail((e && e.message) || 'אין חיבור לשרת'); });
   }
