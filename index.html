@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Brande CashFlow</title>
+  <style>
+    :root { --bg: #f4f5f7; --card: #fff; --txt: #1f2328; --mute: #6b7280; --line: #e5e7eb; --pri: #1a73e8; --ok: #137333; --warn: #b06000; --err: #c5221f; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; margin: 0; background: var(--bg); color: var(--txt); font-size: 16px; }
+    header { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; align-items: center; gap: 8px; }
+    header h1 { font-size: 17px; margin: 0; flex: 1; }
+    header .who { font-size: 12px; color: var(--mute); }
+    main { max-width: 640px; margin: 0 auto; padding: 12px 16px 96px; }
+    nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--line); display: flex; z-index: 5; }
+    nav button { flex: 1; border: 0; background: none; padding: 10px 0 14px; font-size: 13px; color: var(--mute); position: relative; }
+    nav button.on { color: var(--pri); font-weight: bold; }
+    nav .dot { position: absolute; top: 4px; margin-right: 4px; background: var(--err); color: #fff; border-radius: 9px; font-size: 11px; padding: 0 5px; }
+    .card { background: var(--card); border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .card h2 { font-size: 16px; margin: 0 0 10px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .stat { background: var(--card); border-radius: 12px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .stat .k { font-size: 12px; color: var(--mute); }
+    .stat .v { font-size: 20px; font-weight: bold; margin-top: 4px; direction: ltr; text-align: right; }
+    .stat.click { cursor: pointer; }
+    .big { font-size: 34px; font-weight: bold; direction: ltr; text-align: right; }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .row:last-child { border-bottom: 0; }
+    .row.click { cursor: pointer; }
+    .row .main { flex: 1; min-width: 0; }
+    .row .sub { font-size: 12px; color: var(--mute); }
+    .num { direction: ltr; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .muted { color: var(--mute); }
+    .warn { color: var(--warn); }
+    .err { color: var(--err); }
+    .ok { color: var(--ok); }
+    .tag { font-size: 11px; padding: 2px 6px; border-radius: 6px; background: #eef2ff; color: #3730a3; white-space: nowrap; }
+    .tag.g { background: #e6f4ea; color: var(--ok); } .tag.r { background: #fce8e6; color: var(--err); } .tag.y { background: #fef7e0; color: var(--warn); }
+    .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    button.b { font-size: 15px; padding: 10px 14px; border: 0; border-radius: 8px; background: var(--pri); color: #fff; }
+    button.b.s { background: #e8eaed; color: var(--txt); }
+    button.b.sm { font-size: 13px; padding: 6px 10px; }
+    button.b.full { width: 100%; margin-top: 10px; }
+    button:disabled { opacity: .5; }
+    details { margin-bottom: 12px; background: var(--card); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    details summary { padding: 14px; font-weight: bold; cursor: pointer; }
+    details .in { padding: 0 14px 10px; }
+    label { display: block; font-size: 13px; color: var(--mute); margin: 10px 0 4px; }
+    input, select, textarea { width: 100%; font-size: 16px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; background: #fff; font-family: inherit; }
+    input[type=checkbox] { width: auto; transform: scale(1.3); margin-left: 8px; }
+    .chk { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .chk span { flex: 1; }
+    .ltr { direction: ltr; text-align: left; }
+    #modal { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 10; display: flex; align-items: flex-end; justify-content: center; }
+    #modal .sheet { background: var(--card); width: 100%; max-width: 640px; max-height: 92vh; overflow: auto; border-radius: 16px 16px 0 0; padding: 16px 16px 28px; }
+    #modal h2 { margin: 0 0 8px; font-size: 18px; }
+    .msg { padding: 10px; border-radius: 8px; margin: 8px 0; font-size: 14px; }
+    .msg.e { background: #fce8e6; color: var(--err); } .msg.w { background: #fef7e0; color: var(--warn); } .msg.o { background: #e6f4ea; color: var(--ok); }
+    ul.lines { padding-right: 18px; margin: 6px 0; } ul.lines li { margin-bottom: 4px; }
+    .hidden { display: none !important; }
+    #toast { position: fixed; bottom: 80px; left: 16px; right: 16px; max-width: 600px; margin: auto; background: #323232; color: #fff; padding: 12px; border-radius: 8px; z-index: 20; }
+    .center { text-align: center; padding: 40px 0; color: var(--mute); }
+    a { color: var(--pri); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Brande CashFlow</h1>
+    <span class="who" id="who"></span>
+    <button class="b s sm hidden" id="b-logout">יציאה</button>
+  </header>
+  <main id="main"><div class="center">טוען…</div></main>
+  <nav id="nav" class="hidden">
+    <button data-v="home">בית</button>
+    <button data-v="clients">לקוחות</button>
+    <button data-v="editors">עורכים</button>
+    <button data-v="alerts">התראות<span class="dot hidden" id="alert-dot"></span></button>
+    <button data-v="more">עוד</button>
+  </nav>
+  <div id="modal" class="hidden"><div class="sheet" id="sheet"></div></div>
+  <div id="toast" class="hidden"></div>
+
+<script>
+  // ---------- בסיס ----------
+  var TOKEN_KEY = 'brande_token', memToken = null;
+  var S = { user: null, home: null, lists: null, view: null, arg: null };
+
+  // הטוקן: localStorage → sessionStorage → זיכרון. בתוך iframe (דף WordPress) הדפדפן יכול לחסום/לחלק אחסון לפי אתר;
+  // אז הכניסה עדיין עובדת, רק צריך להתחבר שוב אחרי רענון.
+  function store(kind) { try { var s = window[kind]; s.setItem('_t', '1'); s.removeItem('_t'); return s; } catch (e) { return null; } }
+  var STORES = [store('localStorage'), store('sessionStorage')].filter(Boolean);
+  function getToken() {
+    for (var i = 0; i < STORES.length; i++) { try { var v = STORES[i].getItem(TOKEN_KEY); if (v) return v; } catch (e) {} }
+    return memToken;
+  }
+  function setToken(t) {
+    memToken = t;
+    STORES.forEach(function (s) { try { t ? s.setItem(TOKEN_KEY, t) : s.removeItem(TOKEN_KEY); } catch (e) {} });
+  }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function money(n) { return n === null || n === undefined ? '—' : '₪' + Number(n).toLocaleString('he-IL', { maximumFractionDigits: 2 }); }
+  function partial(missing) { return missing ? ' <span class="tag y">חלקי: ' + missing + ' חסרים</span>' : ''; }
+  function date(s) { if (!s) return '—'; var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s); return m ? m[3] + '/' + m[2] + '/' + m[1] : esc(s); }
+  function month(s) { var m = /^(\d{4})-(\d{2})$/.exec(s || ''); return m ? m[2] + '/' + m[1] : esc(s || 'ללא תאריך'); }
+  function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function toast(t) { var el = $('toast'); el.textContent = t; el.classList.remove('hidden'); clearTimeout(toast.t); toast.t = setTimeout(function () { el.classList.add('hidden'); }, 3500); }
+  function setMain(html) { $('main').innerHTML = html; window.scrollTo(0, 0); }
+
+  // בתוך Apps Script (doGet) → google.script.run. כדף סטטי (cashflow.brandemedia.co.il) → POST ל-doPost.
+  var API_URL = 'https://script.google.com/macros/s/AKfycbyIid2Z0N_dfKbPgkCjmkKb2FnmgxxSi3PWzrk-WeqoL8iDoYOyqdOIFDCMLSIO8k22/exec';
+  var GAS = typeof google !== 'undefined' && google.script && google.script.run;
+
+  /** קריאה לשרת. שגיאת הרשאה → חזרה למסך כניסה. */
+  function call(fn, args, onOk, onErr) {
+    var fail = function (m) {
+      if (/AUTH_REQUIRED/.test(m)) { setToken(null); return loginView('החיבור פג. להיכנס שוב.'); }
+      if (/FORBIDDEN/.test(m)) m = 'אין הרשאה';
+      if (onErr) onErr(m); else toast('שגיאה: ' + m);
+    };
+    if (GAS) {
+      var r = google.script.run.withSuccessHandler(onOk).withFailureHandler(function (e) { fail((e && e.message) || String(e)); });
+      return r[fn].apply(r, args);
+    }
+    // text/plain → בלי preflight. credentials: omit → בלי עוגיות Google.
+    fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, credentials: 'omit', redirect: 'follow',
+      body: JSON.stringify({ fn: fn, args: args }) })
+      .then(function (res) { if (!res.ok) throw new Error('שגיאת רשת (' + res.status + ')'); return res.json(); })
+      .then(function (d) { if (d && d.ok) onOk(d.result); else fail((d && d.error) || 'תשובה לא תקינה מהשרת'); })
+      .catch(function (e) { fail((e && e.message) || 'אין חיבור לשרת'); });
+  }
+
+  // ---------- כניסה ----------
+  function loginView(note) {
+    $('nav').classList.add('hidden'); $('b-logout').classList.add('hidden'); $('who').textContent = '';
+    setMain('<div class="card"><h2>כניסה</h2>' + (note ? '<div class="msg w">' + esc(note) + '</div>' : '') +
+      '<label>מייל</label><input id="email" type="email" class="ltr" autocomplete="email" inputmode="email">' +
+      '<button class="b full" id="b-send">שלח לי קוד</button>' +
+      '<div id="code-box" class="hidden"><label>קוד מהמייל (6 ספרות)</label><input id="code" class="ltr" inputmode="numeric" autocomplete="one-time-code" maxlength="6">' +
+      '<button class="b full" id="b-verify">כניסה</button></div><div id="login-msg"></div></div>');
+    var lm = function (t, cls) { $('login-msg').innerHTML = t ? '<div class="msg ' + cls + '">' + esc(t) + '</div>' : ''; };
+    $('b-send').onclick = function () {
+      var email = $('email').value.trim();
+      if (!email) return lm('להזין מייל', 'e');
+      $('b-send').disabled = true;
+      call('requestLoginCode', [email], function (r) {
+        $('b-send').disabled = false; lm(r.message, r.ok ? 'o' : 'e');
+        if (r.ok) { $('code-box').classList.remove('hidden'); $('code').focus(); }
+      }, function (m) { $('b-send').disabled = false; lm(m, 'e'); });
+    };
+    $('b-verify') && ($('b-verify').onclick = function () {
+      $('b-verify').disabled = true;
+      call('verifyLoginCode', [$('email').value.trim(), $('code').value.trim()], function (r) {
+        $('b-verify').disabled = false;
+        if (!r.ok) return lm(r.message, 'e');
+        setToken(r.token); start(r.user);
+      }, function (m) { $('b-verify').disabled = false; lm(m, 'e'); });
+    });
+  }
+
+  $('b-logout').onclick = function () {
+    call('logout', [getToken()], function () { setToken(null); loginView(); }, function () { setToken(null); loginView(); });
+  };
+
+  /** 6.1.2 ניתוב לפי תפקיד. */
+  function start(user) {
+    S.user = user;
+    $('who').textContent = user.email;
+    $('b-logout').classList.remove('hidden');
+    if (user.role === 'admin') { $('nav').classList.remove('hidden'); go('home'); }
+    else { $('nav').classList.add('hidden'); myPage(); }
+  }
+
+  // ---------- מודאל + זרימת תצוגה → אישור ----------
+  function openModal(html) { $('sheet').innerHTML = html; $('modal').classList.remove('hidden'); $('sheet').scrollTop = 0; }
+  function closeModal() { $('modal').classList.add('hidden'); $('sheet').innerHTML = ''; }
+  $('modal').onclick = function (e) { if (e.target === $('modal')) closeModal(); };
+
+  function linesHtml(lines, cls) {
+    if (!lines || !lines.length) return '';
+    return '<div class="msg ' + cls + '"><ul class="lines">' + lines.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul></div>';
+  }
+
+  /**
+   * act = { title, fn, args(confirm) → מערך ארגומנטים, after() }
+   * שלב 1: קריאה בלי confirm → תצוגה מקדימה. שלב 2: "אישור" → אותה קריאה עם confirm.
+   */
+  function runAct(act) {
+    openModal('<h2>' + esc(act.title) + '</h2><div class="center">מכין תצוגה מקדימה…</div>');
+    call(act.fn, act.args(undefined), function (r) {
+      if (!r.ok) return openModal('<h2>' + esc(act.title) + '</h2>' + linesHtml([r.message], 'e') + '<button class="b s full" onclick="closeModal()">סגור</button>');
+      openModal('<h2>' + esc(act.title) + ' — לבדוק ולאשר</h2>' + linesHtml(r.preview, 'o') + linesHtml(r.warnings, 'w') +
+        '<button class="b full" id="b-confirm">אישור וביצוע</button><button class="b s full" onclick="closeModal()">ביטול</button>');
+      $('b-confirm').onclick = function () {
+        $('b-confirm').disabled = true; $('b-confirm').textContent = 'מבצע…';
+        call(act.fn, act.args(r.confirm), function (d) {
+          if (!d.ok) return openModal('<h2>' + esc(act.title) + '</h2>' + linesHtml([d.message], 'e') + '<button class="b s full" onclick="closeModal()">סגור</button>');
+          openModal('<h2>בוצע ✓</h2>' + linesHtml(d.done, 'o') + linesHtml(d.warnings, 'w') + '<div class="sub muted">מזהה: ' + esc(d.id) + '</div>' +
+            '<button class="b full" id="b-done">סגור</button>');
+          $('b-done').onclick = function () { closeModal(); (act.after || reload)(); };
+        }, function (m) { openModal('<h2>' + esc(act.title) + '</h2>' + linesHtml([m], 'e') + '<button class="b s full" onclick="closeModal()">סגור</button>'); });
+      };
+    }, function (m) { openModal('<h2>' + esc(act.title) + '</h2>' + linesHtml([m], 'e') + '<button class="b s full" onclick="closeModal()">סגור</button>'); });
+  }
+
+  /**
+   * טופס גנרי. fields = [{ k, label, type: text|number|date|select|check|file|textarea, options, value, hint }]
+   * onSubmit(values, files) — files = { k: File }.
+   */
+  function formHtml(fields) {
+    return fields.map(function (f) {
+      var id = 'f-' + f.k.replace(/\W/g, '_') + '-' + fields.indexOf(f);
+      f._id = id;
+      var hint = f.hint ? '<div class="sub muted">' + esc(f.hint) + '</div>' : '';
+      if (f.type === 'check') return '<div class="chk"><input type="checkbox" id="' + id + '"' + (f.value ? ' checked' : '') + (f.disabled ? ' disabled' : '') + '><span>' + esc(f.label) + '</span></div>' + hint;
+      var lab = '<label for="' + id + '">' + esc(f.label) + '</label>';
+      if (f.type === 'select') {
+        return lab + '<select id="' + id + '">' + (f.blank ? '<option value=""></option>' : '') + f.options.map(function (o) {
+          var v = typeof o === 'object' ? o.v : o, t = typeof o === 'object' ? o.t : o;
+          return '<option value="' + esc(v) + '"' + (String(v) === String(f.value) ? ' selected' : '') + '>' + esc(t) + '</option>';
+        }).join('') + '</select>' + hint;
+      }
+      if (f.type === 'textarea') return lab + '<textarea id="' + id + '" rows="2">' + esc(f.value) + '</textarea>' + hint;
+      if (f.type === 'file') return lab + '<input type="file" id="' + id + '" accept="image/*,application/pdf">' + hint;
+      var attrs = f.type === 'number' ? ' type="number" inputmode="decimal" step="any" class="ltr"' : f.type === 'date' ? ' type="date"' : f.type === 'email' ? ' type="email" class="ltr"' : ' type="text"';
+      return lab + '<input id="' + id + '"' + attrs + ' value="' + esc(f.value) + '"' + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + '>' + hint;
+    }).join('');
+  }
+  function formValues(fields) {
+    var v = {}, files = {};
+    fields.forEach(function (f) {
+      var el = $(f._id); if (!el) return;
+      if (f.type === 'check') v[f.k] = el.checked;
+      else if (f.type === 'file') { if (el.files && el.files[0]) files[f.k] = el.files[0]; }
+      else v[f.k] = el.value.trim();
+    });
+    return { values: v, files: files };
+  }
+  function openForm(title, fields, onSubmit, extraHtml) {
+    openModal('<h2>' + esc(title) + '</h2>' + (extraHtml || '') + formHtml(fields) + '<div id="form-msg"></div>' +
+      '<button class="b full" id="b-next">המשך לתצוגה מקדימה</button><button class="b s full" onclick="closeModal()">ביטול</button>');
+    $('b-next').onclick = function () { var fv = formValues(fields); onSubmit(fv.values, fv.files); };
+  }
+  function formErr(m) { $('form-msg') && ($('form-msg').innerHTML = linesHtml([m], 'e')); }
+
+  /** קובץ → { name, mimeType, base64 }. עד 10MB. */
+  function readFile(file, cb) {
+    if (file.size > 10 * 1024 * 1024) return formErr('הקובץ גדול מ-10MB');
+    var r = new FileReader();
+    r.onload = function () { cb({ name: file.name, mimeType: file.type || 'application/octet-stream', base64: String(r.result).split(',')[1] }); };
+    r.onerror = function () { formErr('קריאת הקובץ נכשלה'); };
+    r.readAsDataURL(file);
+  }
+  /** העלאה לפני התצוגה המקדימה (הלינק נכנס לפרמטרים של הפעולה). */
+  function uploadThen(kind, owner, file, cb) {
+    if (!file) return cb('');
+    $('b-next').disabled = true; $('b-next').textContent = 'מעלה קובץ…';
+    readFile(file, function (f) {
+      call('uploadFile', [getToken(), kind, owner, f], function (r) { cb(r.url); },
+        function (m) { $('b-next').disabled = false; $('b-next').textContent = 'המשך לתצוגה מקדימה'; formErr(m); });
+    });
+  }
+
+  // ---------- ניווט (מנהל) ----------
+  Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) { b.onclick = function () { go(b.getAttribute('data-v')); }; });
+  function go(view, arg) {
+    S.view = view; S.arg = arg;
+    var tab = { client: 'clients', editor: 'editors', partners: 'more' }[view] || view;
+    Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) { b.classList.toggle('on', b.getAttribute('data-v') === tab); });
+    setMain('<div class="center">טוען…</div>');
+    ({ home: homeView, clients: clientsView, editors: editorsView, alerts: alertsView, more: moreView, partners: partnersView,
+      client: clientView, editor: editorView })[view](arg);
+  }
+  function reload() { if (S.user && S.user.role === 'admin') go(S.view || 'home', S.arg); else myPage(); }
+
+  /** טוען דשבורד (נתוני בית + רשימות לטפסים). */
+  function loadHome(cb) {
+    call('getAdminHome', [getToken()], function (r) {
+      S.home = r.home; S.lists = r.lists;
+      var dot = $('alert-dot'); dot.textContent = r.home.alertsOpen; dot.classList.toggle('hidden', !r.home.alertsOpen);
+      cb(r.home);
+    });
+  }
+
+  // ---------- 6.2 דשבורד ----------
+  function homeView() {
+    loadHome(function (h) {
+      var p = h.partners.filter(function (x) { return x.month === h.month; })[0];
+      setMain(
+        '<div class="grid">' +
+        '<div class="stat click" onclick="go(\'clients\')"><div class="k">לגבייה מלקוחות</div><div class="v">' + money(h.debtTotal.amount) + '</div>' + partial(h.debtTotal.missing) + '</div>' +
+        '<div class="stat click" onclick="go(\'editors\')"><div class="k">לתשלום לעורכים</div><div class="v">' + money(h.dueTotal.amount) + '</div>' + partial(h.dueTotal.missing) + '</div>' +
+        '<div class="stat click" onclick="go(\'partners\')"><div class="k">רווח ' + month(h.month) + '</div><div class="v">' + money(h.monthPnl.profit) + '</div>' + partial(h.monthPnl.missing) + '</div>' +
+        '<div class="stat click" onclick="go(\'alerts\')"><div class="k">התראות פתוחות</div><div class="v ' + (h.alertsOpen ? 'err' : 'ok') + '">' + h.alertsOpen + '</div></div>' +
+        '</div>' +
+        '<div class="card"><h2>חלוקת שותפים · ' + month(h.month) + '</h2>' + partnerRows(p) + '</div>' +
+        '<div class="card"><h2>חוב לפי לקוח</h2>' + h.clients.filter(function (c) { return c.debt || c.missing; }).slice(0, 6).map(clientRow).join('') +
+        '<button class="b s full" onclick="go(\'clients\')">כל הלקוחות</button></div>' +
+        '<div class="card"><h2>מגיע לעורכים</h2>' + h.editors.filter(function (e) { return e.due || e.missing; }).map(editorRow).join('') + '</div>' +
+        '<div class="sub muted center">רווח מצטבר: ' + money(h.totalPnl.profit) + partial(h.totalPnl.missing) + '</div>'
+      );
+    });
+  }
+  function partnerRows(p) {
+    if (!p) return '<div class="muted">אין נתונים לחודש</div>';
+    if (p.error) return '<div class="msg w">' + esc(p.error) + '</div>';
+    return '<div class="row"><div class="main">רווח החודש</div><b class="num">' + money(p.profit) + '</b></div>' +
+      p.partners.map(function (x) { return '<div class="row"><div class="main">' + esc(x.email) + ' <span class="muted">(' + x.pct + '%)</span></div><b class="num">' + money(x.amount) + '</b></div>'; }).join('') +
+      (p.missing ? '<div class="msg w">חלקי: ' + p.missing + ' פריטים בלי מחיר/עלות</div>' : '');
+  }
+  function clientRow(c) {
+    return '<div class="row click" onclick="go(\'client\',' + esc(JSON.stringify(c.name)) + ')"><div class="main"><b>' + esc(c.name) + '</b>' +
+      (c.active ? '' : ' <span class="tag">לא פעיל</span>') + '<div class="sub">' + c.openVideos + ' סרטונים פתוחים · רווח החודש ' + money(c.monthProfit) + '</div></div>' +
+      '<div class="num"><b>' + money(c.debt) + '</b>' + partial(c.missing) + '</div></div>';
+  }
+  function editorRow(e) {
+    return '<div class="row click" onclick="go(\'editor\',' + esc(JSON.stringify(e.name)) + ')"><div class="main"><b>' + esc(e.name) + '</b>' +
+      (e.active ? '' : ' <span class="tag">לא פעיל</span>') + '<div class="sub">' + e.count + ' פריטים פתוחים</div></div>' +
+      '<div class="num"><b>' + money(e.due) + '</b>' + partial(e.missing) + '</div></div>';
+  }
+
+  // ---------- 6.3 לקוחות ----------
+  function clientsView() {
+    loadHome(function (h) {
+      setMain('<input id="q" placeholder="חיפוש לקוח" style="margin-bottom:12px"><div class="card" id="list"></div>');
+      var draw = function () {
+        var q = $('q').value.trim().toLowerCase();
+        $('list').innerHTML = h.clients.filter(function (c) { return !q || c.name.toLowerCase().indexOf(q) !== -1; }).map(clientRow).join('') || '<div class="muted">אין</div>';
+      };
+      $('q').oninput = draw; draw();
+    });
+  }
+
+  function clientView(name) {
+    call('getClientPage', [getToken(), name], function (r) {
+      if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>');
+      var c = r.page, o = c.open, d = c.debt || { total: 0, missing: 0 };
+      var openCount = o.videos.length + o.projects.length + o.retainers.length;
+      S.client = c;
+      setMain(
+        '<div class="btns"><button class="b s sm" onclick="go(\'clients\')">→ לקוחות</button></div>' +
+        '<div class="card"><h2>' + esc(c.name) + ' <span class="tag">' + esc(c.status || '—') + '</span></h2>' +
+        '<div class="k muted">חוב פתוח</div><div class="big">' + money(d.total) + '</div>' + partial(d.missing) +
+        '<div class="sub">' + o.videos.length + ' סרטונים (' + money(o.totals.videos.amount) + ') · ' + o.projects.length + ' פרויקטים (' + money(o.totals.projects.amount) + ') · ' +
+        o.retainers.length + ' ריטיינרים (' + money(o.totals.retainers.amount) + ')</div>' +
+        (c.contentUrl ? '<div class="sub"><a href="' + esc(c.contentUrl) + '" target="_blank" rel="noopener">טבלת התוכן</a> · טאב ' + esc(c.tab) + '</div>' : '') + '</div>' +
+        '<div class="btns"><button class="b" id="b-paid"' + (openCount ? '' : ' disabled') + '>לקוח שילם</button>' +
+        '<button class="b s" id="b-proj">פרויקט חדש</button><button class="b s" id="b-exp">הוצאה</button><button class="b s" id="b-set">הגדרות ומחירים</button></div>' +
+        sect('פתוח (' + openCount + ')', o.videos.map(function (v) {
+          return '<div class="row"><div class="main">#' + esc(v.num) + ' <span class="sub">' + esc(v.type || 'בלי סוג') + (v.date ? ' · ' + esc(v.date) : '') + '</span></div><span class="num">' + money(v.price) + '</span></div>';
+        }).concat(o.projects.map(function (p) { return '<div class="row"><div class="main">פרויקט: ' + esc(p.name) + '</div><span class="num">' + money(p.price) + '</span></div>'; }),
+          o.retainers.map(function (x) { return '<div class="row"><div class="main">ריטיינר ' + month(x.month) + '</div><span class="num">' + money(x.amount) + '</span></div>'; })).join(''), openCount > 0) +
+        sect('פרויקטים (' + c.projects.length + ')', c.projects.map(function (p) {
+          return '<div class="row"><div class="main"><b>' + esc(p.name) + '</b> <span class="tag ' + (p.paid ? 'g' : 'r') + '">' + (p.paid ? 'שולם' : 'לא שולם') + '</span>' +
+            '<div class="sub">' + esc(p.type) + ' · ' + date(p.date) + ' · עלות ' + money(p.cost) + ' (' + esc(p.costOwner) + (p.editor ? ': ' + esc(p.editor) : '') + ')' + (p.editorPaid ? ' · שולם לעורך' : '') + '</div></div>' +
+            '<div><div class="num">' + money(p.price) + '</div><button class="b s sm" onclick="editProject(' + esc(JSON.stringify(p.id)) + ')">עריכה</button></div></div>';
+        }).join('')) +
+        sect('ריטיינרים', c.retainers.map(function (x) {
+          return '<div class="row"><div class="main">' + month(x.month) + ' <span class="tag ' + (x.paid ? 'g' : 'r') + '">' + (x.paid ? 'שולם' : 'לא שולם') + '</span></div><span class="num">' + money(x.amount) + '</span></div>';
+        }).join('')) +
+        sect('היסטוריית תשלומים', c.payments.map(function (p) {
+          return '<div class="row"><div class="main">' + date(p.date) + ' · ' + esc(p.method) + (p.label ? ' · קו "' + esc(p.label) + '"' : '') + '<div class="sub">' + esc(p.covered) + (p.ref ? ' · ' + esc(p.ref) : '') + '</div></div><b class="num">' + money(p.amount) + '</b></div>';
+        }).join('')) +
+        sect('הוצאות', c.expenses.map(function (x) {
+          return '<div class="row"><div class="main">' + date(x.date) + ' · ' + esc(x.category) + (x.notes ? '<div class="sub">' + esc(x.notes) + '</div>' : '') +
+            (x.ref ? '<div class="sub">' + (/^https?:/.test(x.ref) ? '<a href="' + esc(x.ref) + '" target="_blank" rel="noopener">אסמכתא</a>' : esc(x.ref)) + '</div>' : '') + '</div><span class="num">' + money(x.amount) + '</span></div>';
+        }).join('')) +
+        sect('רווח לפי חודש · סה"כ ' + money(c.pnl.total.profit), c.pnl.months.map(function (m) {
+          return '<div class="row"><div class="main">' + month(m.month) + '<div class="sub">הכנסות ' + money(m.revenue) + ' · עלויות ' + money(m.cost) + partial(m.missing) + '</div></div><b class="num">' + money(m.profit) + '</b></div>';
+        }).join(''))
+      );
+      $('b-paid').onclick = function () { clientPaidForm(c); };
+      $('b-proj').onclick = function () { projectForm(null, c.name); };
+      $('b-exp').onclick = function () { expenseForm(c.name); };
+      $('b-set').onclick = function () { clientSettingsForm(c); };
+    }, function (m) { setMain('<div class="msg e">' + esc(m) + '</div>'); });
+  }
+  function sect(title, body, open) {
+    return '<details' + (open ? ' open' : '') + '><summary>' + title + '</summary><div class="in">' + (body || '<div class="muted">אין</div>') + '</div></details>';
+  }
+
+  /** 5.1 — לקוח שילם. קודם קוראים את טבלת התוכן (קריאה בלבד) כדי לבחור עד איזה סרטון. */
+  function clientPaidForm(c) {
+    openModal('<h2>לקוח שילם — ' + esc(c.name) + '</h2><div class="center">קורא את טבלת התוכן…</div>');
+    call('getClientContentInfo', [getToken(), c.name], function (r) {
+      if (!r.ok) return openModal('<h2>לקוח שילם</h2>' + linesHtml([r.message], 'e') + '<button class="b s full" onclick="closeModal()">סגור</button>');
+      var info = r.info, o = c.open;
+      var nums = info.belowNums.slice().reverse();
+      var fields = [
+        { k: 'amount', label: 'סכום ששולם (₪)', type: 'number', value: c.debt ? c.debt.total : '' },
+        { k: 'date', label: 'תאריך', type: 'date', value: today() },
+        { k: 'method', label: 'אמצעי', type: 'select', options: S.lists.payMethods, value: S.lists.payMethods[0] },
+        { k: 'ref', label: 'אסמכתא (מס׳ / הערה)', type: 'text', value: '' },
+        { k: 'upToVideo', label: 'שילם עד סרטון', type: 'select', options: nums.map(function (n) { return { v: n, t: '#' + n }; }), value: nums[0],
+          hint: 'קו החלוקה ייכנס מתחת לסרטון הזה' },
+        { k: 'label', label: 'תווית קו החלוקה', type: 'text', value: info.defaultLabel }
+      ];
+      if (!info.lastDivider) {
+        fields.push({ k: 'labelCol', label: 'באיזו עמודה לכתוב את התווית (אין קו קודם בטבלה)', type: 'select', blank: true,
+          options: info.columns.map(function (x) { return { v: x.col, t: x.letter + (x.name ? ' — ' + x.name : '') }; }), value: '' });
+      }
+      o.projects.forEach(function (p) { fields.push({ k: 'p:' + p.id, label: 'פרויקט: ' + p.name + ' · ' + money(p.price), type: 'check', value: true }); });
+      o.retainers.forEach(function (x) { fields.push({ k: 'r:' + x.key, label: 'ריטיינר ' + month(x.month) + ' · ' + money(x.amount), type: 'check', value: true }); });
+      fields.push({ k: 'manualDivider', label: info.allowed ? 'אני אוסיף את הקו ידנית (לא לכתוב בטבלה)' : 'הקו יתווסף ידנית (הטבלה הזו לא ברשימת ההיתר)',
+        type: 'check', value: !info.allowed, disabled: !info.allowed });
+      var extra = info.lastDivider ? '<div class="sub muted">קו אחרון בטבלה: "' + esc(info.lastDivider.label) + '" (עמודה ' + esc(info.lastDivider.colLetter) + ')</div>' : '';
+      if (!nums.length) extra += '<div class="msg w">אין סרטונים מתחת לקו האחרון בטבלה</div>';
+      openForm('לקוח שילם — ' + c.name, fields, function (v) {
+        var params = { client: c.name, amount: v.amount, date: v.date, method: v.method, ref: v.ref, upToVideo: v.upToVideo, label: v.label,
+          manualDivider: !info.allowed || v.manualDivider,
+          projectIds: o.projects.filter(function (p) { return v['p:' + p.id]; }).map(function (p) { return p.id; }),
+          retainerKeys: o.retainers.filter(function (x) { return v['r:' + x.key]; }).map(function (x) { return x.key; }) };
+        if (!info.lastDivider) { if (v.labelCol === '') return formErr('לבחור עמודה לתווית'); params.labelCol = v.labelCol; }
+        runAct({ title: 'לקוח שילם', fn: 'actionClientPaid', args: function (cf) { return [getToken(), params, cf]; } });
+      }, extra);
+    });
+  }
+
+  function projectForm(p, clientName) {
+    var L = S.lists;
+    var fields = [
+      { k: 'לקוח', label: 'לקוח', type: 'select', options: L.clients, value: p ? p.client : clientName },
+      { k: 'שם', label: 'שם הפרויקט', type: 'text', value: p ? p.name : '' },
+      { k: 'סוג', label: 'סוג', type: 'select', options: L.projectTypes, value: p ? p.type : L.projectTypes[0] },
+      { k: 'מחיר', label: 'מחיר ללקוח (₪)', type: 'number', value: p ? p.price : '' },
+      { k: 'למי העלות', label: 'למי העלות', type: 'select', options: L.costOwners, value: p ? p.costOwner : 'אין' },
+      { k: 'עלות', label: 'עלות (₪)', type: 'number', value: p ? p.cost : '', hint: 'אם "למי העלות" = אין, העלות 0' },
+      { k: 'עורך', label: 'עורך (אם העלות לעורך)', type: 'select', blank: true, options: L.editors, value: p ? p.editor : '' },
+      { k: 'תאריך', label: 'תאריך', type: 'date', value: p ? p.date : today() }
+    ];
+    openForm(p ? 'עריכת פרויקט' : 'פרויקט חדש', fields, function (v) {
+      if (p) runAct({ title: 'עדכון פרויקט', fn: 'actionUpdateProject', args: function (cf) { return [getToken(), p.id, v, cf]; } });
+      else runAct({ title: 'פרויקט חדש', fn: 'actionAddProject', args: function (cf) { return [getToken(), v, cf]; } });
+    });
+  }
+  function editProject(id) {
+    var p = S.client.projects.filter(function (x) { return x.id === id; })[0];
+    projectForm(Object.assign({ client: S.client.name }, p));
+  }
+
+  function expenseForm(clientName) {
+    var L = S.lists;
+    var fields = [
+      { k: 'תאריך', label: 'תאריך', type: 'date', value: today() },
+      { k: 'לקוח', label: 'לקוח (ריק = הוצאה כללית)', type: 'select', blank: true, options: L.clients, value: clientName || '' },
+      { k: 'קטגוריה', label: 'קטגוריה', type: 'select', options: L.expenseCategories, value: L.expenseCategories[0] },
+      { k: 'סכום', label: 'סכום (₪)', type: 'number', value: '' },
+      { k: 'file', label: 'אסמכתא (קובץ, לא חובה)', type: 'file' },
+      { k: 'הערות', label: 'הערות', type: 'text', value: '' }
+    ];
+    openForm('הוצאה חדשה', fields, function (v, files) {
+      uploadThen('הוצאות', '', files.file, function (url) {
+        var f = { 'תאריך': v['תאריך'], 'לקוח': v['לקוח'], 'קטגוריה': v['קטגוריה'], 'סכום': v['סכום'], 'אסמכתא': url, 'הערות': v['הערות'] };
+        runAct({ title: 'הוצאה חדשה', fn: 'actionAddExpense', args: function (cf) { return [getToken(), f, cf]; } });
+      });
+    });
+  }
+
+  /** 5.5 — הגדרות לקוח. שולחים רק שדות ששונו. */
+  function clientSettingsForm(c) {
+    var s = c.settings, L = S.lists;
+    var fields = [
+      { k: 'סוג ברירת מחדל', label: 'סוג ברירת מחדל (לקוח בלי עמודת אורך)', type: 'select', blank: true, options: L.videoTypes, value: s['סוג ברירת מחדל'] },
+      { k: 'אנחנו כותבים', label: 'אנחנו כותבים (מחיר כתיבה)', type: 'check', value: s['אנחנו כותבים'] === true },
+      { k: 'ריטיינר חודשי', label: 'ריטיינר חודשי (₪)', type: 'number', value: s['ריטיינר חודשי'] },
+      { k: 'תאריך התחלת ריטיינר', label: 'תאריך התחלת ריטיינר', type: 'date', value: s['תאריך התחלת ריטיינר'] }
+    ];
+    L.videoTypes.forEach(function (t) {
+      fields.push({ k: 'מחיר ' + t, label: 'מחיר ' + t, type: 'number', value: s['מחיר ' + t] },
+        { k: 'מחיר כתיבה ' + t, label: 'מחיר כתיבה ' + t, type: 'number', value: s['מחיר כתיבה ' + t] },
+        { k: 'עלות עורך ' + t, label: 'עלות עורך ' + t, type: 'number', value: s['עלות עורך ' + t] });
+    });
+    openForm('הגדרות — ' + c.name, fields, function (v) {
+      var changed = {};
+      fields.forEach(function (f) {
+        var before = s[f.k] === undefined || s[f.k] === null ? '' : s[f.k];
+        if (f.type === 'check' ? v[f.k] !== (before === true) : String(v[f.k]) !== String(before)) changed[f.k] = v[f.k];
+      });
+      if (!Object.keys(changed).length) return formErr('לא שונה כלום');
+      runAct({ title: 'הגדרות לקוח', fn: 'actionClientSettings', args: function (cf) { return [getToken(), c.name, changed, cf]; } });
+    }, '<div class="sub muted">שדה ריק = אין מחיר (התראה). 0 = חינם במפורש.</div>');
+  }
+
+  // ---------- 6.4 עורכים ----------
+  function editorsView() {
+    loadHome(function (h) {
+      setMain('<div class="btns"><button class="b s" id="b-new-ed">+ עורך חדש</button></div><div class="card">' + (h.editors.map(editorRow).join('') || '<div class="muted">אין</div>') + '</div>');
+      $('b-new-ed').onclick = newEditorForm;
+    });
+  }
+
+  function editorView(name) {
+    call('getEditorPage', [getToken(), name], function (r) {
+      if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>');
+      var e = r.page, o = e.open;
+      var total = o.totals.videos.amount + o.totals.projects.amount, miss = o.totals.videos.missing + o.totals.projects.missing;
+      var items = o.videos.map(function (v) { return { k: 'v:' + v.key, label: v.key + ' · ' + (v.type || 'בלי סוג') + (v.date ? ' · ' + v.date : ''), amount: v.cost }; })
+        .concat(o.projects.map(function (p) { return { k: 'p:' + p.id, label: 'פרויקט: ' + p.client + ' — ' + p.name, amount: p.cost }; }));
+      setMain(
+        '<div class="btns"><button class="b s sm" onclick="go(\'editors\')">→ עורכים</button></div>' +
+        '<div class="card"><h2>' + esc(e.name) + '</h2><div class="k muted">מגיע עכשיו</div><div class="big">' + money(total) + '</div>' + partial(miss) +
+        '<div class="sub">' + items.length + ' פריטים פתוחים</div></div>' +
+        '<div class="btns"><button class="b" id="b-pay"' + (items.length ? '' : ' disabled') + '>שילמתי לעורך</button><button class="b s" id="b-eset">הגדרות</button></div>' +
+        sect('פתוח (' + items.length + ')', items.map(function (i) {
+          return '<div class="chk"><input type="checkbox" class="pick" data-k="' + esc(i.k) + '" data-a="' + (i.amount === null ? '' : i.amount) + '" checked><span>' + esc(i.label) + '</span><span class="num">' + money(i.amount) + '</span></div>';
+        }).join('') + (items.length ? '<div class="row"><div class="main">נבחר</div><b class="num" id="picked"></b></div>' : ''), items.length > 0) +
+        sect('היסטוריית תשלומים', e.payments.map(function (p) {
+          return '<div class="row"><div class="main">' + date(p.date) + ' · ' + p.count + ' פריטים' + (p.notes ? '<div class="sub">' + esc(p.notes) + '</div>' : '') +
+            '<div class="sub">' + (p.invoice ? '<a href="' + esc(p.invoice) + '" target="_blank" rel="noopener">חשבונית</a>' : '<span class="warn">אין חשבונית</span>') + ' · ' + esc(p.id) + '</div></div><b class="num">' + money(p.amount) + '</b></div>';
+        }).join(''))
+      );
+      var picks = function () { return Array.prototype.filter.call(document.querySelectorAll('.pick'), function (x) { return x.checked; }); };
+      var sumPicked = function () {
+        var s = 0, m = 0; picks().forEach(function (x) { var a = x.getAttribute('data-a'); if (a === '') m++; else s += Number(a); });
+        if ($('picked')) $('picked').innerHTML = money(Math.round(s * 100) / 100) + (m ? ' <span class="tag y">' + m + ' בלי עלות</span>' : '');
+        return s;
+      };
+      Array.prototype.forEach.call(document.querySelectorAll('.pick'), function (x) { x.onchange = sumPicked; });
+      sumPicked();
+      $('b-pay').onclick = function () {
+        var ks = picks().map(function (x) { return x.getAttribute('data-k'); });
+        if (!ks.length) return toast('לא נבחר כלום');
+        var fields = [
+          { k: 'date', label: 'תאריך', type: 'date', value: today() },
+          { k: 'amount', label: 'סכום (ריק = המחושב)', type: 'number', value: '', placeholder: String(sumPicked()) },
+          { k: 'file', label: 'חשבונית / אסמכתא (לא חובה)', type: 'file' },
+          { k: 'notes', label: 'הערות', type: 'text', value: '' }
+        ];
+        openForm('שילמתי ל' + e.name + ' · ' + ks.length + ' פריטים', fields, function (v, files) {
+          uploadThen('עורכים', e.name, files.file, function (url) {
+            var params = { editor: e.name, date: v.date, amount: v.amount, invoiceUrl: url, notes: v.notes,
+              keys: ks.filter(function (k) { return k.indexOf('v:') === 0; }).map(function (k) { return k.slice(2); }),
+              projectIds: ks.filter(function (k) { return k.indexOf('p:') === 0; }).map(function (k) { return k.slice(2); }) };
+            runAct({ title: 'שילמתי לעורך', fn: 'actionEditorPaid', args: function (cf) { return [getToken(), params, cf]; } });
+          });
+        });
+      };
+      $('b-eset').onclick = function () {
+        var s = e.settings;
+        var fields = [{ k: 'כינויים', label: 'כינויים (מופרד בפסיק)', type: 'text', value: s['כינויים'] },
+          { k: 'Gmail', label: 'מייל', type: 'email', value: s['Gmail'] }, { k: 'פעיל', label: 'פעיל', type: 'check', value: s['פעיל'] }];
+        openForm('הגדרות — ' + e.name, fields, function (v) {
+          var changed = {};
+          fields.forEach(function (f) { if (String(v[f.k]) !== String(s[f.k])) changed[f.k] = v[f.k]; });
+          if (!Object.keys(changed).length) return formErr('לא שונה כלום');
+          runAct({ title: 'הגדרות עורך', fn: 'actionEditorSettings', args: function (cf) { return [getToken(), e.name, changed, cf]; } });
+        }, '<div class="sub muted">עלות עורך נקבעת בהגדרות הלקוח.</div>');
+      };
+    }, function (m) { setMain('<div class="msg e">' + esc(m) + '</div>'); });
+  }
+
+  function newEditorForm() {
+    var fields = [{ k: 'שם', label: 'שם (כמו בטבלאות התוכן)', type: 'text', value: '' }, { k: 'כינויים', label: 'כינויים', type: 'text', value: '' },
+      { k: 'Gmail', label: 'מייל', type: 'email', value: '' }];
+    openForm('עורך חדש', fields, function (v) {
+      runAct({ title: 'עורך חדש', fn: 'actionAddEditor', args: function (cf) { return [getToken(), v, cf]; } });
+    }, '<div class="sub muted">כדי שהעורך יוכל להיכנס: להוסיף את המייל שלו בטאב הרשאות (editor + שם עורך מקושר).</div>');
+  }
+
+  // ---------- התראות ----------
+  function alertsView() {
+    call('getAlerts', [getToken()], function (r) {
+      var dot = $('alert-dot'); dot.textContent = r.alerts.length; dot.classList.toggle('hidden', !r.alerts.length);
+      setMain('<div class="card"><h2>התראות פתוחות (' + r.alerts.length + ')</h2>' + (r.alerts.map(function (a) {
+        return '<div class="row"><div class="main"><span class="tag r">' + esc(a.type) + '</span> <b>' + esc(a.who) + '</b><div class="sub">' + esc(a.detail) + ' · ' + date(a.date) + '</div></div>' +
+          '<button class="b s sm" onclick="resolveAlert(' + esc(JSON.stringify(a.id)) + ')">טופל</button></div>';
+      }).join('') || '<div class="ok">אין התראות פתוחות ✓</div>') + '</div>' +
+        '<div class="sub muted">התראה שהבעיה שלה עדיין קיימת תיפתח מחדש בריצה הבאה.</div>');
+    });
+  }
+  function resolveAlert(id) {
+    runAct({ title: 'סגירת התראה', fn: 'actionResolveAlert', args: function (cf) { return [getToken(), id, cf]; } });
+  }
+
+  // ---------- עוד + 6.6 שותפים ----------
+  function moreView() {
+    loadHome(function () {
+      setMain('<div class="card">' +
+        '<button class="b full" onclick="go(\'partners\')">שותפים — רווח לפי חודש</button>' +
+        '<button class="b s full" onclick="projectForm(null, \'\')">פרויקט חדש</button>' +
+        '<button class="b s full" onclick="expenseForm(\'\')">הוצאה חדשה</button>' +
+        '<button class="b s full" onclick="newEditorForm()">עורך חדש</button>' +
+        '<button class="b s full" id="b-refresh">רענון עכשיו (קריאת טבלאות התוכן)</button>' +
+        '<button class="b s full" onclick="undoLast()">ביטול הפעולה האחרונה</button>' +
+        '</div>');
+      $('b-refresh').onclick = function () {
+        var b = $('b-refresh'); b.disabled = true; b.textContent = 'קורא טבלאות… (עד דקה)';
+        call('refreshNow', [getToken()], function (r) {
+          b.disabled = false; b.textContent = 'רענון עכשיו (קריאת טבלאות התוכן)';
+          openModal('<h2>רענון</h2>' + linesHtml(r.ok ? r.summary : [r.message], r.ok ? 'o' : 'e') + '<button class="b s full" onclick="closeModal()">סגור</button>');
+        }, function (m) { b.disabled = false; toast(m); });
+      };
+    });
+  }
+  function undoLast() { runAct({ title: 'ביטול הפעולה האחרונה', fn: 'actionUndoLast', args: function (cf) { return [getToken(), cf]; } }); }
+
+  function partnersView() {
+    loadHome(function (h) {
+      setMain('<div class="btns"><button class="b s sm" onclick="go(\'more\')">→ עוד</button></div>' +
+        '<div class="card"><h2>רווח מצטבר</h2><div class="big">' + money(h.totalPnl.profit) + '</div>' + partial(h.totalPnl.missing) +
+        '<div class="sub">הכנסות ' + money(h.totalPnl.revenue) + ' · עלויות ' + money(h.totalPnl.cost) + '</div></div>' +
+        h.partners.map(function (p) {
+          return sect(month(p.month) + ' · ' + money(p.profit), '<div class="sub">הכנסות ' + money(p.revenue) + ' · עלויות ' + money(p.cost) + '</div>' + partnerRows(p), p.month === h.month);
+        }).join(''));
+    });
+  }
+
+  // ---------- 6.5 דף עורך אישי ----------
+  function myPage() {
+    setMain('<div class="center">טוען…</div>');
+    call('getMyPage', [getToken()], function (r) {
+      if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>');
+      var p = r.page;
+      var byClient = {};
+      p.videos.forEach(function (v) { (byClient[v.client] = byClient[v.client] || []).push(v); });
+      setMain(
+        '<div class="card"><h2>שלום ' + esc(p.name) + '</h2><div class="k muted">מגיע לך עכשיו</div><div class="big">' + money(p.due.amount) + '</div>' +
+        (p.due.missing ? '<div class="msg w">' + p.due.missing + ' פריטים עוד בלי מחיר. הסכום יתעדכן כשיוסף ישלים.</div>' : '') +
+        '<div class="sub">' + p.due.count + ' פריטים מאז התשלום האחרון</div></div>' +
+        sect('סרטונים שלא שולמו (' + p.videos.length + ')', Object.keys(byClient).sort().map(function (c) {
+          return '<div class="sub" style="margin-top:8px"><b>' + esc(c) + '</b></div>' + byClient[c].map(function (v) {
+            return '<div class="row"><div class="main">#' + esc(v.num) + ' <span class="sub">' + esc(v.type || '') + '</span></div><span class="num">' + money(v.amount) + '</span></div>';
+          }).join('');
+        }).join(''), true) +
+        (p.projects.length ? sect('פרויקטים (' + p.projects.length + ')', p.projects.map(function (x) {
+          return '<div class="row"><div class="main">' + esc(x.client) + ' — ' + esc(x.name) + '</div><span class="num">' + money(x.amount) + '</span></div>';
+        }).join(''), true) : '') +
+        sect('היסטוריית תשלומים', p.payments.map(function (x) {
+          return '<div class="row"><div class="main">' + date(x.date) + ' · ' + x.count + ' פריטים<div class="sub">' +
+            (x.hasInvoice ? '<span class="ok">חשבונית ✓</span>' : '<button class="b sm" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">העלאת חשבונית</button>') +
+            '</div></div><b class="num">' + money(x.amount) + '</b></div>';
+        }).join(''), true)
+      );
+    });
+  }
+  function myInvoice(paymentId) {
+    var fields = [{ k: 'file', label: 'קובץ חשבונית (PDF / תמונה)', type: 'file' }];
+    openForm('העלאת חשבונית', fields, function (v, files) {
+      if (!files.file) return formErr('לבחור קובץ');
+      readFile(files.file, function (f) {
+        runAct({ title: 'העלאת חשבונית', fn: 'editorUploadInvoice', args: function (cf) { return [getToken(), paymentId, f, cf]; }, after: myPage });
+      });
+    });
+  }
+
+  // ---------- התחלה ----------
+  (function init() {
+    var t = getToken();
+    if (!t) return loginView();
+    call('getCurrentUser', [t], function (r) {
+      if (r.ok) return start(r.user);
+      setToken(null); loginView();
+    }, function () { setToken(null); loginView(); });
+  })();
+</script>
+</body>
+</html>
