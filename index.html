@@ -120,7 +120,7 @@
       display: flex; align-items: center; justify-content: center; color: var(--label); cursor: pointer; }
     .fab svg { width: 24px; height: 24px; position: relative; }
     #fab-end { inset-inline-end: 16px; }
-    #fab-back { inset-inline-start: 16px; width: 44px; height: 44px; margin-top: 2px; }
+    #fab-back { inset-inline-start: 16px; }
     .fab:active { transform: scale(.94); }
     .fab:hover::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--fill2); pointer-events: none; }
     /* ===== Liquid Glass: רק שכבת הניווט (tab bar + כפתורים צפים). לא כרטיסים, לא רשימות, לא sheets (שכבת תוכן) ===== */
@@ -301,6 +301,13 @@
     .pk[aria-checked="true"] .ckc { background: var(--tint); border-color: var(--tint); }
     .pk[aria-checked="false"] .ckc svg { visibility: hidden; }
     .pick-sum { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 4px; }
+    /* הצעות בונוס: chips (36px, שטח לחיצה 44) */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 16px 12px; }
+    .chips:empty { display: none; }
+    .chip { position: relative; min-height: 36px; padding: 0 12px; border: 0; border-radius: 18px; background: var(--tint-bg); color: var(--link-text);
+      font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .chip::before { content: ''; position: absolute; inset: -4px 0; }
+    .chip[aria-pressed="true"] { background: var(--tint); color: var(--white); }
     .pick-sum .main { flex: 1; color: var(--label2); }
     .pie-gap { height: 16px; }
     .btn-plain.inl { padding: 0; }
@@ -1603,7 +1610,7 @@
           ed ? 'לפי עלות עורך, כולל מה שכבר שולם' : '') : '') +
         sect('היסטוריית תשלומים', e.payments.map(function (p) {
           return '<div class="row"><div class="main"><div class="t-body">' + date(p.date) + ' · ' + nOf(p.count, 'פריט', 'פריטים') + '</div>' + (p.notes ? '<div class="t-foot sec">' + esc(p.notes) + '</div>' : '') +
-            '<div class="t-foot sec">' + (p.invoice ? '<a href="' + esc(p.invoice) + '" target="_blank" rel="noopener">חשבונית</a>' : '<span class="warn">⚠︎ אין חשבונית</span>') + ' · <span class="ltr">' + esc(p.id) + '</span></div></div><span class="t-body num">' + money(p.amount) + '</span></div>';
+            '<div class="t-foot sec">' + (p.invoice ? '<a href="' + esc(p.invoice) + '" target="_blank" rel="noopener">חשבונית</a>' : '<span class="warn">⚠︎ אין חשבונית</span>') + ' · <span class="ltr">' + esc(p.id) + '</span></div></div>' + paidVal(p.amount, p.bonus) + '</div>';
         }).join(''))
       );
       $('b-pay').onclick = function () { paySheet(e, items); };
@@ -1614,37 +1621,55 @@
     return '<div class="row"><div class="main"><div class="t-body">' + i.name + '</div>' + (i.sub ? '<div class="t-foot sec">' + i.sub + '</div>' : '') + '</div>' +
       (i.amount === null ? wg(1, 'בלי עלות') + '<span class="t-body sec">—</span>' : '<span class="t-body num">' + money(i.amount) + '</span>') + '</div>';
   }
-  /** גיליון "שילמתי לעורך": סימון פריטים (הכול מסומן), סכום רץ למטה, ואז תאריך / סכום / חשבונית. */
+  /**
+   * גיליון "שילמתי לעורך": סימון פריטים (הכול מסומן) → בונוס (הצעות + שדה חופשי) → תאריך / סכום / חשבונית.
+   * למטה: סה״כ לתשלום = פריטים + בונוס. הבונוס נרשם בשרת גם כהוצאה כללית (בונוס עורכים).
+   */
   function paySheet(e, items) {
-    var sel = {};
+    var sel = {}, bonusTxt = '';
     items.forEach(function (i) { sel[i.k] = true; });
     var sum = function () {
       var x = { s: 0, m: 0, n: 0 };
       items.forEach(function (i) { if (!sel[i.k]) return; x.n++; if (i.amount === null) x.m++; else x.s += i.amount; });
       x.s = Math.round(x.s * 100) / 100; return x;
     };
+    var bonusNum = function () { var t = String(bonusTxt).replace(/,/g, '').trim(); return t === '' ? 0 : Number(t); };
+    var amountField = function () { var el = $(fields[1]._id), t = el ? el.value.replace(/,/g, '').trim() : ''; return t === '' ? null : Number(t); };
     var sumHtml = function () {
-      var x = sum();
-      return '<span class="main">נבחרו ' + x.n + ' מתוך ' + items.length + (x.m ? ' · ' + x.m + ' בלי עלות' : '') + '</span><span class="t-head num">' + money(x.s) + '</span>';
+      var x = sum(), items$ = amountField(), b = bonusNum(), ok = !isNaN(b) && b >= 0 && (items$ === null || !isNaN(items$));
+      var total = ok ? Math.round(((items$ === null ? x.s : items$) + b) * 100) / 100 : null;
+      return '<span class="main">סה״כ לתשלום<span class="t-foot sec blk">נבחרו ' + x.n + ' מתוך ' + items.length + (x.m ? ' · ' + x.m + ' בלי עלות' : '') + '</span></span>' +
+        '<span class="t-head num">' + money(total) + '</span>';
+    };
+    var chipsHtml = function () {
+      var b = bonusNum();
+      return bonusSuggestions(sum().s).map(function (x) {
+        return '<button type="button" class="chip t-sub" data-b="' + x.bonus + '" aria-pressed="' + (b === x.bonus) + '">' + money(x.total) + ' · בונוס ' + money(x.bonus) + '</button>';
+      }).join('');
     };
     var list = function () {
       return grp('מה שולם', '<div id="pick-list">' + items.map(function (i) {
         return '<button class="row pk" type="button" role="checkbox" aria-checked="' + !!sel[i.k] + '" data-k="' + esc(i.k) + '"><span class="ckc" aria-hidden="true">' + ICON_CHECK + '</span>' +
           '<span class="main"><span class="t-body blk">' + i.name + '</span>' + (i.sub ? '<span class="t-foot sec blk">' + i.sub + '</span>' : '') + '</span>' +
           (i.amount === null ? wg(1, 'בלי עלות') + '<span class="t-body sec">—</span>' : '<span class="t-body num">' + money(i.amount) + '</span>') + '</button>';
-      }).join('') + '</div>');
+      }).join('') + '</div>') +
+        grp('בונוס', '<div class="row"><span class="main t-body">סה״כ הפריטים שנבחרו</span><span class="t-body num" id="bn-base">' + money(sum().s) + '</span></div>' +
+          '<div class="chips" id="bn-chips">' + chipsHtml() + '</div>' +
+          '<div class="fld"><label for="bn-in">בונוס (₪)</label><input id="bn-in" type="text" inputmode="numeric" class="ltr" placeholder="0" value="' + esc(bonusTxt) + '"></div>',
+          'הבונוס נרשם גם כהוצאה כללית (בונוס עורכים) ומוריד את רווח החודש.');
     };
     var fields = [
       { k: 'date', label: 'תאריך', type: 'date', value: today() },
-      { k: 'amount', label: 'סכום (ריק = המחושב)', type: 'number', value: '', placeholder: '' },
+      { k: 'amount', label: 'סכום הפריטים (ריק = המחושב)', type: 'number', value: '', placeholder: '' },
       { k: 'file', label: 'חשבונית / אסמכתא (לא חובה)', type: 'file' },
       { k: 'notes', label: 'הערות', type: 'text', value: '' }
     ];
     openForm('שילמתי ל' + e.name, fields, function (v, files) {
       var ks = items.filter(function (i) { return sel[i.k]; }).map(function (i) { return i.k; });
       if (!ks.length) return formErr('לא נבחר כלום');
+      var bonus = String(bonusTxt).replace(/,/g, '').trim();
       uploadThen('עורכים', e.name, files.file, function (url) {
-        var params = { editor: e.name, date: v.date, amount: v.amount, invoiceUrl: url, notes: v.notes,
+        var params = { editor: e.name, date: v.date, amount: v.amount, bonus: bonus, invoiceUrl: url, notes: v.notes,
           keys: ks.filter(function (k) { return k.indexOf('v:') === 0; }).map(function (k) { return k.slice(2); }),
           projectIds: ks.filter(function (k) { return k.indexOf('p:') === 0; }).map(function (k) { return k.slice(2); }) };
         runAct({ title: 'שילמתי לעורך', fn: 'actionEditorPaid', args: function (cf) { return [getToken(), params, cf]; } });
@@ -1652,14 +1677,41 @@
     }, list, {
       foot: function () { return '<div class="pick-sum t-sub" id="picked" aria-live="polite">' + sumHtml() + '</div>'; },
       onOpen: function (fs) {
-        var amt = $(fs[1]._id), sync = function () { $('picked').innerHTML = sumHtml(); amt.placeholder = String(sum().s); };
+        fields = fs;
+        var amt = $(fs[1]._id);
+        // שינוי בבחירה מחשב מחדש את ההצעות; הבונוס שבשדה נשאר כמו שהוא (לא משנים סכום כסף בשקט)
+        var sync = function () { $('picked').innerHTML = sumHtml(); amt.placeholder = String(sum().s); $('bn-base').textContent = money(sum().s); $('bn-chips').innerHTML = chipsHtml(); };
         $('pick-list').onclick = function (ev) {
           var b = ev.target.closest('[data-k]'); if (!b) return;
           var k = b.getAttribute('data-k'); sel[k] = !sel[k]; b.setAttribute('aria-checked', sel[k] ? 'true' : 'false'); sync();
         };
+        $('bn-chips').onclick = function (ev) {
+          var c = ev.target.closest('[data-b]'); if (!c) return;
+          bonusTxt = c.getAttribute('aria-pressed') === 'true' ? '' : c.getAttribute('data-b');   // לחיצה חוזרת מנקה
+          $('bn-in').value = bonusTxt; sync();
+        };
+        $('bn-in').oninput = function () { bonusTxt = $('bn-in').value; sync(); };
+        amt.oninput = sync;
         sync();
       }
     });
+  }
+  /**
+   * הצעות בונוס מסכום הפריטים (דטרמיניסטי, באגורות): עיגול למעלה ל-100 / 500 / 1,000, ו-5% / 10% (הבונוס מעוגל למעלה לעשרות).
+   * בלי כפילויות (אותו סה״כ) ובלי הצעה שהבונוס בה 0. → [{ total, bonus }]
+   */
+  function bonusSuggestions(s) {
+    var c = Math.round(s * 100), out = [], seen = {};
+    if (!(c > 0)) return out;
+    var add = function (t) { if (t - c <= 0 || seen[t]) return; seen[t] = 1; out.push({ total: t / 100, bonus: (t - c) / 100 }); };
+    [10000, 50000, 100000].forEach(function (u) { add(Math.ceil(c / u) * u); });
+    [5, 10].forEach(function (pct) { add(c + Math.ceil(c * pct / 100 / 1000) * 1000); });
+    return out;
+  }
+  /** סכום ששולם, ומתחת "כולל בונוס ₪X" כשיש בונוס. */
+  function paidVal(amount, bonus) {
+    return bonus ? '<span class="val"><span class="t-body num">' + money(amount) + '</span><span class="t-foot sec nw">כולל בונוס ' + money(bonus) + '</span></span>'
+      : '<span class="t-body num">' + money(amount) + '</span>';
   }
   /** "…" בדף העורך. */
   function editorMenu(btn) { if (S.editorPage && S.editorPage.name === S.arg) openMenu(btn, [{ t: 'הגדרות עורך', fn: editorSettings }]); }
@@ -1831,7 +1883,7 @@
       sect('היסטוריית תשלומים', p.payments.map(function (x) {
         return '<div class="row"><div class="main"><div class="t-body">' + date(x.date) + ' · ' + nOf(x.count, 'פריט', 'פריטים') + '</div><div class="t-foot">' +
           (x.hasInvoice ? '<span class="ok">חשבונית ✓</span>' : '<span class="warn">⚠︎ אין חשבונית</span>') + '</div>' +
-          (x.hasInvoice ? '' : '<button class="btn-plain t-sub inl" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">העלאת חשבונית</button>') + '</div><span class="t-body num">' + money(x.amount) + '</span></div>';
+          (x.hasInvoice ? '' : '<button class="btn-plain t-sub inl" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">העלאת חשבונית</button>') + '</div>' + paidVal(x.amount, x.bonus) + '</div>';
       }).join(''), true) +
       grp('תצוגה', themeRow()) +
       logoutGroup()
