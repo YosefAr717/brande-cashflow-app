@@ -92,6 +92,7 @@
       opacity: 1; transition: opacity 150ms cubic-bezier(.2,.8,.2,1); }
     #bar-title.fade { opacity: 0; }
     .bar-slot { display: flex; align-items: center; min-width: 44px; position: relative; z-index: 1; }
+    #sync { padding-inline: 8px; white-space: nowrap; }
     #bar-back { gap: 4px; }
     #bar-back .chev { transform: scaleX(-1); background: var(--tint); width: 10px; height: 18px; }
     main { padding: 0 16px calc(49px + 32px + env(safe-area-inset-bottom)); }
@@ -395,7 +396,7 @@
   <header id="bar" class="hidden">
     <div class="bar-slot"><button class="btn-plain t-body hidden" id="bar-back"><span class="chev" aria-hidden="true"></span><span id="bar-back-t"></span></button></div>
     <div id="bar-title" class="t-head" aria-live="polite"></div>
-    <div class="bar-slot" id="bar-end"></div>
+    <div class="bar-slot"><span id="sync" class="t-foot sec hidden" role="status">מתעדכן…</span><span id="bar-end"></span></div>
   </header>
   <main id="main"><div class="grp"><div class="gbody"><div class="skrow"><div class="sk l"></div></div><div class="skrow"><div class="sk l"></div></div></div></div></main>
   <div id="modal" class="hidden"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
@@ -417,6 +418,17 @@
   function setToken(t) {
     memToken = t;
     STORES.forEach(function (s) { try { t ? s.setItem(TOKEN_KEY, t) : s.removeItem(TOKEN_KEY); } catch (e) {} });
+    if (!t) setRole(null);
+  }
+  // התפקיד (לא סוד) נשמר ליד הטוקן: טעינה ראשונה בבקשה אחת (getAdminHome / getMyPage) במקום getCurrentUser + עוד אחת.
+  var ROLE_KEY = 'brande_role', memRole = null;
+  function getRole() {
+    for (var i = 0; i < STORES.length; i++) { try { var v = STORES[i].getItem(ROLE_KEY); if (v) return v; } catch (e) {} }
+    return memRole;
+  }
+  function setRole(r) {
+    memRole = r;
+    STORES.forEach(function (s) { try { r ? s.setItem(ROLE_KEY, r) : s.removeItem(ROLE_KEY); } catch (e) {} });
   }
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -478,13 +490,17 @@
 
   /** קריאה לשרת. שגיאת הרשאה → חזרה למסך כניסה. */
   function call(fn, args, onOk, onErr) {
-    var fail = function (m) {
+    var t0 = performance.now();
+    var done = function (t) { perfMark(fn, t0, t); };
+    var fail = function (m, t) {
+      done(t);
+      if (/FORBIDDEN/.test(m) && S.boot) { S.boot = false; setRole(null); return bootSlow(); }   // התפקיד השמור כבר לא נכון
       if (/AUTH_REQUIRED/.test(m)) { setToken(null); return loginView('החיבור פג. להיכנס שוב.'); }
       if (/FORBIDDEN/.test(m)) m = 'אין הרשאה';
       if (onErr) onErr(m); else toast('שגיאה: ' + m);
     };
     if (GAS) {
-      var r = google.script.run.withSuccessHandler(onOk).withFailureHandler(function (e) { fail((e && e.message) || String(e)); });
+      var r = google.script.run.withSuccessHandler(function (x) { done(); onOk(x); perfLoaded(fn); }).withFailureHandler(function (e) { fail((e && e.message) || String(e)); });
       return r[fn].apply(r, args);
     }
     // text/plain → בלי preflight. credentials: omit → בלי עוגיות Google.
@@ -494,7 +510,7 @@
         if (!res.ok) throw new Error('שגיאת שרת (' + res.status + '). לנסות שוב.');
         return res.text().then(function (t) { try { return JSON.parse(t); } catch (e) { throw new Error('תשובה לא תקינה מהשרת. לנסות שוב.'); } });
       }, function () { throw new Error('אין חיבור לשרת. לנסות שוב.'); })
-      .then(function (d) { if (d && d.ok) onOk(d.result); else fail((d && d.error) || 'תשובה לא תקינה מהשרת'); })
+      .then(function (d) { if (d && d.ok) { done(d.t); onOk(d.result); perfLoaded(fn); } else fail((d && d.error) || 'תשובה לא תקינה מהשרת', d && d.t); })
       .catch(function (e) { fail((e && e.message) || 'אין חיבור לשרת'); });
   }
 
@@ -561,11 +577,33 @@
     return grp('', '<button class="row row-c t-body danger" id="b-logout" onclick="logout()">התנתקות</button>');
   }
 
-  /** 6.1.2 ניתוב לפי תפקיד. */
-  function start(user) {
+  // ---------- מדידה (שלב 0 בביצועים) ----------
+  /** הבקשה האחרונה: זמן הלוך-חזור בדפדפן + t מהשרת (total, load, cache). */
+  function perfMark(fn, t0, t) {
+    S.timing = { fn: fn, rt: Math.round(performance.now() - t0), total: t ? t.total : null, load: t ? t.load : null, cache: t ? t.cache : '' };
+    var el = $('perf'); if (el) el.innerHTML = perfRows();
+  }
+  /** זמן טעינת הדף: מתחילת הניווט עד שהמסך הראשון עם נתונים צויר. */
+  function perfLoaded(fn) {
+    if (!S.pageLoad && /^(getAdminHome|getMyPage)$/.test(fn)) S.pageLoad = Math.round(performance.now());
+    if (/^(getAdminHome|getMyPage)$/.test(fn)) S.boot = false;
+  }
+  function perfRows() {
+    var t = S.timing || {}, ms = function (v) { return v === null || v === undefined ? '—' : v + ' ms'; };
+    var row = function (k, v) { return '<div class="row"><div class="main t-body">' + k + '</div><span class="t-body num">' + v + '</span></div>'; };
+    return row('בקשה אחרונה', '<span class="ltr">' + esc(t.fn || '—') + '</span>') + row('שרת (סה״כ)', ms(t.total)) +
+      row('טעינת נתונים', ms(t.load) + (t.cache ? ' · ' + esc(t.cache) : '')) + row('הלוך-חזור', ms(t.rt)) + row('טעינת הדף', ms(S.pageLoad));
+  }
+
+  function applyUser(user) {
     S.user = user;
     $('who').textContent = user.email;
     $('av').textContent = String(user.email || '?').charAt(0).toUpperCase();
+    setRole(user.role);
+  }
+  /** 6.1.2 ניתוב לפי תפקיד. */
+  function start(user) {
+    applyUser(user);
     if (user.role === 'admin') { $('nav').classList.remove('hidden'); go('home'); }
     else { $('nav').classList.add('hidden'); myPage(); }
   }
@@ -602,7 +640,7 @@
           if (!d.ok) return openModal(sheetHtml(act.title, linesHtml([d.message], 'e'), '', 'סגור'));
           openModal(sheetHtml('בוצע ✓', linesHtml(d.done, 'o') + linesHtml(d.warnings, 'w') + '<p class="note t-foot">מזהה: <span class="ltr">' + esc(d.id) + '</span></p>',
             '<button class="btn btn-fill full t-head" id="b-done">סגור</button>', 'סגור'));
-          $('b-done').onclick = function () { closeModal(); (act.after || reload)(); };
+          $('b-done').onclick = function () { closeModal(); S.home = null; (act.after || reload)(); };
         }, function (m) { openModal(sheetHtml(act.title, linesHtml([m], 'e'), '', 'סגור')); });
       };
     }, function (m) { openModal(sheetHtml(act.title, linesHtml([m], 'e'), '', 'סגור')); });
@@ -680,19 +718,36 @@
     });
     S.screen = Object.assign({}, SCREENS[view], arg ? { t: arg } : {});
     if (view === 'editors') S.screen.action = '<button class="btn-plain t-body" id="b-new-ed">+ עורך חדש</button>';
-    setMain(skeleton(view));
+    S.navSeq = (S.navSeq || 0) + 1;
+    if (!(homeFresh() && /^(home|clients|editors|more|partners)$/.test(view))) setMain(skeleton(view));
     ({ home: homeView, clients: clientsView, editors: editorsView, alerts: alertsView, more: moreView, partners: partnersView,
       client: clientView, editor: editorView })[view](arg);
   }
   function reload() { if (S.user && S.user.role === 'admin') go(S.view || 'home', S.arg); else myPage(); }
 
-  /** טוען דשבורד (נתוני בית + רשימות לטפסים). */
-  function loadHome(cb) {
+  /**
+   * טוען דשבורד (נתוני בית + רשימות לטפסים).
+   * stale-while-revalidate: אם יש S.home בן פחות מ-120 שניות — מציירים מיד ממנו, ומרעננים ברקע.
+   * כשהתשובה חוזרת: מציירים שוב רק אם המסך עדיין פתוח והנתונים השתנו (opts.onRefresh במקום ציור מלא).
+   */
+  var HOME_TTL_MS = 120000;
+  function homeFresh() { return !!S.home && Date.now() - S.homeAt < HOME_TTL_MS; }
+  function setSync(on) { $('sync').classList.toggle('hidden', !on); }
+  function loadHome(cb, opts) {
+    opts = opts || {};
+    var seq = S.navSeq, fresh = homeFresh();
+    if (fresh) { cb(S.home); setSync(true); }
     call('getAdminHome', [getToken()], function (r) {
-      S.home = r.home; S.lists = r.lists;
+      setSync(false);
+      var changed = !S.home || JSON.stringify(r.home) !== JSON.stringify(S.home) || JSON.stringify(r.lists) !== JSON.stringify(S.lists);
+      S.home = r.home; S.lists = r.lists; S.homeAt = Date.now();
+      if (r.user && !S.user) applyUser(r.user);
       var dot = $('alert-dot'); dot.textContent = r.home.alertsOpen; dot.classList.toggle('hidden', !r.home.alertsOpen);
-      cb(r.home);
-    });
+      if (!fresh) return cb(r.home);
+      if (seq !== S.navSeq || !changed) return;
+      if (opts.onRefresh) return opts.onRefresh(r.home);
+      var y = window.scrollY; cb(r.home); window.scrollTo(0, y);
+    }, function (m) { setSync(false); toast('שגיאה: ' + m); });
   }
 
   /** אריח מספר. go = מסך ללחיצה (או ריק). */
@@ -764,15 +819,18 @@
 
   // ---------- 6.3 לקוחות ----------
   function clientsView() {
+    var cur = null;
     loadHome(function (h) {
+      cur = h;
+      if ($('q') && $('list')) return draw();   // רענון ברקע: לא מאפסים את החיפוש
       setMain('<label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></svg>' +
         '<span class="vh">חיפוש לקוח</span><input id="q" type="search" placeholder="חיפוש" class="t-body"></label>' + grp('', '<div id="list"></div>'));
-      var draw = function () {
-        var q = $('q').value.trim().toLowerCase();
-        $('list').innerHTML = h.clients.filter(function (c) { return !q || c.name.toLowerCase().indexOf(q) !== -1; }).map(clientRow).join('') || emptyRow();
-      };
       $('q').oninput = draw; draw();
     });
+    function draw() {
+      var q = $('q').value.trim().toLowerCase();
+      $('list').innerHTML = cur.clients.filter(function (c) { return !q || c.name.toLowerCase().indexOf(q) !== -1; }).map(clientRow).join('') || emptyRow();
+    }
   }
 
   function clientView(name) {
@@ -1128,16 +1186,17 @@
           iconRow(IC('<path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/>'), 'רענון עכשיו', '', { id: 'b-refresh' }) +
           iconRow(IC('<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>'), 'ביטול הפעולה האחרונה', 'undoLast()', { cls: 'danger red' }),
           'רענון קורא את טבלאות התוכן. עד דקה.') +
+        grp('ביצועים', '<div id="perf">' + perfRows() + '</div>') +
         logoutGroup() +
         '<p class="foot-link t-foot"><a href="https://cashflow.brandemedia.co.il/privacy.html" target="_blank" rel="noopener">מדיניות פרטיות</a></p>');
       $('b-refresh').onclick = function () {
         var b = $('b-refresh'), t = b.querySelector('.main'); b.disabled = true; t.textContent = 'קורא טבלאות…';
         call('refreshNow', [getToken()], function (r) {
-          b.disabled = false; t.textContent = 'רענון עכשיו';
+          b.disabled = false; t.textContent = 'רענון עכשיו'; S.home = null;
           openModal(sheetHtml('רענון', linesHtml(r.ok ? r.summary : [r.message], r.ok ? 'o' : 'e'), '', 'סגור'));
         }, function (m) { b.disabled = false; t.textContent = 'רענון עכשיו'; toast(m); });
       };
-    });
+    }, { onRefresh: function () { if ($('perf')) $('perf').innerHTML = perfRows(); } });
   }
   function undoLast() { runAct({ title: 'ביטול הפעולה האחרונה', fn: 'actionUndoLast', args: function (cf) { return [getToken(), cf]; } }); }
 
@@ -1156,6 +1215,7 @@
     S.screen = { t: 'שלום', large: 1 };
     setMain(skeleton('my'));
     call('getMyPage', [getToken()], function (r) {
+      if (!r.ok && S.boot) { S.boot = false; setRole(null); return bootSlow(); }   // התפקיד השמור כבר לא נכון
       if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>' + logoutGroup());
       renderMy(r.page);
     });
@@ -1204,13 +1264,22 @@
   }
 
   // ---------- התחלה ----------
-  (function init() {
+  /** בלי תפקיד שמור: getCurrentUser ואז המסך (כמו קודם). */
+  function bootSlow() {
     var t = getToken();
     if (!t) return loginView();
     call('getCurrentUser', [t], function (r) {
       if (r.ok) return start(r.user);
       setToken(null); loginView();
     }, function () { setToken(null); loginView(); });
+  }
+  (function init() {
+    var t = getToken(), role = getRole();
+    if (!t) return loginView();
+    // תפקיד שמור → בקשה אחת. השרת מאמת את הטוקן בכל מקרה (AUTH_REQUIRED → כניסה, FORBIDDEN → bootSlow).
+    if (role === 'admin') { S.boot = true; $('nav').classList.remove('hidden'); return go('home'); }
+    if (role === 'editor') { S.boot = true; return myPage(); }
+    bootSlow();
   })();
 </script>
 </body>
