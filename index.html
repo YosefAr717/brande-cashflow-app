@@ -145,7 +145,8 @@
       '<div id="code-box" class="hidden"><label>קוד מהמייל (6 ספרות)</label><input id="code" class="ltr" inputmode="numeric" autocomplete="one-time-code" maxlength="6">' +
       '<button class="b full" id="b-verify">כניסה</button></div>' +
       (GOOGLE_CLIENT_ID && !GAS ? '<div class="sub muted" style="text-align:center;margin:12px 0 8px">או</div><div id="g-btn" style="display:flex;justify-content:center"></div>' : '') +
-      '<div id="login-msg"></div></div>');
+      '<div id="login-msg"></div></div>' +
+      '<div class="sub muted" style="text-align:center"><a href="https://cashflow.brandemedia.co.il/privacy.html" target="_blank" rel="noopener" style="color:inherit">מדיניות פרטיות</a></div>');
     var lm = function (t, cls) { $('login-msg').innerHTML = t ? '<div class="msg ' + cls + '">' + esc(t) + '</div>' : ''; };
     if ($('g-btn')) googleButton(function (cred) {
       lm('מתחבר...', 'o');
