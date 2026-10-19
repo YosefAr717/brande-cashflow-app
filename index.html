@@ -544,15 +544,36 @@
       return r[fn].apply(r, args);
     }
     // text/plain → בלי preflight. credentials: omit → בלי עוגיות Google.
-    fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, credentials: 'omit', redirect: 'follow',
-      body: JSON.stringify({ fn: fn, args: args }) })
-      .then(function (res) {
-        if (!res.ok) throw new Error('שגיאת שרת (' + res.status + '). לנסות שוב.');
-        return res.text().then(function (t) { try { return JSON.parse(t); } catch (e) { throw new Error('תשובה לא תקינה מהשרת. לנסות שוב.'); } });
-      }, function () { throw new Error('אין חיבור לשרת. לנסות שוב.'); })
-      .then(function (d) { if (d && d.ok) { done(d.t); onOk(d.result); perfLoaded(fn); } else fail((d && d.error) || 'תשובה לא תקינה מהשרת', d && d.t); })
-      .catch(function (e) { fail((e && e.message) || 'אין חיבור לשרת'); });
+    // timeout: קריאה — 15 שניות, ניסיון אחד נוסף, ואז שגיאה. כתיבה — ניסיון אחד בלבד (ניסיון חוזר עלול לבצע פעמיים).
+    var write = isWriteFn(fn), limit = CALL_LONG[fn] ? CALL_LONG_MS : CALL_TIMEOUT_MS;
+    var attempt = function (n) {
+      var ctrl = typeof AbortController === 'function' ? new AbortController() : null, timedOut = false;
+      var timer = ctrl ? setTimeout(function () { timedOut = true; ctrl.abort(); }, limit) : null;
+      fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, credentials: 'omit', redirect: 'follow',
+        body: JSON.stringify({ fn: fn, args: args }), signal: ctrl ? ctrl.signal : undefined })
+        .then(function (res) {
+          if (!res.ok) throw new Error('שגיאת שרת (' + res.status + '). לנסות שוב.');
+          return res.text().then(function (t) { try { return JSON.parse(t); } catch (e) { throw new Error('תשובה לא תקינה מהשרת. לנסות שוב.'); } });
+        }, function () { throw new Error('אין חיבור לשרת. לנסות שוב.'); })
+        .then(function (d) {
+          clearTimeout(timer);
+          if (d && d.ok) { done(d.t); onOk(d.result); perfLoaded(fn); } else fail((d && d.error) || 'תשובה לא תקינה מהשרת', d && d.t);
+        })
+        .catch(function (e) {
+          clearTimeout(timer);
+          if (!timedOut) return fail((e && e.message) || 'אין חיבור לשרת');
+          if (write) return fail('לא ברור אם הפעולה בוצעה. לרענן ולבדוק לפני שמנסים שוב.');
+          if (n < 2) return attempt(n + 1);
+          fail('השרת לא עונה. לנסות שוב.');
+        });
+    };
+    attempt(1);
   }
+  var CALL_TIMEOUT_MS = 15000, CALL_LONG_MS = 90000;
+  // שליחת קובץ / קליטה מלאה / תשלום לקוח (שמריץ קליטה אחריו) לוקחים יותר מ-15 שניות באופן רגיל.
+  var CALL_LONG = { refreshNow: 1, uploadFile: 1, editorUploadInvoice: 1, actionClientPaid: 1 };
+  /** פעולות שכותבות: action*, ועוד שלוש שכותבות בלי השם הזה. */
+  function isWriteFn(fn) { return /^action/.test(fn) || fn === 'editorUploadInvoice' || fn === 'uploadFile' || fn === 'refreshNow'; }
 
   // ---------- כניסה ----------
   function loginView(note) {
