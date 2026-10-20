@@ -414,11 +414,41 @@
     .sh-body { padding: 0 16px; }
     .sh-body > .grp:first-child { margin-top: 12px; }
     .sh-foot { padding: 16px 16px 0; display: flex; flex-direction: column; gap: 8px; }
+    .lnk { color: var(--link-text); cursor: pointer; }
     @media (min-width: 600px) {
       #modal { align-items: center; -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
       #modal .sheet { max-width: 520px; border-radius: 14px; padding-bottom: 16px; }
       #modal:not(.hidden) .sheet { animation: pop 200ms cubic-bezier(.2,.8,.2,1); }
       .grab { display: none; }
+    }
+    /* ===== דסקטופ: sheet וטופס קומפקטיים ===== */
+    @media (min-width: 1024px) {
+      /* כותרת וכפתור ראשי קבועים (מחוץ לגלילה), גלילה רק בתוכן */
+      #modal .sheet { max-width: 560px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+      #modal .sh-head, #modal .sh-foot { flex: none; background: inherit; }
+      #modal .sh-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding-bottom: 16px; }
+      #modal .sh-foot { padding: 12px 16px 16px; border-top: .5px solid var(--sep); }
+      #modal .sh-body .grp { margin-top: 16px; }
+      #modal .sh-body .gh { padding-bottom: 4px; }
+      /* שורת שדה אחת: תווית מימין (40%), שדה משמאל, 44 */
+      #modal .fld { flex-direction: row; flex-wrap: wrap; align-items: center; column-gap: 12px; min-height: 44px; padding: 0 16px; }
+      #modal .fld > label, #modal .fld > .lbl { flex: 0 0 40%; max-width: 40%; font-size: .9375rem; line-height: 1.25rem; }
+      #modal .fld > input:not([type=checkbox]), #modal .fld > .selw, #modal .fld > textarea, #modal .fld > .filerow, #modal .fld > .frow { flex: 1 1 0; min-width: 0; }
+      #modal .fld input:not([type=checkbox]), #modal .fld select, #modal .fld textarea { text-align: end; text-align-last: end; }
+      #modal .fld input.ltr, #modal .fld input:dir(ltr), #modal .fld textarea:dir(ltr) { text-align: start; text-align-last: start; }
+      #modal .fld > input[type=date] { flex: 0 0 auto; width: auto; margin-inline-start: auto; }   /* Chrome מתעלם מ-text-align בתאריך: השדה ברוחב התוכן, בקצה השורה */
+      #modal .fld > .filerow { justify-content: flex-end; }
+      #modal .fld > .swr { flex: 1 1 100%; }
+      #modal .fld > .swr > label { color: var(--label2); font-size: .9375rem; line-height: 1.25rem; }
+      #modal .fld > .hint { flex: 0 0 100%; padding-inline-start: calc(40% + 12px); margin-top: -6px; padding-bottom: 8px; }
+      #modal .fld > .swr + .hint { padding-inline-start: 0; }
+      /* 4 שדות מספריים: 2×2, תווית קטנה מעל */
+      #modal .fgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #modal .fgrid .fld { flex-direction: column; flex-wrap: nowrap; align-items: stretch; padding: 6px 16px 0; }
+      #modal .fgrid .fld > label { flex: none; max-width: none; font-size: .75rem; line-height: 1rem; }
+      #modal .fgrid .fld input.ltr { text-align: end; text-align-last: end; }
+      #modal .fgrid .fld + .fld::before { content: none; }
+      #modal .fgrid .fld:nth-child(n+3)::before { content: ''; position: absolute; top: 0; inset-inline: 16px 0; border-top: .5px solid var(--sep); }
     }
     @keyframes pop { from { transform: scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
 
@@ -439,7 +469,7 @@
     .selw .sel-ic { position: absolute; inset-inline-end: 0; top: 50%; width: 18px; height: 18px; margin-top: -9px; transform: rotate(-90deg); color: var(--label3); pointer-events: none; }
     .hint { color: var(--label2); padding-bottom: 4px; }
     .swr { flex-wrap: nowrap; }
-    .swr > label { flex: 1; min-height: 22px; cursor: pointer; }
+    .swr > label { flex: 1; min-height: 22px; cursor: pointer; font-size: 1.0625rem; line-height: 1.375rem; }
     input.switch { appearance: none; -webkit-appearance: none; position: relative; flex: none; width: 51px; height: 31px; margin: 0; border-radius: 16px;
       background: var(--fill); cursor: pointer; transition: background-color 200ms cubic-bezier(.2,.8,.2,1); }
     input.switch::before { content: ''; position: absolute; inset: -7px -2px; }
@@ -1052,20 +1082,29 @@
 
   /**
    * טופס גנרי. fields = [{ k, label, type: text|number|date|select|check|file|textarea, options, value, hint, placeholder, g }]
-   * g = כותרת קבוצה: שדות רצופים עם אותו g באותה קבוצה. onSubmit(values, files) — files = { k: File }.
+   * g = כותרת קבוצה: שדות רצופים עם אותו g באותה קבוצה. grid = הקבוצה ב-2×2 בדסקטופ (4 שדות מספריים). gfoot = הערה מתחת לקבוצה.
+   * onSubmit(values, files) — files = { k: File }.
    */
   function formHtml(fields) {
     fields.forEach(function (f, i) { f._id = 'f-' + f.k.replace(/\W/g, '_') + '-' + i; });
-    var out = '', chunk = [], g = null;
-    var flush = function () { if (chunk.length) out += grp(g ? esc(g) : '', chunk.join('')); chunk = []; };
-    fields.forEach(function (f) { if ((f.g || null) !== g) { flush(); g = f.g || null; } chunk.push(fieldHtml(f)); });
+    var out = '', chunk = [], g = null, gridOn = false, foot = '';
+    var flush = function () {
+      if (chunk.length) out += grp(g ? esc(g) : '', gridOn ? '<div class="fgrid">' + chunk.join('') + '</div>' : chunk.join(''), foot);
+      chunk = []; gridOn = false; foot = '';
+    };
+    fields.forEach(function (f) {
+      if ((f.g || null) !== g) { flush(); g = f.g || null; }
+      if (f.grid) gridOn = true;
+      if (f.gfoot) foot = esc(f.gfoot);
+      chunk.push(fieldHtml(f));
+    });
     flush();
     return out;
   }
   function fieldHtml(f) {
     var id = f._id;
     var hint = f.hint ? '<div class="hint t-foot">' + esc(f.hint) + '</div>' : '';
-    if (f.type === 'check') return '<div class="fld"><div class="row swr" style="padding:0;min-height:44px"><label for="' + id + '" class="t-body">' + esc(f.label) + '</label>' +
+    if (f.type === 'check') return '<div class="fld"><div class="row swr" style="padding:0;min-height:44px"><label for="' + id + '">' + esc(f.label) + '</label>' +
       '<input type="checkbox" class="switch" id="' + id + '"' + (f.value ? ' checked' : '') + (f.disabled ? ' disabled' : '') + '></div>' + hint + '</div>';
     var lab = '<label for="' + id + '">' + esc(f.label) + '</label>';
     if (f.type === 'select') {
@@ -1074,10 +1113,10 @@
         return '<option value="' + esc(v) + '"' + (String(v) === String(f.value) ? ' selected' : '') + '>' + esc(t) + '</option>';
       }).join('') + '</select>' + ic('chevron-left', 'sel-ic') + '</span>' + hint + '</div>';
     }
-    if (f.type === 'textarea') return '<div class="fld">' + lab + '<textarea id="' + id + '" rows="2">' + esc(f.value) + '</textarea>' + hint + '</div>';
+    if (f.type === 'textarea') return '<div class="fld">' + lab + '<textarea id="' + id + '" rows="2" dir="auto">' + esc(f.value) + '</textarea>' + hint + '</div>';
     if (f.type === 'file') return '<div class="fld"><span class="lbl">' + esc(f.label) + '</span><div class="filerow"><label for="' + id + '" class="btn-plain t-head">בחירת קובץ</label>' +
       '<span class="t-foot sec" data-for="' + id + '"></span><input type="file" class="vh" id="' + id + '" accept="image/*,application/pdf"></div>' + hint + '</div>';
-    var attrs = f.type === 'number' ? ' type="number" inputmode="decimal" step="any" class="ltr"' : f.type === 'date' ? ' type="date"' : f.type === 'email' ? ' type="email" class="ltr"' : ' type="text"';
+    var attrs = f.type === 'number' ? ' type="number" inputmode="decimal" step="any" class="ltr"' : f.type === 'date' ? ' type="date"' : f.type === 'email' ? ' type="email" class="ltr"' : ' type="text" dir="auto"';
     return '<div class="fld">' + lab + '<input id="' + id + '"' + attrs + ' value="' + esc(f.value) + '"' + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + '>' + hint + '</div>';
   }
   function formValues(fields) {
@@ -1395,6 +1434,8 @@
             (v.price === null ? wg(1) + '<span class="t-body sec">—</span>' : '<span class="t-body num">' + money(v.price) + '</span>') + '</div>';
         }).concat(o.projects.map(function (p) { return '<div class="row"><div class="main t-body">פרויקט: ' + esc(p.name) + '</div>' + (p.price === null ? wg(1) + '<span class="t-body sec">—</span>' : '<span class="t-body num">' + money(p.price) + '</span>') + '</div>'; }),
           o.retainers.map(function (x) { return '<div class="row"><div class="main t-body">ריטיינר ' + monthName(x.month, true) + '</div><span class="t-body num">' + money(x.amount) + '</span></div>'; })).join(''), openCount > 0) +
+        grp('פרויקטים (' + c.projects.length + ')', c.projects.length ? c.projects.map(projRow).join('') :
+          emptyRow('אין פרויקטים') + '<button class="row t-body lnk" id="b-newproj" onclick="projectForm(null,' + esc(JSON.stringify(c.name)) + ')">פרויקט חדש</button>') +
         sect('היסטוריה', '<div class="pad">' + histSeg() + '</div><div id="hist"></div>')
       );
       drawHist();
@@ -1402,7 +1443,14 @@
       if (S.afterClient === c.name) { S.afterClient = null; clientSettingsForm(c); }   // מהתראת "מחיר חסר"
     }, function (m) { setMain('<div class="msg e">' + esc(m) + '</div>'); });
   }
-  var HIST = [['pay', 'תשלומים'], ['proj', 'פרויקטים'], ['exp', 'הוצאות'], ['pnl', 'רווח חודשי']];
+  /** פרויקט בדף הלקוח: שם, "סוג · תאריך · שולם/לא שולם", מחיר. לחיצה = עריכה. */
+  function projRow(p) {
+    return '<button class="row" onclick="editProject(' + esc(JSON.stringify(p.id)) + ')"><span class="main"><span class="t-head blk">' + esc(p.name) + '</span>' +
+      '<span class="t-foot sec blk">' + esc(p.type) + ' · ' + date(p.date) + ' · ' + (p.paid ? 'שולם' : 'לא שולם') + '</span></span>' +
+      (p.price === null ? '<span class="t-body sec">—</span>' : '<span class="t-body num">' + money(p.price) + '</span>') + CHEV + '</button>';
+  }
+  // פרויקטים: קבוצה קבועה בדף (projRow), לא בהיסטוריה
+  var HIST = [['pay', 'תשלומים'], ['exp', 'הוצאות'], ['pnl', 'רווח חודשי']];
   S.hist = 'pay';
   function histSeg() {
     setTimeout(function () {
@@ -1421,11 +1469,6 @@
       pay: function () { return c.payments.map(function (p) {
         return '<div class="row"><div class="main"><div class="t-body">' + date(p.date) + ' · ' + esc(p.method) + (p.label ? ' · קו "' + esc(p.label) + '"' : '') + '</div><div class="t-foot sec">' + esc(p.covered) + (p.ref ? ' · ' + esc(p.ref) : '') + '</div></div><span class="t-body num">' + money(p.amount) + '</span></div>';
       }).join(''); },
-      proj: function () { return c.projects.map(function (p) {
-        return '<div class="row"><div class="main"><div class="t-head">' + esc(p.name) + ' <span class="tag' + (p.paid ? ' g' : '') + '">' + (p.paid ? 'שולם' : 'לא שולם') + '</span></div>' +
-          '<div class="t-foot sec">' + esc(p.type) + ' · ' + date(p.date) + ' · עלות ' + money(p.cost) + ' (' + esc(p.costOwner) + (p.editor ? ': ' + esc(p.editor) : '') + ')' + (p.editorPaid ? ' · שולם לעורך' : '') + '</div></div>' +
-          '<span class="t-body num">' + money(p.price) + '</span><button class="btn-plain t-sub" onclick="editProject(' + esc(JSON.stringify(p.id)) + ')">עריכה</button></div>';
-      }).join(''); },
       exp: function () { return c.expenses.map(function (x) {
         return '<div class="row"><div class="main"><div class="t-body">' + date(x.date) + ' · ' + esc(x.category) + '</div>' + (x.notes ? '<div class="t-foot sec">' + esc(x.notes) + '</div>' : '') +
           (x.ref ? '<div class="t-foot sec">' + (/^https?:/.test(x.ref) ? '<a href="' + esc(x.ref) + '" target="_blank" rel="noopener">אסמכתא</a>' : esc(x.ref)) + '</div>' : '') + '</div><span class="t-body num">' + money(x.amount) + '</span></div>';
@@ -1434,6 +1477,7 @@
         return '<div class="row"><div class="main"><div class="t-body">' + monthName(m.month, true) + '</div><div class="t-foot sec">הכנסות ' + money(m.revenue) + ' · עלויות ' + money(m.cost) + '</div></div>' + wg(m.missing) + '<span class="t-body num">' + money(m.profit) + '</span></div>';
       }).join('') : ''; }
     };
+    if (!rows[S.hist]) S.hist = 'pay';
     el.innerHTML = rows[S.hist]() || emptyRow();
   }
   /** "…" בסרגל הלקוח. */
@@ -1679,7 +1723,9 @@
       { k: 'עורך', label: 'עורך (אם העלות לעורך)', type: 'select', blank: true, options: L.editors, value: p ? p.editor : '' },
       { k: 'תאריך', label: 'תאריך', type: 'date', value: p ? p.date : today() }
     ];
-    openForm(p ? 'עריכת פרויקט' : 'פרויקט חדש', fields, function (v) {
+    if (p) fields.push({ k: 'שולם', label: 'שולם', type: 'check', value: p.paid === true, disabled: true, hint: 'משתנה דרך "לקוח שילם"' });
+    openForm(p ? 'עריכת פרויקט · ' + p.name : 'פרויקט חדש', fields, function (v) {
+      delete v['שולם'];   // לקריאה בלבד: actionUpdateProject לא משנה "שולם"
       if (p) runAct({ title: 'עדכון פרויקט', fn: 'actionUpdateProject', args: function (cf) { return [getToken(), p.id, v, cf]; } });
       else runAct({ title: 'פרויקט חדש', fn: 'actionAddProject', args: function (cf) { return [getToken(), v, cf]; } });
     }, '', { onOpen: function (fs) {
@@ -1716,14 +1762,14 @@
   function clientSettingsForm(c) {
     var s = c.settings, L = S.lists;
     var fields = [
-      { g: 'כללי', k: 'סוג ברירת מחדל', label: 'סוג ברירת מחדל (לקוח בלי עמודת אורך)', type: 'select', blank: true, options: L.videoTypes, value: s['סוג ברירת מחדל'] },
+      { g: 'כללי', k: 'סוג ברירת מחדל', label: 'סוג ברירת מחדל', type: 'select', blank: true, options: L.videoTypes, value: s['סוג ברירת מחדל'], hint: 'ללקוח בלי עמודת אורך' },
       { g: 'כללי', k: 'אנחנו כותבים', label: 'אנחנו כותבים (מחיר כתיבה)', type: 'check', value: s['אנחנו כותבים'] === true },
       { g: 'כללי', k: 'ריטיינר חודשי', label: 'ריטיינר חודשי (₪)', type: 'number', value: s['ריטיינר חודשי'] },
-      { g: 'כללי', k: 'תאריך התחלת ריטיינר', label: 'תאריך התחלת ריטיינר', type: 'date', value: s['תאריך התחלת ריטיינר'] }
+      { g: 'כללי', k: 'תאריך התחלת ריטיינר', label: 'תאריך התחלת ריטיינר', type: 'date', value: s['תאריך התחלת ריטיינר'], gfoot: 'שדה ריק = אין מחיר (התראה). 0 = חינם במפורש.' }
     ];
     // קבוצה לכל סוג מחיר; התווית = אורך הסרטון (שם השדה המלא נשלח לשרת כמו קודם)
     [['מחירים', 'מחיר '], ['מחירי כתיבה', 'מחיר כתיבה '], ['עלות עורך', 'עלות עורך ']].forEach(function (g) {
-      L.videoTypes.forEach(function (t) { fields.push({ g: g[0], k: g[1] + t, label: t + ' (₪)', type: 'number', value: s[g[1] + t] }); });
+      L.videoTypes.forEach(function (t) { fields.push({ g: g[0], k: g[1] + t, label: t + ' (₪)', type: 'number', value: s[g[1] + t], grid: L.videoTypes.length === 4 }); });
     });
     openForm('הגדרות — ' + c.name, fields, function (v) {
       var changed = {};
@@ -1733,7 +1779,7 @@
       });
       if (!Object.keys(changed).length) return formErr('לא שונה כלום');
       runAct({ title: 'הגדרות לקוח', fn: 'actionClientSettings', args: function (cf) { return [getToken(), c.name, changed, cf]; } });
-    }, '<p class="note t-foot">שדה ריק = אין מחיר (התראה). 0 = חינם במפורש.</p>');
+    });
   }
 
   // ---------- 6.4 עורכים ----------
