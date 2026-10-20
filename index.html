@@ -869,7 +869,7 @@
     }
     // text/plain → בלי preflight. credentials: omit → בלי עוגיות Google.
     // timeout: קריאה — 15 שניות, ניסיון אחד נוסף, ואז שגיאה. כתיבה — ניסיון אחד בלבד (ניסיון חוזר עלול לבצע פעמיים).
-    var write = isWriteFn(fn), limit = CALL_LONG[fn] ? CALL_LONG_MS : CALL_TIMEOUT_MS;
+    var write = isWriteFn(fn), limit = callLimit(fn);
     var attempt = function (n) {
       var ctrl = typeof AbortController === 'function' ? new AbortController() : null, timedOut = false;
       var timer = ctrl ? setTimeout(function () { timedOut = true; ctrl.abort(); }, limit) : null;
@@ -894,8 +894,8 @@
     attempt(1);
   }
   var CALL_TIMEOUT_MS = 15000, CALL_LONG_MS = 90000;
-  // שליחת קובץ / קליטה מלאה / תשלום לקוח (שמריץ קליטה אחריו) לוקחים יותר מ-15 שניות באופן רגיל.
-  var CALL_LONG = { refreshNow: 1, uploadFile: 1, editorUploadInvoice: 1, actionClientPaid: 1 };
+  // כל כתיבה — 90 שניות: כל action* מריץ חישוב אחרי הכתיבה (תשלום לקוח: קליטה), וגם קובץ / רענון. קריאה — 15.
+  function callLimit(fn) { return isWriteFn(fn) ? CALL_LONG_MS : CALL_TIMEOUT_MS; }
   /** פעולות שכותבות: action*, ועוד שלוש שכותבות בלי השם הזה. */
   function isWriteFn(fn) { return /^action/.test(fn) || fn === 'editorUploadInvoice' || fn === 'uploadFile' || fn === 'refreshNow'; }
 
