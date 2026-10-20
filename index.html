@@ -406,6 +406,9 @@
     .seg button.on { background: var(--seg-on); box-shadow: var(--shadow-seg); font-weight: 600; }
     @media (min-width: 1024px) { .seg { max-width: 460px; } }
     .gbody .seg { margin: 0 0 12px; }
+    .gbody .fld > .seg { margin: 6px 0 4px; }
+    .useg { padding: 0 16px 12px; }
+    .gbody .useg .seg { margin: 0; }
 
     /* ===== תגיות והודעות ===== */
     .tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 6px; font-size: .75rem; line-height: 1rem; font-weight: 500;
@@ -467,6 +470,7 @@
       #modal .fld input.ltr, #modal .fld input:dir(ltr), #modal .fld textarea:dir(ltr) { text-align: start; text-align-last: start; }
       #modal .fld > input[type=date] { flex: 0 0 auto; width: auto; margin-inline-start: auto; }   /* Chrome מתעלם מ-text-align בתאריך: השדה ברוחב התוכן, בקצה השורה */
       #modal .fld > .filerow { justify-content: flex-end; }
+      #modal .gbody .fld > .seg { flex: 1 1 0; min-width: 0; margin: 0; }
       #modal .fld > .swr { flex: 1 1 100%; }
       #modal .fld > .swr > label { color: var(--label2); font-size: .9375rem; line-height: 1.25rem; }
       #modal .fld > .hint { flex: 0 0 100%; padding-inline-start: calc(40% + 12px); margin-top: -6px; padding-bottom: 8px; }
@@ -759,7 +763,8 @@
   // ---------- מבנה מסך: כותרת גדולה + כפתורים צפים (UI בלבד). אין סרגל עליון ----------
   var SCREENS = { home: { t: 'בית', large: 1, hide: 1 }, clients: { t: 'לקוחות', large: 1 }, editors: { t: 'עורכים', large: 1 },
     alerts: { t: 'התראות', large: 1 }, settings: { t: 'הגדרות', large: 1 }, partners: { t: 'שותפים', large: 1, back: 'home' },
-    client: { large: 1, back: 'clients' }, editor: { large: 1, back: 'editors' }, expenses: { t: 'הוצאות', large: 1, back: 'settings' } };
+    client: { large: 1, back: 'clients' }, editor: { large: 1, back: 'editors' }, expenses: { t: 'הוצאות', large: 1, back: 'settings' },
+    ledger: { t: 'התחשבנות', large: 1, back: 'settings' }, untagged: { t: 'לא מתויגות', large: 1, back: 'ledger' } };
   /** אייקון מה-sprite (Lucide). */
   function ic(id, cls) { return '<svg class="i' + (cls ? ' ' + cls : '') + '" aria-hidden="true" focusable="false"><use href="#i-' + id + '"/></svg>'; }
   var CHEV = ic('chevron-left', 'chev');
@@ -828,6 +833,12 @@
     var t = e.target;
     if ((e.key === 'Enter' || e.key === ' ') && t && t.getAttribute && t.getAttribute('role') === 'button' && t.tagName !== 'BUTTON') { e.preventDefault(); t.click(); }
     if (e.key === 'Escape') { if (S.menu) return closeMenu(true); if (pieEsc()) return; if (!$('modal').classList.contains('hidden')) closeModal(); }
+  });
+  // שדה segmented בטופס: בחירה אחת (data-v על הקבוצה)
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.fseg button'); if (!b) return;
+    var g = b.parentNode; g.setAttribute('data-v', b.getAttribute('data-v'));
+    Array.prototype.forEach.call(g.children, function (x) { var on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
   });
   // שם הקובץ שנבחר בשדה קובץ
   document.addEventListener('change', function (e) {
@@ -1142,10 +1153,17 @@
         return '<option value="' + esc(v) + '"' + (String(v) === String(f.value) ? ' selected' : '') + '>' + esc(t) + '</option>';
       }).join('') + '</select>' + ic('chevron-left', 'sel-ic') + '</span>' + hint + '</div>';
     }
+    if (f.type === 'seg') {
+      return '<div class="fld"><span class="lbl" id="' + id + '-l">' + esc(f.label) + '</span><div class="seg fseg" role="group" aria-labelledby="' + id + '-l" id="' + id + '" data-v="' + esc(f.value || '') + '">' +
+        f.options.map(function (o) {
+          var on = String(o.v) === String(f.value);
+          return '<button type="button" aria-pressed="' + on + '"' + (on ? ' class="on"' : '') + ' data-v="' + esc(o.v) + '">' + esc(o.t) + '</button>';
+        }).join('') + '</div>' + hint + '</div>';
+    }
     if (f.type === 'textarea') return '<div class="fld">' + lab + '<textarea id="' + id + '" rows="2" dir="auto">' + esc(f.value) + '</textarea>' + hint + '</div>';
     if (f.type === 'file') return '<div class="fld"><span class="lbl">' + esc(f.label) + '</span><div class="filerow"><label for="' + id + '" class="btn-plain t-head">בחירת קובץ</label>' +
       '<span class="t-foot sec" data-for="' + id + '"></span><input type="file" class="vh" id="' + id + '" accept="image/*,application/pdf"></div>' + hint + '</div>';
-    var attrs = f.type === 'number' ? ' type="number" inputmode="decimal" step="any" class="ltr"' : f.type === 'date' ? ' type="date"' : f.type === 'email' ? ' type="email" class="ltr"' : ' type="text" dir="auto"';
+    var attrs = f.type === 'number' ? ' type="number" inputmode="decimal" step="any" class="ltr"' : f.type === 'date' ? ' type="date"' + (f.min ? ' min="' + esc(f.min) + '"' : '') + (f.max ? ' max="' + esc(f.max) + '"' : '') : f.type === 'email' ? ' type="email" class="ltr"' : ' type="text" dir="auto"';
     return '<div class="fld">' + lab + '<input id="' + id + '"' + attrs + ' value="' + esc(f.value) + '"' + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '') + '>' + hint + '</div>';
   }
   function formValues(fields) {
@@ -1153,6 +1171,7 @@
     fields.forEach(function (f) {
       var el = $(f._id); if (!el) return;
       if (f.type === 'check') v[f.k] = el.checked;
+      else if (f.type === 'seg') v[f.k] = el.getAttribute('data-v') || '';
       else if (f.type === 'file') { if (el.files && el.files[0]) files[f.k] = el.files[0]; }
       else v[f.k] = el.value.trim();
     });
@@ -1209,9 +1228,12 @@
   };
   var WIDE_MQ = window.matchMedia ? matchMedia('(min-width: 1024px)') : null;
   function go(view, arg) {
+    // התחשבנות: "חזרה" למסך שממנו הגיעו
+    if (view === 'ledger' && (S.view === 'settings' || S.view === 'partners')) S.ledgerBack = S.view;
     S.view = view; S.arg = arg;
     // שותפים: בדסקטופ פריט משלו בסרגל הצד; בטלפון מגיעים מהבית → "בית" מסומן
-    var tab = { client: 'clients', editor: 'editors', expenses: 'settings', partners: WIDE_MQ && WIDE_MQ.matches ? 'partners' : 'home' }[view] || view;
+    var wide = WIDE_MQ && WIDE_MQ.matches, lb = S.ledgerBack === 'partners' ? (wide ? 'partners' : 'home') : 'settings';
+    var tab = { client: 'clients', editor: 'editors', expenses: 'settings', partners: wide ? 'partners' : 'home', ledger: lb, untagged: lb }[view] || view;
     Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) {
       var on = b.getAttribute('data-v') === tab && !b.classList.contains('sb-prof');
       b.classList.toggle('on', on);
@@ -1220,11 +1242,12 @@
     movePill();
     S.screen = Object.assign({}, SCREENS[view], arg ? { t: arg } : {});
     if (view === 'partners' && tab === 'partners') S.screen = { t: 'שותפים', large: 1 };   // מסרגל הצד: מסך ראשי
+    if (view === 'ledger') S.screen.back = S.ledgerBack || 'settings';
     if (FAB[view]) S.screen.action = FAB[view];
     S.navSeq = (S.navSeq || 0) + 1;
     if (!(homeFresh() && /^(home|clients|editors|settings|partners)$/.test(view))) setMain(skeleton(view));
     ({ home: homeView, clients: clientsView, editors: editorsView, alerts: alertsView, settings: settingsView, partners: partnersView,
-      client: clientView, editor: editorView, expenses: expensesView })[view](arg);
+      client: clientView, editor: editorView, expenses: expensesView, ledger: ledgerView, untagged: untaggedView })[view](arg);
   }
   /** ה-pill של הטאב הפעיל: אלמנט אחד שזז (טלפון: גובה 52, inset 6; דסקטופ: בגודל השורה). בפעם הראשונה — בלי תנועה. */
   var pillPlaced = false;
@@ -1502,7 +1525,9 @@
     var c = S.client, el = $('hist'); if (!c || !el) return;
     var rows = {
       pay: function () { return c.payments.map(function (p) {
-        return '<div class="row"><div class="main"><div class="t-body">' + date(p.date) + ' · ' + esc(p.method) + (p.label ? ' · קו "' + esc(p.label) + '"' : '') + '</div><div class="t-foot sec">' + esc(p.covered) + (p.ref ? ' · ' + esc(p.ref) : '') + '</div></div><span class="t-body num">' + money(p.amount) + '</span></div>';
+        var who = p.receivedBy ? adminName(p.receivedBy) : '';
+        return '<div class="row"><div class="main"><div class="t-body">' + date(p.date) + (p.method ? ' · ' + esc(p.method) : '') + (p.label ? ' · קו "' + esc(p.label) + '"' : '') + (p.historic ? ' <span class="tag">היסטורי</span>' : '') + '</div>' +
+          '<div class="t-foot sec">' + [esc(p.covered), p.ref ? esc(p.ref) : '', who ? 'התקבל אצל ' + esc(who) : ''].filter(Boolean).join(' · ') + '</div></div><span class="t-body num">' + money(p.amount) + '</span></div>';
       }).join(''); },
       exp: function () { return c.expenses.map(function (x) {
         return '<div class="row"><div class="main"><div class="t-body">' + date(x.date) + ' · ' + esc(x.category) + '</div>' + (x.project ? '<div class="t-foot sec">פרויקט: ' + esc(x.project.name) + '</div>' : '') +
@@ -1734,6 +1759,7 @@
       o.retainers.forEach(function (x) { fields.push({ k: 'r:' + x.key, label: 'ריטיינר ' + monthName(x.month, true) + ' · ' + money(x.amount), type: 'check', value: true }); });
       fields.push({ k: 'manualDivider', label: info.allowed ? 'אני אוסיף את הקו ידנית (לא לכתוב בטבלה)' : 'הקו יתווסף ידנית (הטבלה הזו לא ברשימת ההיתר)',
         type: 'check', value: !info.allowed, disabled: !info.allowed });
+      fields = fields.concat(whoField('התקבל אצל'));
       var extra = info.lastDivider ? '<p class="note t-foot">קו אחרון בטבלה: "' + esc(info.lastDivider.label) + '" (עמודה ' + esc(info.lastDivider.colLetter) + ')</p>' : '';
       if (!nums.length) extra += '<div class="msg w">אין סרטונים מתחת לקו האחרון בטבלה</div>';
       openForm('לקוח שילם — ' + c.name, fields, function (v) {
@@ -1742,6 +1768,7 @@
           projectIds: o.projects.filter(function (p) { return v['p:' + p.id]; }).map(function (p) { return p.id; }),
           retainerKeys: o.retainers.filter(function (x) { return v['r:' + x.key]; }).map(function (x) { return x.key; }) };
         if (!info.lastDivider) { if (v.labelCol === '') return formErr('לבחור עמודה לתווית'); params.labelCol = v.labelCol; }
+        if (v.who) params.receivedBy = v.who;
         runAct({ title: 'לקוח שילם', fn: 'actionClientPaid', args: function (cf) { return [getToken(), params, cf]; } });
       }, extra);
     });
@@ -1786,11 +1813,12 @@
         { k: 'קטגוריה', label: 'קטגוריה', type: 'select', options: L.expenseCategories, value: L.expenseCategories[0] },
         { k: 'סכום', label: 'סכום (₪)', type: 'number', value: '', placeholder: '350' },
         { k: 'file', label: 'אסמכתא (קובץ, לא חובה)', type: 'file' },
-        { k: 'הערות', label: 'הערות', type: 'text', value: '' }]);
+        { k: 'הערות', label: 'הערות', type: 'text', value: '' }], whoField('שולם על ידי'));
       openForm('הוצאה חדשה', fields, function (v, files) {
         uploadThen('הוצאות', '', files.file, function (url) {
           var f = { 'תאריך': v['תאריך'], 'לקוח': v['לקוח'], 'קטגוריה': v['קטגוריה'], 'סכום': v['סכום'], 'אסמכתא': url, 'הערות': v['הערות'] };
           if (v['פרויקט']) f['פרויקט'] = v['פרויקט'];
+          if (v.who) f['שולם על ידי'] = v.who;
           runAct({ title: 'הוצאה חדשה', fn: 'actionAddExpense', args: function (cf) { return [getToken(), f, cf]; } });
         });
       }, '', { onOpen: function (fs) { if (proj) projSync(fs[1], fs[2]); } });
@@ -1883,20 +1911,24 @@
     var x = (S.xpPage.items || []).filter(function (i) { return i.id === id; })[0]; if (!x) return;
     withProjects(function () {
       var L = S.lists, sub = !!x.subscriptionId, cats = L.expenseCategories.indexOf(x.category) === -1 ? L.expenseCategories.concat([x.category]) : L.expenseCategories;
-      var orig = { 'תאריך': x.date, 'לקוח': x.client, 'פרויקט': x.project ? x.project.id : '', 'קטגוריה': x.category, 'סכום': x.amount === null ? '' : x.amount, 'אסמכתא': x.ref, 'הערות': x.notes };
+      var orig = { 'תאריך': x.date, 'לקוח': x.client, 'פרויקט': x.project ? x.project.id : '', 'קטגוריה': x.category, 'סכום': x.amount === null ? '' : x.amount, 'אסמכתא': x.ref, 'הערות': x.notes,
+        'שולם על ידי': x.paidBy || '' };
       var F = {
         'תאריך': { k: 'תאריך', label: 'תאריך', type: 'date' }, 'לקוח': { k: 'לקוח', label: 'לקוח (ריק = הוצאה כללית)', type: 'select', blank: true, options: L.clients },
         'פרויקט': { k: 'פרויקט', label: 'פרויקט (ריק = לא משויך)', type: 'select', blank: true, options: projOptions(x.client) },
         'קטגוריה': { k: 'קטגוריה', label: 'קטגוריה', type: 'select', options: cats }, 'סכום': { k: 'סכום', label: 'סכום (₪)', type: 'number' },
         'אסמכתא': { k: 'אסמכתא', label: 'אסמכתא', type: 'text' }, 'הערות': { k: 'הערות', label: 'הערות', type: 'text' } };
-      var keys = sub ? ['קטגוריה', 'סכום', 'הערות'] : ['תאריך', 'לקוח'].concat(S.xpReady === false ? [] : ['פרויקט'], ['קטגוריה', 'סכום', 'אסמכתא', 'הערות']);
+      // "שולם על ידי": ריק נשאר ריק עד שבוחרים
+      var who = whoField('שולם על ידי', orig['שולם על ידי'])[0];
+      if (who) { who.k = 'שולם על ידי'; F['שולם על ידי'] = who; }
+      var keys = (sub ? ['קטגוריה', 'סכום', 'הערות'] : ['תאריך', 'לקוח'].concat(S.xpReady === false ? [] : ['פרויקט'], ['קטגוריה', 'סכום', 'אסמכתא', 'הערות'])).concat(who ? ['שולם על ידי'] : []);
       var fields = keys.map(function (k) { return Object.assign({ value: orig[k] }, F[k]); });
       openForm('עריכת הוצאה', fields, function (v) {
         var ch = {};
         keys.forEach(function (k) { if (String(v[k]) !== String(orig[k] === null || orig[k] === undefined ? '' : orig[k])) ch[k] = v[k]; });
         if (!Object.keys(ch).length) return formErr('לא שונה כלום');
         runAct({ title: 'עדכון הוצאה', fn: 'actionUpdateExpense', args: function (cf) { return [getToken(), id, ch, cf]; } });
-      }, sub ? '<p class="note t-foot">הוצאה של מנוי: אפשר לשנות סכום, קטגוריה והערות</p>' : '', {
+      }, sub ? '<p class="note t-foot">הוצאה של מנוי: אפשר לשנות סכום, קטגוריה, הערות ו"שולם על ידי"</p>' : '', {
         after: '<button class="btn-plain danger full t-body" id="b-del">מחיקה</button>',
         onOpen: function (fs) {
           if (!sub && keys.indexOf('פרויקט') !== -1) projSync(fs[1], fs[2]);
@@ -2084,13 +2116,13 @@
       { k: 'amount', label: 'סכום הפריטים (ריק = המחושב)', type: 'number', value: '', placeholder: '' },
       { k: 'file', label: 'חשבונית / אסמכתא (לא חובה)', type: 'file' },
       { k: 'notes', label: 'הערות', type: 'text', value: '' }
-    ];
+    ].concat(whoField('שולם על ידי'));
     openForm('שילמתי ל' + e.name, fields, function (v, files) {
       var ks = items.filter(function (i) { return sel[i.k]; }).map(function (i) { return i.k; });
       if (!ks.length) return formErr('לא נבחר כלום');
       var bonus = String(bonusTxt).replace(/,/g, '').trim();
       uploadThen('עורכים', e.name, files.file, function (url) {
-        var params = { editor: e.name, date: v.date, amount: v.amount, bonus: bonus, invoiceUrl: url, notes: v.notes,
+        var params = { editor: e.name, date: v.date, amount: v.amount, bonus: bonus, invoiceUrl: url, notes: v.notes, paidBy: v.who || undefined,
           keys: ks.filter(function (k) { return k.indexOf('v:') === 0; }).map(function (k) { return k.slice(2); }),
           projectIds: ks.filter(function (k) { return k.indexOf('p:') === 0; }).map(function (k) { return k.slice(2); }) };
         runAct({ title: 'שילמתי לעורך', fn: 'actionEditorPaid', args: function (cf) { return [getToken(), params, cf]; } });
@@ -2233,7 +2265,8 @@
       setMain(
         grp('חשבון', '<div class="row"><span class="av t-head" aria-hidden="true">' + esc(String(u.email || '?').charAt(0).toUpperCase()) + '</span>' +
           '<div class="main"><div class="t-body em">' + esc(u.email) + '</div><div class="t-foot sec">' + (u.role === 'admin' ? 'מנהל' : 'עורך') + '</div></div></div>') +
-        grp('כספים', '<button class="row" id="b-expenses" onclick="go(\'expenses\')"><span class="main t-body">הוצאות</span><span class="t-foot sec">מנויים וחד-פעמי</span>' + CHEV + '</button>') +
+        grp('כספים', '<button class="row" id="b-expenses" onclick="go(\'expenses\')"><span class="main t-body">הוצאות</span><span class="t-foot sec">מנויים וחד-פעמי</span>' + CHEV + '</button>' +
+          '<button class="row" id="b-ledger" onclick="go(\'ledger\')"><span class="main t-body">התחשבנות</span><span class="t-foot sec">בין השותפים</span>' + CHEV + '</button>') +
         grp('תצוגה', themeRow()) +
         grp('תחזוקה',
           iconRow(ic('refresh'), 'רענון עכשיו', '', { id: 'b-refresh' }) +
@@ -2266,7 +2299,8 @@
             wg(p.missing, 'בלי מחיר או עלות') + '<span class="t-body num">' + money(p.profit) + '</span>' + CHEV + '</button>';
         }).join('') || emptyRow()) +
         grp('', '<div class="row"><div class="main"><div class="t-head">רווח מצטבר' + (first ? ' · מ' + monthName(first, true) : '') + '</div><div class="t-foot sec"><span class="nw">הכנסות ' + money(h.totalPnl.revenue) + '</span> · <span class="nw">עלויות ' + money(h.totalPnl.cost) + '</span></div></div>' +
-          '<span class="t-head num">' + money(h.totalPnl.profit) + '</span></div>')
+          '<span class="t-head num">' + money(h.totalPnl.profit) + '</span></div>') +
+        grp('', '<button class="row" id="b-ledger" onclick="go(\'ledger\')"><span class="main t-body">התחשבנות בין השותפים</span><span class="t-foot sec">מי מעביר למי</span>' + CHEV + '</button>')
       );
     });
   }
@@ -2281,6 +2315,120 @@
     var row = function (k, v, cls) { return '<div class="row"><div class="main t-body">' + k + '</div><span class="' + (cls || 't-body') + ' num">' + money(v) + '</span></div>'; };
     openModal(sheetHtml(monthName(m, true), grp('', row('הכנסות', p.revenue) + row('עלויות', p.cost) + row('רווח', p.profit, 't-head')) +
       missMsg(p.missing, 'בלי מחיר או עלות', '', true) + grp('חלוקת שותפים', partnerRows(p)), '', 'סגור'));
+  }
+
+  // ---------- התחשבנות שותפים ----------
+  /** שדה "מי" (segmented, המנהלים). value ריק → המחובר. */
+  function whoField(label, value) {
+    var A = (S.lists && S.lists.admins) || [], me = String((S.user && S.user.email) || '').toLowerCase();
+    if (!A.length) return [];
+    if (value === undefined) value = A.some(function (a) { return a.email === me; }) ? me : '';
+    return [{ k: 'who', label: label, type: 'seg', options: A.map(function (a) { return { v: a.email, t: a.name }; }), value: value }];
+  }
+  function adminName(email) {
+    var a = ((S.lists && S.lists.admins) || []).concat((S.ledger && S.ledger.partners) || []).filter(function (x) { return x.email === email; })[0];
+    return a ? a.name : email;
+  }
+  function smoney(n) { return n === null || n === undefined ? '—' : n < 0 ? '−' + money(-n) : money(n); }
+  function settleWho(L) { return L.settlement ? adminName(L.settlement.from) + ' מעביר ל' + adminName(L.settlement.to) : ''; }
+  function settleText(L) { return L.settlement ? settleWho(L) + ' ' + money(L.settlement.amount) : 'מאוזן'; }
+  function ledgerLoad(cb) {
+    loadHome(function () {
+      call('getLedger', [getToken()], function (r) {
+        if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>');
+        S.ledger = r.ledger; cb(r.ledger);
+      }, function (m) { setMain('<div class="msg e">' + esc(m) + '</div>'); });
+    }, { onRefresh: function () {} });
+  }
+  /** התחשבנות: מי מעביר למי · כרטיס לכל מנהל · לפי חודש · העברות · קבלות היסטוריות. הכול מהשרת. */
+  function ledgerView() { ledgerLoad(renderLedger); }
+  function renderLedger(L) {
+    var n = L.untagged.length, last = L.historicTo;
+    var row = function (k, v, sub, cls) {
+      return '<div class="row"><div class="main"><div class="t-body">' + k + '</div>' + (sub ? '<div class="t-foot sec">' + sub + '</div>' : '') + '</div><span class="' + (cls || 't-body') + ' num">' + v + '</span></div>';
+    };
+    var card = function (p) {
+      var bal = p.balance === null ? '' : p.balance > 0 ? 'מחזיק יותר ממה שמגיע לו' : p.balance < 0 ? 'מגיע לו עוד' : 'מאוזן';
+      return grp(esc(p.name) + (p.pct === null ? '' : ' · ' + p.pct + '%'),
+        row('קיבל', money(p.received), 'מלקוחות') + row('שילם', money(p.paid), 'הוצאות ותשלומים לעורכים') +
+        row('העברות', smoney(Math.round((p.transfersIn - p.transfersOut) * 100) / 100), 'קיבל ' + money(p.transfersIn) + ' · העביר ' + money(p.transfersOut)) +
+        row('מגיע לו', smoney(p.entitlement), p.pct === null ? '' : p.pct + '% מהנטו') + row('יתרה', smoney(p.balance), bal, 't-head'), '', 'lg-card');
+    };
+    var tr = L.transfers.map(function (t) {
+      return row(esc(adminName(t.from)) + ' ← ' + esc(adminName(t.to)), money(t.amount), date(t.date) + (t.notes ? ' · ' + esc(t.notes) : ''));
+    }).join('');
+    var hr = L.historic.map(function (x) {
+      return row(esc(x.client), money(x.amount), date(x.date) + (x.who ? ' · התקבל אצל ' + esc(adminName(x.who)) : '') + (x.notes ? ' · ' + esc(x.notes) : ''));
+    }).join('');
+    setMain(
+      hero('התחשבנות · מ-' + date(L.since), L.error || !L.ready ? '—' : L.settlement ? money(L.settlement.amount) : 'מאוזן',
+        L.error ? '' : 'קיבלו ' + money(L.total.received) + ' · שילמו ' + money(L.total.paid) + ' · נטו ' + smoney(L.total.net)).replace('<span class="blk">', L.settlement ? '<span class="t-title3 blk" id="lg-who">' + esc(settleWho(L)) + '</span><span class="blk">' : '<span class="blk">') +
+      (L.ready ? '' : '<div class="msg w t-sub">תיוג, קבלות היסטוריות והעברות — אחרי הרצת setupSchema.</div>') +
+      (L.error ? '<div class="msg w t-sub">' + esc(L.error) + '</div>' : '') +
+      (n ? '<button class="msg w banner t-sub" id="b-untagged" onclick="go(\'untagged\')"><span class="main">' + nOf(n, 'תנועה לא מתויגת', 'תנועות לא מתויגות') + ' — היתרה חלקית</span>' + CHEV + '</button>' : '') +
+      L.partners.map(card).join('') +
+      sect('לפי חודש', L.monthly.map(function (m) { return row(monthName(m.month, true), smoney(m.net), 'נכנס ' + money(m.received) + ' · יצא ' + money(m.paid)); }).join('')) +
+      grp('העברות', (tr || emptyRow('אין העברות')) + (L.ready && L.partners.length === 2 ? '<button class="row t-body lnk" id="b-transfer">רישום העברה</button>' : '')) +
+      grp('קבלות היסטוריות', (hr || emptyRow('אין קבלות היסטוריות')) + (L.ready ? '<button class="row t-body lnk" id="b-historic">הוספת קבלה היסטורית</button>' : ''),
+        'קבלות מ-' + date(L.since) + ' עד ' + date(last) + ' (לפני ההשקה). לא משנות חוב לקוח ולא כותבות קו חלוקה.') +
+      (L.warnings.length ? sect('אזהרות (' + L.warnings.length + ')', L.warnings.map(function (w) { return '<div class="row"><span class="main t-sub">' + esc(w) + '</span></div>'; }).join('')) : '')
+    );
+    if ($('b-transfer')) $('b-transfer').onclick = transferForm;
+    if ($('b-historic')) $('b-historic').onclick = historicForm;
+  }
+  /** ברירת מחדל = ההעברה שמאזנת. */
+  function transferForm() {
+    var L = S.ledger, A = L.partners, st = L.settlement, opts = A.map(function (a) { return { v: a.email, t: a.name }; });
+    openForm('רישום העברה', [
+      { k: 'date', label: 'תאריך', type: 'date', value: today(), max: today() },
+      { k: 'from', label: 'מאת', type: 'seg', options: opts, value: st ? st.from : A[0].email },
+      { k: 'to', label: 'אל', type: 'seg', options: opts, value: st ? st.to : A[1].email },
+      { k: 'amount', label: 'סכום (₪)', type: 'number', value: st ? st.amount : '' },
+      { k: 'notes', label: 'הערות', type: 'text', value: '' }
+    ], function (v) {
+      if (!v.from || !v.to || v.from === v.to) return formErr('לבחור מאת ואל — שני מנהלים שונים');
+      runAct({ title: 'רישום העברה', fn: 'actionPartnerTransfer', args: function (cf) { return [getToken(), v, cf]; } });
+    }, st ? '<p class="note t-foot">כדי לאזן: ' + esc(settleText(L)) + '</p>' : '');
+  }
+  function historicForm() {
+    var L = S.ledger, last = L.historicTo;
+    openForm('קבלה היסטורית', [
+      { k: 'date', label: 'תאריך', type: 'date', value: '', min: L.since, max: last },
+      { k: 'client', label: 'לקוח', type: 'select', blank: true, options: S.lists.clients, value: '' },
+      { k: 'amount', label: 'סכום (₪)', type: 'number', value: '' },
+      { k: 'notes', label: 'הערות', type: 'text', value: '' }
+    ].concat(whoField('התקבל אצל')), function (v) {
+      if (!v.date || v.date < L.since || v.date > last) return formErr('תאריך מ-' + date(L.since) + ' עד ' + date(last) + '. מההשקה — "לקוח שילם"');
+      if (!v.client) return formErr('לבחור לקוח');
+      runAct({ title: 'קבלה היסטורית', fn: 'actionAddHistoricReceipt', args: function (cf) { return [getToken(), v, cf]; } });
+    }, '<p class="note t-foot">לא משנה חוב לקוח ולא כותבת קו חלוקה</p>');
+  }
+  /** לא מתויגות: תיוג שורה, או "סמן הכול" (פעולה אחת). */
+  function untaggedView() { ledgerLoad(renderUntagged); }
+  function renderUntagged(L) {
+    var A = L.partners;
+    if (!L.ready || !L.untagged.length) return setMain(L.ready ? grp('', emptyRow('אין תנועות לא מתויגות')) : '<div class="msg w t-sub">תיוג — אחרי הרצת setupSchema.</div>');
+    var item = function (u, i) {
+      return '<div class="urow"><div class="row"><div class="main"><div class="t-body">' + esc(u.desc) + '</div><div class="t-foot sec">' + esc(u.label) + ' · ' + date(u.date) +
+        (u.who ? ' · <span class="ltr">' + esc(u.who) + '</span> לא מנהל' : '') + '</div></div><span class="t-body num">' + (u.kind === 'in' ? '' : '−') + money(u.amount) + '</span></div>' +
+        '<div class="useg"><div class="seg" role="group" aria-label="' + esc('מי · ' + u.desc) + '">' + A.map(function (a) {
+          return '<button type="button" aria-pressed="false" data-ut="' + i + '" data-who="' + esc(a.email) + '">' + esc(a.name) + '</button>';
+        }).join('') + '</div></div></div>';
+    };
+    setMain(
+      '<p class="t-sub sec lsub">' + nOf(L.untagged.length, 'תנועה', 'תנועות') + ' בלי "מי" — לא נספרות עד שמתייגים.</p>' +
+      '<div id="ut">' + grp('', A.map(function (a) { return '<button class="row t-body lnk" data-all="' + esc(a.email) + '">סמן הכול כ' + esc(a.name) + '</button>'; }).join('')) +
+      grp('', L.untagged.map(item).join(''), '', 'ut-list') + '</div>'
+    );
+    $('ut').onclick = function (e) {
+      var b = e.target.closest('[data-ut], [data-all]'); if (!b) return;
+      if (b.hasAttribute('data-all')) {
+        var all = L.untagged.map(function (u) { return { tab: u.tab, id: u.id }; }), w = b.getAttribute('data-all');
+        return runAct({ title: 'סימון הכול כ' + adminName(w), fn: 'actionTagMovement', args: function (cf) { return [getToken(), '*', all, w, cf]; } });
+      }
+      var u = L.untagged[Number(b.getAttribute('data-ut'))], who = b.getAttribute('data-who');
+      runAct({ title: 'תיוג · ' + u.desc, fn: 'actionTagMovement', args: function (cf) { return [getToken(), u.tab, u.id, who, cf]; } });
+    };
   }
 
   // ---------- 6.5 דף עורך אישי ----------
