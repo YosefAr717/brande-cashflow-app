@@ -38,7 +38,7 @@
       /* טקסט צבעוני נגיש (נגזר; ניגודיות 4.5:1 על לבן ועל רקע תג/הודעה) */
       --danger-text: rgb(200,0,20); --warn-text: rgb(160,68,0); --success-text: rgb(0,112,30); --gray-text: rgba(60,60,67,.85);
       --tint-bg: rgba(0,136,255,.15); --side-on: rgba(0,136,255,.12);
-      --shadow-seg: 0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04); --seg-on: #FFFFFF;
+      --shadow-seg: 0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04); --seg-on: #FFFFFF; --seg-on-sub: var(--label2);   /* שורה שנייה בכפתור נבחר */
       --shadow-toast: 0 8px 24px rgba(0,0,0,.18);
       --scrim: rgba(0,0,0,.4);
       --knob-shadow: 0 3px 8px rgba(0,0,0,.15), 0 1px 1px rgba(0,0,0,.16);
@@ -57,7 +57,7 @@
         --brown: rgb(183,138,102); --gray3: rgb(72,72,74); --gray5: rgb(44,44,46);
         --link-text: var(--blue);
         --danger-text: rgb(255,105,97); --warn-text: var(--orange); --success-text: var(--green); --gray-text: rgba(235,235,245,.7);
-        --tint-bg: rgba(0,136,255,.25); --side-on: rgba(0,136,255,.12); --seg-on: rgb(99,99,102);
+        --tint-bg: rgba(0,136,255,.25); --side-on: rgba(0,136,255,.12); --seg-on: rgb(99,99,102); --seg-on-sub: var(--label);
         --pie-pink: rgb(255,88,150);
         --tab-on: rgba(0,145,255,.2); --tab-on-text: rgb(120,190,255);
         --glass-bg: rgba(30,30,32,.55); --glass-solid: var(--bg3); --glass-drop: 0 10px 30px rgba(0,0,0,.5);
@@ -74,7 +74,7 @@
       --brown: rgb(183,138,102); --gray3: rgb(72,72,74); --gray5: rgb(44,44,46);
       --link-text: var(--blue);
       --danger-text: rgb(255,105,97); --warn-text: var(--orange); --success-text: var(--green); --gray-text: rgba(235,235,245,.7);
-      --tint-bg: rgba(0,136,255,.25); --side-on: rgba(0,136,255,.12); --seg-on: rgb(99,99,102);
+      --tint-bg: rgba(0,136,255,.25); --side-on: rgba(0,136,255,.12); --seg-on: rgb(99,99,102); --seg-on-sub: var(--label);
       --pie-pink: rgb(255,88,150);
       --tab-on: rgba(0,145,255,.2); --tab-on-text: rgb(120,190,255);
       --glass-bg: rgba(30,30,32,.55); --glass-solid: var(--bg3); --glass-drop: 0 10px 30px rgba(0,0,0,.5);
@@ -283,6 +283,20 @@
     .hero .hero-seg { padding-top: 0; }
     .hero .seg { margin: 0; }
     .grp.hero + .tiles { margin-top: 12px; }
+    /* בית בלי כותרת גלויה: הכרטיס מתחיל מתחת לכפתור הצף (padding-top של main) */
+    h1.vh + .grp.hero { margin-top: 0; }
+    .hero-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px 0; }
+    .hero-head + .row { padding-top: 4px; }
+    /* רווח / הכנסה: segmented קטן בפינת הכרטיס */
+    .hero .hero-head .seg.hm { margin: 0; flex: none; width: 128px; min-height: 32px; }
+    .seg.hm button { position: relative; min-height: 28px; }   /* 28 + 2×2 = קפסולה של 32px */
+    .seg.hm button::before { content: ''; position: absolute; inset: -8px 0; }   /* שטח לחיצה 44 */
+    /* בורר תקופה: 3 כפתורים ברוחב שווה, כל אחד שתי שורות */
+    .seg.pp button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 52px; padding: 6px 4px; gap: 1px; }
+    .pp .pp-t { font-weight: 600; }
+    .pp .pp-m { color: var(--label2); }
+    .pp .on .pp-m { color: var(--seg-on-sub); }   /* כהה: --label2 על --seg-on = 2.9:1 → --label */
+    .btn .ch-in { width: 18px; height: 18px; }
     .lsub { margin-top: -4px; }
     .hero .hero-tag { margin-top: 8px; }
     /* תפריט מהסרגל */
@@ -669,7 +683,7 @@
   function toastErr(m, retry) { toast(m, { error: true, retry: retry }); }
 
   // ---------- מבנה מסך: כותרת גדולה + כפתורים צפים (UI בלבד). אין סרגל עליון ----------
-  var SCREENS = { home: { t: 'בית', large: 1 }, clients: { t: 'לקוחות', large: 1 }, editors: { t: 'עורכים', large: 1 },
+  var SCREENS = { home: { t: 'בית', large: 1, hide: 1 }, clients: { t: 'לקוחות', large: 1 }, editors: { t: 'עורכים', large: 1 },
     alerts: { t: 'התראות', large: 1 }, settings: { t: 'הגדרות', large: 1 }, partners: { t: 'שותפים', large: 1, back: 'home' },
     client: { large: 1, back: 'clients' }, editor: { large: 1, back: 'editors' } };
   /** אייקון מה-sprite (Lucide). */
@@ -686,7 +700,7 @@
       if (a.menu) { end.setAttribute('aria-haspopup', 'menu'); end.setAttribute('aria-expanded', 'false'); } else { end.removeAttribute('aria-haspopup'); end.removeAttribute('aria-expanded'); }
     }
     edgeOn();
-    $('main').innerHTML = (sc.large ? '<h1 class="t-large ltitle" id="ltitle">' + esc(sc.t) + '</h1>' + (sc.sub ? '<p class="t-sub sec lsub">' + sc.sub + '</p>' : '') : '') + html;
+    $('main').innerHTML = (sc.large ? '<h1 class="' + (sc.hide ? 'vh' : 't-large ltitle') + '" id="ltitle">' + esc(sc.t) + '</h1>' + (sc.sub ? '<p class="t-sub sec lsub">' + sc.sub + '</p>' : '') : '') + html;
     window.scrollTo(0, 0);
   }
   function edgeOn() { $('edge').classList.toggle('on', window.scrollY > 4 && !(S.screen && S.screen.login)); }
@@ -1157,7 +1171,8 @@
     opts = opts || {};
     var seq = S.navSeq, fresh = homeFresh();
     if (fresh) { S.renderSrc = S.fromSnap ? 'snapshot' : 'cache'; cb(S.home); setSync(true); }
-    call('getAdminHome', [getToken()], function (r) {
+    // חודש שנבחר ב"בחר חודש" (לא החודש / הקודם) מחושב בשרת — מבקשים אותו גם ברענון
+    call('getAdminHome', [getToken()].concat(MONTH_RE.test(S.period) ? [S.period] : []), function (r) {
       S.fromSnap = false; S.snapAt = null; S.renderSrc = 'שרת';
       setSync(false);
       var changed = !S.home || JSON.stringify(r.home) !== JSON.stringify(S.home) || JSON.stringify(r.lists) !== JSON.stringify(S.lists);
@@ -1187,33 +1202,105 @@
   // ---------- 6.2 דשבורד ----------
   function homeView() { loadHome(renderHome); }
   /**
-   * בית: 4 בלוקים. 1 רווח העסק (בורר התקופה בתוך הכרטיס) · 2 אריחים · באנר חוסרים (רק כשיש) · רווח לפי לקוח.
-   * ואחריהם שתי שורות: עורכים, סה״כ שלנו. כל השאר במסכים עצמם (לקוחות, עורכים, שותפים).
+   * בית: כרטיס רווח/הכנסה (עם בורר התקופה) · 2 אריחים · באנר חוסרים (רק כשיש) · עוגה לפי לקוח · מגיע לעורכים · הכסף שלי.
+   * בלי כותרת גלויה. "רווח / הכנסה" משנה את הכרטיס ואת העוגה הראשונה, ונשמר במכשיר.
    */
   function renderHome(h) {
-    var D = h.dash, P = D.periods[S.period], B = P.business, share = partnerShare(h, D.labels);
-    var sub = dots(['הכנסות ' + money(B.revenue), 'הוצאות ' + money(B.cost)].concat(share === null ? [] : ['לכל שותף ' + money(share)]));
+    var D = h.dash;
+    if (!D.periods[S.period]) S.period = 'month';   // חודש שנבחר ולא בתשובה (למשל snapshot ישן)
+    var P = D.periods[S.period], B = P.business, rev = homeMode() === 'revenue', share = partnerShare(h, D.labels), short = esc(periodShort(D.labels));
+    var sub = rev ? dots(['עלויות עורכים ' + money(B.editorCost), 'הוצאות ' + money(B.expenses), 'רווח ' + money(B.total)])
+      : dots(['הכנסות ' + money(B.revenue), 'הוצאות ' + money(B.cost)].concat(share === null ? [] : ['לכל שותף ' + money(share)]));
     setMain(
       '<section class="grp hero"><div class="gbody">' +
-        '<button class="row" id="b-profit" onclick="go(\'partners\')"><span class="main"><span class="t-foot sec blk">רווח העסק · ' + esc(periodName(D.labels)) + '</span>' +
-        '<span class="blk"><span class="t-large num">' + money(B.total) + '</span></span><span class="t-foot sec">' + sub + '</span></span>' + CHEV + '</button>' +
-        '<div class="pad hero-seg">' + periodSeg(D.labels, function () { renderHome(h); }) + '</div></div></section>' +
+        '<div class="hero-head"><span class="t-foot sec" id="hero-l">' + (rev ? 'הכנסות' : 'רווח העסק') + ' · ' + esc(periodName(D.labels)) + '</span>' + modeSeg(rev) + '</div>' +
+        '<button class="row" id="b-profit" aria-labelledby="hero-l hero-v" onclick="go(\'partners\')"><span class="main" id="hero-v"><span class="blk"><span class="t-large num">' + money(rev ? B.revenue : B.total) + '</span></span>' +
+        '<span class="t-foot sec">' + sub + '</span></span>' + CHEV + '</button>' +
+        '<div class="pad hero-seg">' + periodPicker(D.labels) + '</div></div></section>' +
       '<div class="tiles">' + tile('לגבייה מלקוחות', money(h.debtTotal.amount), '', 'clients') + tile('לתשלום לעורכים', money(h.dueTotal.amount), '', 'editors') + '</div>' +
       missingBanner(h, B) +
-      pieGrp('רווח לפי לקוח · ' + esc(periodShort(D.labels)),
-        pieBlock(B, D.colors, 'רווח לפי לקוח', { sumLabel: 'רווח מלקוחות', totalLabel: 'רווח', dedName: function (x) { return x.general ? x.key : x.key + ' (הפסד)'; } })) +
-      grp('', '<button class="row" onclick="go(\'editors\')"><span class="main"><span class="t-body blk">עורכים</span><span class="t-foot sec blk">מה עשה כל אחד ב' + monthName(D.labels.month) + '</span></span>' + CHEV + '</button>' +
-        '<button class="row" id="b-ours" onclick="oursSheet()"><span class="main"><span class="t-body blk">סה״כ שלנו</span><span class="t-foot sec blk">העסק + העריכות שלנו</span></span>' +
-        '<span class="t-body num">' + money(P.ours.total) + '</span>' + CHEV + '</button>')
+      (rev ? pieGrp('הכנסה לפי לקוח · ' + short, pieBlock(P.revenue, D.colors, 'הכנסה לפי לקוח',
+          { calc: calcP([['', 'הכנסות', B.revenue], ['− ', 'עלויות עורכים', B.editorCost], ['− ', 'הוצאות', B.expenses], ['= ', 'רווח', B.total]]) }))
+        : pieGrp('רווח לפי לקוח · ' + short, pieBlock(B, D.colors, 'רווח לפי לקוח',
+          { sumLabel: 'רווח מלקוחות', totalLabel: 'רווח', dedName: function (x) { return x.general ? x.key : x.key + ' (הפסד)'; } }))) +
+      dueList(h) +
+      minePie(P.mine, D.colors, short)
     );
     markPaint();
+  }
+  var MONTH_RE = /^\d{4}-\d{2}$/, HM_KEY = 'brande_home_mode';
+  /** "רווח" (ברירת מחדל) / "הכנסה". נשמר במכשיר (לא סוד). */
+  function homeMode() { return lsGet(HM_KEY) === 'revenue' ? 'revenue' : 'profit'; }
+  function setHomeMode(m) { lsSet(HM_KEY, m); reHome(); }
+  function reHome() { var y = window.scrollY; renderHome(S.home); window.scrollTo(0, y); }
+  function modeSeg(rev) {
+    var b = function (v, t, on) { return '<button type="button" aria-pressed="' + on + '"' + (on ? ' class="on"' : '') + ' onclick="setHomeMode(\'' + v + '\')">' + t + '</button>'; };
+    return '<div class="seg hm" role="group" aria-label="תצוגת הכרטיס">' + b('profit', 'רווח', !rev) + b('revenue', 'הכנסה', rev) + '</div>';
+  }
+  /** בורר תקופה: "החודש הזה" / "החודש הקודם" / "בחר חודש" (sheet). מתחת לכל אחד שם החודש בסוגריים. */
+  function periodPicker(L) {
+    var p = S.period, custom = p !== 'month' && p !== 'prev';
+    var cm = p === 'year' ? L.year : p === 'all' ? 'כל הזמן' : custom ? monthName(p, p.slice(0, 4) !== String(L.month).slice(0, 4)) : '—';
+    var b = function (v, t, m, on, extra) {
+      return '<button type="button" aria-pressed="' + on + '"' + (on ? ' class="on"' : '') + (extra || '') + ' onclick="homePick(\'' + v + '\')">' +
+        '<span class="pp-t t-sub">' + t + '</span><span class="pp-m t-cap1">(' + m + ')</span></button>';
+    };
+    return '<div class="seg pp" role="group" aria-label="תקופה">' + b('month', 'החודש הזה', monthName(L.month), p === 'month') + b('prev', 'החודש הקודם', prevName(L), p === 'prev') +
+      b('pick', 'בחר חודש', cm, custom, ' aria-haspopup="dialog"') + '</div>';
+  }
+  function homePick(v) { if (v === 'pick') return periodSheet(); S.period = v; reHome(); }
+  /** 12 החודשים האחרונים (חדש למעלה) + "השנה" + "כל הזמן". סימון על הנוכחי. */
+  function periodSheet() {
+    var L = S.home.dash.labels, cur = S.period === 'month' ? L.month : S.period === 'prev' ? L.prev : S.period;
+    var y = Number(String(L.month).slice(0, 4)), m = Number(String(L.month).slice(5)) - 1, months = [];
+    for (var i = 0; i < 12; i++) { var d = new Date(y, m - i, 1); months.push(d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2)); }
+    var row = function (v, t) {
+      var on = v === cur;
+      return '<button class="row" role="radio" aria-checked="' + on + '" data-pv="' + v + '"><span class="main t-body">' + t + '</span>' + (on ? ICON_CHECK : '') + '</button>';
+    };
+    openModal(sheetHtml('בחירת תקופה', '<div role="radiogroup" aria-label="תקופה" id="pv-list">' + grp('', months.map(function (v) { return row(v, monthName(v, true)); }).join('')) +
+      grp('', row('year', 'השנה (' + L.year + ')') + row('all', 'כל הזמן')) + '</div>', '', 'ביטול'));
+    $('pv-list').onclick = function (e) { var b = e.target.closest('[data-pv]'); if (b) pickPeriod(b.getAttribute('data-pv')); };
+  }
+  /** בחירה מה-sheet. חודש שאין בתשובה → getAdminHome(token, 'YYYY-MM') (החישוב בשרת), ואז ציור. */
+  function pickPeriod(v) {
+    closeModal();
+    var D = S.home.dash, p = v === D.labels.month ? 'month' : v === D.labels.prev ? 'prev' : v;
+    if (D.periods[p]) { S.period = p; return reHome(); }
+    var seq = S.navSeq;
+    setSync(true);
+    call('getAdminHome', [getToken(), v], function (r) {
+      setSync(false);
+      S.home = r.home; S.lists = r.lists; S.homeAt = Date.now();
+      saveSnap('admin', { home: r.home, lists: r.lists, user: r.user || S.user });
+      if (!r.home.dash.periods[p]) return toastErr('אין נתונים לתקופה');
+      S.period = p;
+      if (seq === S.navSeq) reHome();
+    }, function (m) { setSync(false); toastErr(m); });
+  }
+  /** מגיע לעורכים: שורה לכל עורך עם סכום פתוח → דף העורך. מתחת: "כל העורכים". */
+  function dueList(h) {
+    var rows = h.editors.filter(function (e) { return e.due > 0 || e.missing > 0; }).map(function (e) {
+      return '<button class="row" onclick="go(\'editor\',' + esc(JSON.stringify(e.name)) + ')"><span class="main t-body">' + esc(e.name) + '</span>' + amt(e.due, e.missing) + CHEV + '</button>';
+    }).join('');
+    return grp('מגיע לעורכים', rows || emptyRow('אין תשלומים פתוחים')) +
+      '<div class="actions"><button class="btn btn-tint full t-head" id="b-all-ed" onclick="go(\'editors\')">כל העורכים' + ic('chevron-left', 'ch-in') + '</button></div>';
+  }
+  /** הכסף שלי (המנהל המחובר, מהשרת): חלקו ברווח העסק + העריכות שלו לפי לקוח. */
+  function minePie(M, colors, short) {
+    var lab = function (x) { return x.share ? Object.assign({}, x, { key: '__biz', label: 'חלקי ברווח העסק' + (M.sharePct === null ? '' : ' (' + M.sharePct + '%)') }) : x; };
+    var pie = { total: M.total, sliceSum: M.sliceSum, deductions: M.deductions.map(lab), slices: M.slices.map(lab) };
+    var foot = (M.partnerError ? 'אין חלק ברווח: ' + esc(M.partnerError) : M.sharePct === null ? 'אין אחוז שותפות בטאב הרשאות' : 'חלק ' + M.sharePct + '% מרווח העסק') +
+      (M.editor ? ' + העריכות שלך (' + esc(M.editor) + ') לפי עלות עורך, כולל מה שכבר שולם' : ' · החשבון לא מקושר לעורך');
+    return pieGrp('הכסף שלי · ' + short, pieBlock(pie, colors, 'הכסף שלי',
+      { sumLabel: 'העריכות שלי', totalLabel: 'שלי', dedName: function () { return 'חלקי בהפסד העסק'; } }), foot);
   }
   /** "א · ב · ג" שנשבר לשורות בלי "·" בתחילת שורה (המפריד הראשון בכל שורה מחוץ לקופסה ונחתך). */
   function dots(parts) { return '<span class="dots"><span>' + parts.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</span></span>'; }
   /** לכל שותף בתקופה: סכום החלוקות החודשיות מהשרת. רק כשכל השותפים באותו אחוז; אחרת null (הפירוט במסך שותפים). */
   function partnerShare(h, labels) {
     var rows = h.partners.filter(function (p) {
-      return S.period === 'all' || (S.period === 'year' ? p.month.indexOf(labels.year + '-') === 0 : p.month === labels[S.period]);
+      return S.period === 'all' || (S.period === 'year' ? p.month.indexOf(labels.year + '-') === 0 : p.month === (labels[S.period] || S.period));
     });
     if (!rows.length || rows.some(function (p) { return p.error || !p.partners.length; })) return null;
     var first = rows[0].partners;
@@ -1228,14 +1315,6 @@
     if (!parts.length && B.missing) parts.push(nOf(B.missing, 'פריט', 'פריטים') + ' בלי מחיר או עלות');
     if (!parts.length) return '';
     return '<button class="msg w banner t-sub" id="b-missing" onclick="go(\'alerts\')"><span class="main">' + parts.join(' · ') + '. הסכומים חלקיים</span>' + CHEV + '</button>';
-  }
-  /** סה״כ שלנו (רווח העסק + מה שהמנהלים הרוויחו כעורכים) — בגיליון, אותה עוגה. */
-  function oursSheet() {
-    var D = S.home.dash, P = D.periods[S.period];
-    var oursPie = { total: P.ours.total, sliceSum: P.ours.sliceSum, deductions: P.ours.deductions,
-      slices: P.ours.slices.map(function (x) { return Object.assign({}, x, { key: x.key === 'העסק' ? '__biz' : x.key, label: x.key === 'העסק' ? 'רווח העסק' : 'עריכות של ' + x.key }); }) };
-    openModal(sheetHtml('סה״כ שלנו', '<p class="note t-foot">' + esc(periodName(D.labels)) + ' · רווח העסק + מה שהמנהלים הרוויחו כעורכים</p>' +
-      pieGrp('', pieBlock(oursPie, D.editorColors, 'סה״כ שלנו', { dedName: function () { return 'הפסד העסק'; } })), '', 'סגור'));
   }
   /** חלוקה לשותפים בחודש (בגיליון החודש). */
   function partnerRows(p) {
@@ -1355,9 +1434,10 @@
     var rows = function (n) { var r = ''; for (var i = 0; i < n; i++) r += '<div class="skrow"><div class="sk l"' + (i % 2 ? ' style="width:40%"' : '') + '></div></div>'; return r; };
     var card = function (n) { return '<section class="grp"><div class="gh"><div class="sk l" style="width:30%;height:12px"></div></div><div class="gbody">' + rows(n) + '</div></section>'; };
     var pieCard = '<section class="grp"><div class="gh"><div class="sk l" style="width:40%;height:12px"></div></div><div class="gbody pad"><div class="sk c"></div>' + rows(3) + '</div></section>';
+    var ppb = function (on) { return '<button' + (on ? ' class="on"' : '') + ' tabindex="-1" aria-hidden="true"><span class="pp-t t-sub">&nbsp;</span><span class="pp-m t-cap1">&nbsp;</span></button>'; };
     if (view === 'home') return '<section class="grp hero"><div class="gbody"><div class="pad"><div class="sk l" style="width:40%;height:12px"></div><div class="sk v" style="margin:8px 0;width:45%;height:34px"></div><div class="sk l" style="width:70%;height:12px"></div></div>' +
-      '<div class="pad hero-seg"><div class="seg"><button class="on" tabindex="-1">&nbsp;</button><button tabindex="-1">&nbsp;</button><button tabindex="-1">&nbsp;</button><button tabindex="-1">&nbsp;</button></div></div></div></section>' +
-      '<div class="tiles">' + stat + stat + '</div>' + pieCard + card(2);
+      '<div class="pad hero-seg"><div class="seg pp">' + ppb(1) + ppb() + ppb() + '</div></div></div></section>' +
+      '<div class="tiles">' + stat + stat + '</div>' + pieCard + card(3) + pieCard;
     var heroSk = '<section class="grp hero"><div class="gbody pad"><div class="sk l" style="width:30%;height:12px"></div><div class="sk v" style="margin:8px 0;width:45%;height:34px"></div><div class="sk l" style="width:50%;height:12px"></div></div></section>';
     if (view === 'my') return heroSk + card(4) + pieCard;
     if (view === 'client' || view === 'editor' || view === 'partners') return heroSk + card(4) + card(2);
@@ -1439,7 +1519,7 @@
     return (slices.length ? '<div class="pie" data-lock="" data-sum="' + esc(money(sum)) + '"><div class="ring"><div role="img" aria-label="' + esc(summary) + '">' + donut(slices, col, gid) + '</div>' +
       '<div class="ctr" aria-live="polite"><span class="t-foot c-n hidden"></span><span class="t-title2 num c-a">' + money(sum) + '</span><span class="t-cap1 c-p">סה״כ</span></div></div>' +
       '<ul class="legend gbody" aria-label="' + esc(label) + '">' + leg + '</ul></div>' : '') +
-      calcLine(pie, sum, opts);
+      (opts.calc !== undefined ? opts.calc : calcLine(pie, sum, opts));
   }
   /** מציג פרוסה i (או null = ברירת מחדל: "סה״כ" + סכום הפרוסות). */
   function pieShow(pie, i) {
@@ -1496,9 +1576,11 @@
   function calcLine(pie, sum, opts) {
     var ded = pie.deductions || [];
     if (!ded.length) return '';
-    var term = function (op, t, n) { return '<span class="nw">' + op + esc(t) + ' <span class="num">' + money(n) + '</span></span>'; };
-    return '<p class="calc t-foot sec">' + term('', opts.sumLabel || 'סה״כ', sum) + ded.map(function (x) { return ' ' + term('− ', opts.dedName ? opts.dedName(x) : x.key, x.amount); }).join('') +
-      ' ' + term('= ', opts.totalLabel || 'נטו', pie.total) + '</p>';
+    return calcP([['', opts.sumLabel || 'סה״כ', sum]].concat(ded.map(function (x) { return ['− ', opts.dedName ? opts.dedName(x) : x.key, x.amount]; }), [['= ', opts.totalLabel || 'נטו', pie.total]]));
+  }
+  /** שורת חישוב מ-[[פעולה, תווית, סכום], ...]: "הכנסות ₪X − עלויות עורכים ₪Y − הוצאות ₪Z = רווח ₪W". */
+  function calcP(terms) {
+    return '<p class="calc t-foot sec">' + terms.map(function (t) { return '<span class="nw">' + t[0] + esc(t[1]) + ' <span class="num">' + money(t[2]) + '</span></span>'; }).join(' ') + '</p>';
   }
   var PERIODS = ['month', 'prev', 'year', 'all'];
   S.period = 'month';
@@ -1518,10 +1600,12 @@
   /** חודש קודם עם שנה רק כשהיא שונה (ינואר → "דצמבר 2025"). */
   function prevName(labels) { return monthName(labels.prev, String(labels.prev).slice(0, 4) !== String(labels.month).slice(0, 4)); }
   function periodShort(labels) {
+    if (MONTH_RE.test(S.period)) return monthName(S.period, S.period.slice(0, 4) !== String(labels.month).slice(0, 4));
     return { month: monthName(labels.month), prev: prevName(labels), year: labels.year, all: 'כל הזמן' }[S.period];
   }
   /** "החודש (אוקטובר)" / "חודש קודם (ספטמבר)" / "השנה (2026)" / "כל הזמן". */
   function periodName(labels) {
+    if (MONTH_RE.test(S.period)) return monthName(S.period, true);
     return { month: 'החודש (' + monthName(labels.month) + ')', prev: 'חודש קודם (' + prevName(labels) + ')', year: 'השנה (' + labels.year + ')', all: 'כל הזמן' }[S.period];
   }
 
