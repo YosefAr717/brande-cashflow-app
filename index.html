@@ -305,6 +305,12 @@
       .tiles + .hgrid { margin-top: 24px; }
       .hgrid > .grp:first-child, .hgrid > .grp, .hgrid > .h-due > .grp:first-child { margin-top: 0; }
       .hgrid .h-p1 { grid-area: p1; } .hgrid .h-p2 { grid-area: p2; } .hgrid .h-due { grid-area: due; }
+      /* יישור בין העמודות: כותרת באותו גובה, עוגה 200 ממורכזת, מקרא ברוחב העמודה, הערה ושורת חישוב באותו סגנון ומיקום (מתחת למקרא) */
+      .hgrid > .pgrp > .gh { min-height: 24px; margin: 0 0 8px; padding-bottom: 0; }
+      .hgrid > .pgrp > .gh + .pie { margin-top: 0; }
+      .hgrid .pie .ring { width: 200px; height: 200px; }
+      .hgrid .pie .legend { width: 100%; }
+      .hgrid > .pgrp > .calc, .hgrid > .pgrp > .gf { margin: 8px 0 0; padding: 0 16px; color: var(--label2); }
     }
     .lsub { margin-top: -4px; }
     .hero .hero-tag { margin-top: 8px; }
