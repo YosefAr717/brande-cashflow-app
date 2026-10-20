@@ -337,6 +337,24 @@
     .chip::before { content: ''; position: absolute; inset: -4px 0; }
     .chip[aria-pressed="true"] { background: var(--tint); color: var(--white); }
     .pick-sum .main { flex: 1; color: var(--label2); }
+    .pick-sum .ps-n { color: var(--label); }
+    /* שילמתי לעורך: שורת סוג = סימון (44) + כפתור פתיחה; סרטונים בודדים מוזחים */
+    .row.tr { padding: 0; gap: 0; flex-wrap: nowrap; }
+    .tr .ck { flex: none; width: 52px; min-height: 44px; display: inline-flex; align-items: center; justify-content: flex-start; border: 0; background: none; padding: 0; padding-inline-start: 16px; cursor: pointer; }
+    .tr .tx { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 16px 0 12px; border: 0; background: none; color: var(--label); text-align: start; cursor: pointer; }
+    .tr .tx .main { flex: 1; min-width: 0; }
+    .tr .tx .chev { transform: rotate(-90deg); transition: transform 200ms cubic-bezier(.2,.8,.2,1); }
+    .tr .tx[aria-expanded="true"] .chev { transform: rotate(90deg); }
+    .ck[aria-checked="true"] .ckc, .ck[aria-checked="mixed"] .ckc { background: var(--tint); border-color: var(--tint); }
+    .ck[aria-checked="false"] .ckc svg, .ck[aria-checked="mixed"] .ckc svg { display: none; }
+    .ck[aria-checked="mixed"] .ckc::after { content: ''; width: 10px; height: 2px; border-radius: 1px; background: var(--white); }   /* חלק מסומן */
+    .tsub .row.pk { padding-inline-start: 52px; min-height: 44px; padding-block: 0; }
+    .tsub { position: relative; }
+    .tsub::before { content: ''; position: absolute; top: 0; inset-inline: 52px 0; border-top: .5px solid var(--sep); }
+    .tsub + .row::before { content: ''; position: absolute; top: 0; inset-inline: 16px 0; border-top: .5px solid var(--sep); }
+    .tsub .row + .row::before { inset-inline-start: 52px; }
+    /* הסיכום והכפתור קבועים למטה גם בטלפון (בדסקטופ: מחוץ לגלילה) */
+    .sh-foot:has(.pick-sum) { position: sticky; bottom: 0; background: inherit; padding-bottom: 12px; border-top: .5px solid var(--sep); z-index: 1; }
     .pie-gap { height: 16px; }
     .btn-plain.inl { padding: 0; }
     /* באנר חוסרים: אחד למסך, לחיץ → התראות */
@@ -1130,13 +1148,13 @@
     return { values: v, files: files };
   }
   /**
-   * extra = HTML מעל השדות (או פונקציה שמחזירה אותו — נבנה מחדש ב"חזרה"). opts.foot = HTML מעל הכפתור; opts.onOpen(fields) אחרי הציור.
+   * extra = HTML מעל השדות (או פונקציה שמחזירה אותו — נבנה מחדש ב"חזרה"). opts.foot = HTML מעל הכפתור (או פונקציה); opts.onOpen(fields) אחרי הציור.
    */
   function openForm(title, fields, onSubmit, extra, opts) {
     opts = opts || {};
     S.formBack = null; S.modalSeq = (S.modalSeq || 0) + 1;
     openModal(sheetHtml(title, (typeof extra === 'function' ? extra() : extra || '') + formHtml(fields) + '<div id="form-msg"></div>',
-      (opts.foot || '') + '<button class="btn btn-fill full t-head" id="b-next">המשך</button>'));
+      (typeof opts.foot === 'function' ? opts.foot() : opts.foot || '') + '<button class="btn btn-fill full t-head" id="b-next">המשך</button>'));
     if (opts.onOpen) opts.onOpen(fields);
     $('b-next').onclick = function () {
       var fv = formValues(fields);
@@ -1801,9 +1819,11 @@
       if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>');
       var e = r.page, o = e.open;
       var total = o.totals.videos.amount + o.totals.projects.amount, miss = o.totals.videos.missing + o.totals.projects.missing;
-      var items = o.videos.map(function (v) { return { k: 'v:' + v.key, name: esc(v.client) + ' <span class="num">#' + esc(String(v.key).split('#').slice(1).join('#')) + '</span>',
-          sub: esc(v.type || 'בלי סוג') + (v.date ? ' · ' + esc(v.date) : ''), amount: v.cost }; })
-        .concat(o.projects.map(function (p) { return { k: 'p:' + p.id, name: 'פרויקט: ' + esc(p.client) + ' — ' + esc(p.name), sub: '', amount: p.cost }; }));
+      var items = o.videos.map(function (v) { var num = String(v.key).split('#').slice(1).join('#');
+          return { k: 'v:' + v.key, kind: 'v', client: v.client, type: v.type || 'בלי סוג', num: num, date: v.date || '', amount: v.cost,
+            name: esc(v.client) + ' <span class="num">#' + esc(num) + '</span>', sub: esc(v.type || 'בלי סוג') + (v.date ? ' · ' + esc(v.date) : '') }; })
+        .concat(o.projects.map(function (p) { return { k: 'p:' + p.id, kind: 'p', client: p.client, pname: p.name, amount: p.cost,
+          name: 'פרויקט: ' + esc(p.client) + ' — ' + esc(p.name), sub: '' }; }));
       S.editorPage = e;
       var D = S.home && S.home.dash, ed = D && D.periods.month.editors.filter(function (x) { return x.name === e.name; })[0];
       var mn = D ? monthName(D.labels.month) : '';
@@ -1828,12 +1848,14 @@
       (i.amount === null ? wg(1, 'בלי עלות') + '<span class="t-body sec">—</span>' : '<span class="t-body num">' + money(i.amount) + '</span>') + '</div>';
   }
   /**
-   * גיליון "שילמתי לעורך": סימון פריטים (הכול מסומן) → בונוס (הצעות + שדה חופשי) → תאריך / סכום / חשבונית.
-   * למטה: סה״כ לתשלום = פריטים + בונוס. הבונוס נרשם בשרת גם כהוצאה כללית (בונוס עורכים).
+   * גיליון "שילמתי לעורך": קבוצה לכל לקוח (סכום יורד) → שורה לכל סוג אורך עם סימון אחד (נפתחת לסרטונים הבודדים) → פרויקטים בסוף.
+   * פריט בלי עלות לא ניתן לסימון. הכול מסומן כברירת מחדל. אחר כך בונוס (הצעות + שדה חופשי) → תאריך / סכום / חשבונית.
+   * למטה (קבוע): "נבחר: N פריטים · ₪X" + סה״כ לתשלום (כולל בונוס) + "המשך". לשרת: רשימת המפתחות המסומנים, כמו קודם.
    */
   function paySheet(e, items) {
-    var sel = {}, bonusTxt = '';
-    items.forEach(function (i) { sel[i.k] = true; });
+    var sel = {}, bonusTxt = '', open = {};
+    items.forEach(function (i) { if (i.amount !== null) sel[i.k] = true; });
+    var groups = payGroups(items), projs = items.filter(function (i) { return i.kind === 'p'; });
     var sum = function () {
       var x = { s: 0, m: 0, n: 0 };
       items.forEach(function (i) { if (!sel[i.k]) return; x.n++; if (i.amount === null) x.m++; else x.s += i.amount; });
@@ -1844,8 +1866,8 @@
     var sumHtml = function () {
       var x = sum(), items$ = amountField(), b = bonusNum(), ok = !isNaN(b) && b >= 0 && (items$ === null || !isNaN(items$));
       var total = ok ? Math.round(((items$ === null ? x.s : items$) + b) * 100) / 100 : null;
-      return '<span class="main">סה״כ לתשלום<span class="t-foot sec blk">נבחרו ' + x.n + ' מתוך ' + items.length + (x.m ? ' · ' + x.m + ' בלי עלות' : '') + '</span></span>' +
-        '<span class="t-head num">' + money(total) + '</span>';
+      return '<span class="main"><span class="t-sub blk ps-n">נבחר: ' + nOf(x.n, 'פריט', 'פריטים') + ' · <span class="num">' + money(x.s) + '</span></span>' +
+        '<span class="t-foot sec blk">סה״כ לתשלום (כולל בונוס)</span></span><span class="t-head num">' + money(total) + '</span>';
     };
     var chipsHtml = function () {
       var b = bonusNum();
@@ -1853,12 +1875,24 @@
         return '<button type="button" class="chip t-sub" data-b="' + x.bonus + '" aria-pressed="' + (b === x.bonus) + '">' + money(x.total) + ' · בונוס ' + money(x.bonus) + '</button>';
       }).join('');
     };
+    var ck = function (k) { return !!sel[k]; };
+    var state = function (list) { var n = list.filter(function (i) { return ck(i.k); }).length; return n === list.length ? 'true' : n ? 'mixed' : 'false'; };
+    var pick = function (k, body) { return '<button class="row pk" type="button" role="checkbox" aria-checked="' + ck(k) + '" data-k="' + esc(k) + '"><span class="ckc" aria-hidden="true">' + ICON_CHECK + '</span>' + body + '</button>'; };
     var list = function () {
-      return grp('מה שולם', '<div id="pick-list">' + items.map(function (i) {
-        return '<button class="row pk" type="button" role="checkbox" aria-checked="' + !!sel[i.k] + '" data-k="' + esc(i.k) + '"><span class="ckc" aria-hidden="true">' + ICON_CHECK + '</span>' +
-          '<span class="main"><span class="t-body blk">' + i.name + '</span>' + (i.sub ? '<span class="t-foot sec blk">' + i.sub + '</span>' : '') + '</span>' +
-          (i.amount === null ? wg(1, 'בלי עלות') + '<span class="t-body sec">—</span>' : '<span class="t-body num">' + money(i.amount) + '</span>') + '</button>';
-      }).join('') + '</div>') +
+      return '<div id="pick-list">' + groups.map(function (g, gi) {
+        return grp('<bdi>' + esc(g.client) + '</bdi> · <span class="num">' + money(g.sum) + '</span> · ' + nOf(g.n, 'סרטון', 'סרטונים'), g.types.map(function (t, ti) {
+          var id = gi + ':' + ti, op = !!open[id];
+          return '<div class="row tr"><button type="button" class="ck" role="checkbox" aria-checked="' + state(t.items) + '" data-tg="' + id + '" aria-label="' + esc(g.client + ' · ' + t.type) + '"><span class="ckc" aria-hidden="true">' + ICON_CHECK + '</span></button>' +
+            '<button type="button" class="tx" aria-expanded="' + op + '" aria-controls="pv-' + gi + '-' + ti + '" data-tx="' + id + '"><span class="main t-body">' + esc(t.type) + ' — ' + nOf(t.items.length, 'סרטון', 'סרטונים') + '</span>' +
+            '<span class="t-body num">' + money(t.sum) + '</span>' + CHEV + '</button></div>' +
+            '<div class="tsub' + (op ? '' : ' hidden') + '" id="pv-' + gi + '-' + ti + '">' + t.items.map(function (i) {
+              return pick(i.k, '<span class="main t-body"><span class="num">#' + esc(i.num) + '</span>' + (i.date ? ' · ' + esc(i.date) : '') + '</span><span class="t-body num">' + money(i.amount) + '</span>');
+            }).join('') + '</div>';
+        }).join('') + (g.miss ? '<div class="row"><span class="main t-body sec">' + g.miss + ' בלי עלות' + wg(g.miss, 'בלי עלות') + '</span><span class="t-body sec">—</span></div>' : ''));
+      }).join('') + (projs.length ? grp('פרויקטים', projs.map(function (i) {
+        var body = '<span class="main t-body"><bdi>' + esc(i.client) + '</bdi> · ' + esc(i.pname) + '</span>';
+        return i.amount === null ? '<div class="row">' + body + wg(1, 'בלי עלות') + '<span class="t-body sec">—</span></div>' : pick(i.k, body + '<span class="t-body num">' + money(i.amount) + '</span>');
+      }).join('')) : '') + '</div>' +
         grp('בונוס', '<div class="row"><span class="main t-body">סה״כ הפריטים שנבחרו</span><span class="t-body num" id="bn-base">' + money(sum().s) + '</span></div>' +
           '<div class="chips" id="bn-chips">' + chipsHtml() + '</div>' +
           '<div class="fld"><label for="bn-in">בונוס (₪)</label><input id="bn-in" type="text" inputmode="numeric" class="ltr" placeholder="0" value="' + esc(bonusTxt) + '"></div>',
@@ -1887,9 +1921,18 @@
         var amt = $(fs[1]._id);
         // שינוי בבחירה מחשב מחדש את ההצעות; הבונוס שבשדה נשאר כמו שהוא (לא משנים סכום כסף בשקט)
         var sync = function () { $('picked').innerHTML = sumHtml(); amt.placeholder = String(sum().s); $('bn-base').textContent = money(sum().s); $('bn-chips').innerHTML = chipsHtml(); };
+        // סימון: פריט / סוג שלם (הכול → ביטול, אחרת → הכול). פתיחת סוג = רשימת הסרטונים. אחרי כל שינוי: מצב הסימונים + סיכום
+        var paint = function () {
+          Array.prototype.forEach.call($('pick-list').querySelectorAll('[data-k]'), function (b) { b.setAttribute('aria-checked', ck(b.getAttribute('data-k')) ? 'true' : 'false'); });
+          Array.prototype.forEach.call($('pick-list').querySelectorAll('[data-tg]'), function (b) { var p = b.getAttribute('data-tg').split(':'); b.setAttribute('aria-checked', state(groups[p[0]].types[p[1]].items)); });
+          sync();
+        };
         $('pick-list').onclick = function (ev) {
-          var b = ev.target.closest('[data-k]'); if (!b) return;
-          var k = b.getAttribute('data-k'); sel[k] = !sel[k]; b.setAttribute('aria-checked', sel[k] ? 'true' : 'false'); sync();
+          var b = ev.target.closest('[data-k], [data-tg], [data-tx]'); if (!b) return;
+          if (b.hasAttribute('data-k')) { var k = b.getAttribute('data-k'); sel[k] = !sel[k]; return paint(); }
+          var id = b.getAttribute('data-tg') || b.getAttribute('data-tx'), p = id.split(':'), t = groups[p[0]].types[p[1]];
+          if (b.hasAttribute('data-tg')) { var all = state(t.items) === 'true'; t.items.forEach(function (i) { sel[i.k] = !all; }); return paint(); }
+          open[id] = !open[id]; b.setAttribute('aria-expanded', open[id] ? 'true' : 'false'); $('pv-' + p[0] + '-' + p[1]).classList.toggle('hidden', !open[id]);
         };
         $('bn-chips').onclick = function (ev) {
           var c = ev.target.closest('[data-b]'); if (!c) return;
@@ -1901,6 +1944,25 @@
         sync();
       }
     });
+  }
+  /** סרטונים פתוחים של עורך → [{ client, sum, n, miss, types: [{ type, sum, items }] }]. לקוח לפי סכום יורד; סוגים לפי סדר הרשימה. */
+  function payGroups(items) {
+    var by = {}, order = (S.lists && S.lists.videoTypes) || [];
+    items.forEach(function (i) {
+      if (i.kind !== 'v') return;
+      var g = by[i.client] = by[i.client] || { client: i.client, sum: 0, n: 0, miss: 0, types: {} };
+      g.n++;
+      if (i.amount === null) { g.miss++; return; }
+      g.sum = Math.round((g.sum + i.amount) * 100) / 100;
+      var t = g.types[i.type] = g.types[i.type] || { type: i.type, sum: 0, items: [] };
+      t.sum = Math.round((t.sum + i.amount) * 100) / 100; t.items.push(i);
+    });
+    var rank = function (t) { var x = order.indexOf(t); return x === -1 ? order.length : x; };
+    return Object.keys(by).map(function (c) {
+      var g = by[c];
+      g.types = Object.keys(g.types).map(function (t) { return g.types[t]; }).sort(function (a, b) { return rank(a.type) - rank(b.type) || (a.type < b.type ? -1 : 1); });
+      return g;
+    }).sort(function (a, b) { return b.sum - a.sum || (a.client < b.client ? -1 : 1); });
   }
   /**
    * הצעות בונוס מסכום הפריטים (דטרמיניסטי, באגורות): עיגול למעלה ל-100 / 500 / 1,000, ו-5% / 10% (הבונוס מעוגל למעלה לעשרות).
