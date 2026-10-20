@@ -297,9 +297,12 @@
     .pp .pp-m { color: var(--label2); }
     .pp .on .pp-m { color: var(--seg-on-sub); }   /* כהה: --label2 על --seg-on = 2.9:1 → --label */
     .btn .ch-in { width: 18px; height: 18px; }
-    /* עוגות הבית: בטלפון כמו בלי העטיפה (העוגה הראשונה לא "first-child" לעניין הרווח) */
-    .hgrid > .grp:first-child { margin-top: 32px; }
-    .tiles + .hgrid > .grp:first-child { margin-top: 24px; }
+    /* עוגות הבית: בטלפון כמו בלי העטיפה (העוגה הראשונה לא "first-child" לעניין הרווח).
+       רק מתחת ל-1024: הכלל ".tiles + .hgrid > …" חזק יותר מהאיפוס בדסקטופ, ובלי באנר חוסרים הוריד את העמודה הראשונה ב-24px */
+    @media (max-width: 1023.98px) {
+      .hgrid > .grp:first-child { margin-top: 32px; }
+      .tiles + .hgrid > .grp:first-child { margin-top: 24px; }
+    }
     @media (min-width: 1024px) {
       .hgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "p1 p2" "due due"; gap: 24px; align-items: start; margin-top: 32px; }
       .tiles + .hgrid { margin-top: 24px; }
