@@ -1945,6 +1945,7 @@
       { k: 'סכום חודשי', label: 'סכום חודשי (₪)', type: 'number', value: '', placeholder: '230' },
       { k: 'יום חיוב', label: 'יום חיוב בחודש (1–28)', type: 'number', value: '', placeholder: '10' },
       { k: 'תאריך התחלה', label: 'תאריך התחלה', type: 'date', value: today() },
+      { k: 'backfill', label: 'לרשום גם חודשים קודמים', type: 'check', value: true, hint: 'כשההתחלה בעבר' },
       { k: 'הערות', label: 'הערות', type: 'text', value: '' }
     ], function (v) { runAct({ title: 'מנוי חדש', fn: 'actionAddSubscription', args: function (cf) { return [getToken(), v, cf]; } }); });
   }
