@@ -298,6 +298,10 @@
     .pp .pp-m { color: var(--label2); }
     .pp .on .pp-m { color: var(--seg-on-sub); }   /* כהה: --label2 על --seg-on = 2.9:1 → --label */
     .btn .ch-in { width: 18px; height: 18px; }
+    /* שורת המשנה בכרטיס הבית: "הוצאות ₪Y" → מסך הוצאות */
+    .hero-sub { padding: 0 16px 12px; margin-top: -8px; }
+    .lnk-in { position: relative; border: 0; background: none; padding: 0; font: inherit; color: var(--link-text); cursor: pointer; }
+    .lnk-in::before { content: ''; position: absolute; inset: -14px -4px; }
     /* עוגות הבית: בטלפון כמו בלי העטיפה (העוגה הראשונה לא "first-child" לעניין הרווח).
        רק מתחת ל-1024: הכלל ".tiles + .hgrid > …" חזק יותר מהאיפוס בדסקטופ, ובלי באנר חוסרים הוריד את העמודה הראשונה ב-24px */
     @media (max-width: 1023.98px) {
@@ -755,7 +759,7 @@
   // ---------- מבנה מסך: כותרת גדולה + כפתורים צפים (UI בלבד). אין סרגל עליון ----------
   var SCREENS = { home: { t: 'בית', large: 1, hide: 1 }, clients: { t: 'לקוחות', large: 1 }, editors: { t: 'עורכים', large: 1 },
     alerts: { t: 'התראות', large: 1 }, settings: { t: 'הגדרות', large: 1 }, partners: { t: 'שותפים', large: 1, back: 'home' },
-    client: { large: 1, back: 'clients' }, editor: { large: 1, back: 'editors' } };
+    client: { large: 1, back: 'clients' }, editor: { large: 1, back: 'editors' }, expenses: { t: 'הוצאות', large: 1, back: 'settings' } };
   /** אייקון מה-sprite (Lucide). */
   function ic(id, cls) { return '<svg class="i' + (cls ? ' ' + cls : '') + '" aria-hidden="true" focusable="false"><use href="#i-' + id + '"/></svg>'; }
   var CHEV = ic('chevron-left', 'chev');
@@ -1161,7 +1165,7 @@
     opts = opts || {};
     S.formBack = null; S.modalSeq = (S.modalSeq || 0) + 1;
     openModal(sheetHtml(title, (typeof extra === 'function' ? extra() : extra || '') + formHtml(fields) + '<div id="form-msg"></div>',
-      (typeof opts.foot === 'function' ? opts.foot() : opts.foot || '') + '<button class="btn btn-fill full t-head" id="b-next">המשך</button>'));
+      (typeof opts.foot === 'function' ? opts.foot() : opts.foot || '') + '<button class="btn btn-fill full t-head" id="b-next">המשך</button>' + (opts.after || '')));
     if (opts.onOpen) opts.onOpen(fields);
     $('b-next').onclick = function () {
       var fv = formValues(fields);
@@ -1199,13 +1203,15 @@
     home: { icon: ic('plus'), label: 'הוספה', menu: 1, fn: function (b) { addMenu(b); } },
     editors: { icon: ic('plus'), label: 'עורך חדש', fn: function () { newEditorForm(); } },
     client: { icon: ic('ellipsis'), label: 'פעולות נוספות', menu: 1, fn: function (b) { clientMenu(b); } },
-    editor: { icon: ic('ellipsis'), label: 'פעולות נוספות', menu: 1, fn: function (b) { editorMenu(b); } }
+    editor: { icon: ic('ellipsis'), label: 'פעולות נוספות', menu: 1, fn: function (b) { editorMenu(b); } },
+    expenses: { icon: ic('plus'), label: 'הוספה', menu: 1, fn: function (b) {
+      openMenu(b, [{ t: 'הוצאה חדשה', icon: 'doc', fn: function () { expenseForm(''); } }, { t: 'מנוי חדש', icon: 'refresh', fn: subForm }]); } }
   };
   var WIDE_MQ = window.matchMedia ? matchMedia('(min-width: 1024px)') : null;
   function go(view, arg) {
     S.view = view; S.arg = arg;
     // שותפים: בדסקטופ פריט משלו בסרגל הצד; בטלפון מגיעים מהבית → "בית" מסומן
-    var tab = { client: 'clients', editor: 'editors', partners: WIDE_MQ && WIDE_MQ.matches ? 'partners' : 'home' }[view] || view;
+    var tab = { client: 'clients', editor: 'editors', expenses: 'settings', partners: WIDE_MQ && WIDE_MQ.matches ? 'partners' : 'home' }[view] || view;
     Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) {
       var on = b.getAttribute('data-v') === tab && !b.classList.contains('sb-prof');
       b.classList.toggle('on', on);
@@ -1218,7 +1224,7 @@
     S.navSeq = (S.navSeq || 0) + 1;
     if (!(homeFresh() && /^(home|clients|editors|settings|partners)$/.test(view))) setMain(skeleton(view));
     ({ home: homeView, clients: clientsView, editors: editorsView, alerts: alertsView, settings: settingsView, partners: partnersView,
-      client: clientView, editor: editorView })[view](arg);
+      client: clientView, editor: editorView, expenses: expensesView })[view](arg);
   }
   /** ה-pill של הטאב הפעיל: אלמנט אחד שזז (טלפון: גובה 52, inset 6; דסקטופ: בגודל השורה). בפעם הראשונה — בלי תנועה. */
   var pillPlaced = false;
@@ -1288,13 +1294,14 @@
     var D = h.dash;
     if (!D.periods[S.period]) S.period = 'month';   // חודש שנבחר ולא בתשובה (למשל snapshot ישן)
     var P = D.periods[S.period], B = P.business, rev = homeMode() === 'revenue', share = partnerShare(h, D.labels), short = esc(periodShort(D.labels));
-    var sub = rev ? dots(['עלויות עורכים ' + money(B.editorCost), 'הוצאות ' + money(B.expenses), 'רווח ' + money(B.total)])
-      : dots(['הכנסות ' + money(B.revenue), 'הוצאות ' + money(B.cost)].concat(share === null ? [] : ['לכל שותף ' + money(share)]));
+    var xl = function (n) { return '<button type="button" class="lnk-in" id="b-exp" onclick="go(\'expenses\')">הוצאות <span class="num">' + money(n) + '</span></button>'; };
+    var sub = rev ? dots(['עלויות עורכים ' + money(B.editorCost), xl(B.expenses), 'רווח ' + money(B.total)])
+      : dots(['הכנסות ' + money(B.revenue), xl(B.cost)].concat(share === null ? [] : ['לכל שותף ' + money(share)]));
     setMain(
       '<section class="grp hero"><div class="gbody">' +
         '<div class="hero-head"><span class="t-foot sec" id="hero-l">' + (rev ? 'הכנסות' : 'רווח העסק') + ' · ' + esc(periodName(D.labels)) + '</span>' + modeSeg(rev) + '</div>' +
-        '<button class="row" id="b-profit" aria-labelledby="hero-l hero-v" onclick="go(\'partners\')"><span class="main" id="hero-v"><span class="blk"><span class="t-large num">' + money(rev ? B.revenue : B.total) + '</span></span>' +
-        '<span class="t-foot sec">' + sub + '</span></span>' + CHEV + '</button>' +
+        '<button class="row" id="b-profit" aria-labelledby="hero-l hero-v" onclick="go(\'partners\')"><span class="main" id="hero-v"><span class="blk"><span class="t-large num">' + money(rev ? B.revenue : B.total) + '</span></span></span>' + CHEV + '</button>' +
+        '<div class="hero-sub t-foot sec">' + sub + '</div>' +
         '<div class="pad hero-seg">' + periodPicker(D.labels) + '</div></div></section>' +
       '<div class="tiles">' + tile('לגבייה מלקוחות', money(h.debtTotal.amount), '', 'clients') + tile('לתשלום לעורכים', money(h.dueTotal.amount), '', 'editors') + '</div>' +
       missingBanner(h, B) +
@@ -1319,20 +1326,23 @@
     return '<div class="seg hm" role="group" aria-label="תצוגת הכרטיס">' + b('profit', 'רווח', !rev) + b('revenue', 'הכנסה', rev) + '</div>';
   }
   /** בורר תקופה: "החודש הזה" / "החודש הקודם" / "בחר חודש" (sheet). מתחת לכל אחד שם החודש בסוגריים. */
-  function periodPicker(L) {
-    var p = S.period, custom = p !== 'month' && p !== 'prev';
+  function periodPicker(L, cur, fn) {
+    var p = cur || S.period, custom = p !== 'month' && p !== 'prev';
     var cm = p === 'year' ? L.year : p === 'all' ? 'כל הזמן' : custom ? monthName(p, p.slice(0, 4) !== String(L.month).slice(0, 4)) : '—';
     var b = function (v, t, m, on, extra) {
-      return '<button type="button" aria-pressed="' + on + '"' + (on ? ' class="on"' : '') + (extra || '') + ' onclick="homePick(\'' + v + '\')">' +
+      return '<button type="button" aria-pressed="' + on + '"' + (on ? ' class="on"' : '') + (extra || '') + ' onclick="' + (fn || 'homePick') + '(\'' + v + '\')">' +
         '<span class="pp-t t-sub">' + t + '</span><span class="pp-m t-cap1">(' + m + ')</span></button>';
     };
     return '<div class="seg pp" role="group" aria-label="תקופה">' + b('month', 'החודש הזה', monthName(L.month), p === 'month') + b('prev', 'החודש הקודם', prevName(L), p === 'prev') +
       b('pick', 'בחר חודש', cm, custom, ' aria-haspopup="dialog"') + '</div>';
   }
-  function homePick(v) { if (v === 'pick') return periodSheet(); S.period = v; reHome(); }
-  /** 12 החודשים האחרונים (חדש למעלה) + "השנה" + "כל הזמן". סימון על הנוכחי. */
-  function periodSheet() {
-    var L = S.home.dash.labels, cur = S.period === 'month' ? L.month : S.period === 'prev' ? L.prev : S.period;
+  function homePick(v) {
+    var L = S.home.dash.labels;
+    if (v === 'pick') return periodSheet(L, S.period === 'month' ? L.month : S.period === 'prev' ? L.prev : S.period, pickPeriod);
+    S.period = v; reHome();
+  }
+  /** 12 החודשים האחרונים (חדש למעלה) + "השנה" + "כל הזמן". סימון על הנוכחי (cur: 'YYYY-MM' / year / all). onPick(ערך). */
+  function periodSheet(L, cur, onPick) {
     var y = Number(String(L.month).slice(0, 4)), m = Number(String(L.month).slice(5)) - 1, months = [];
     for (var i = 0; i < 12; i++) { var d = new Date(y, m - i, 1); months.push(d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2)); }
     var row = function (v, t) {
@@ -1341,7 +1351,7 @@
     };
     openModal(sheetHtml('בחירת תקופה', '<div role="radiogroup" aria-label="תקופה" id="pv-list">' + grp('', months.map(function (v) { return row(v, monthName(v, true)); }).join('')) +
       grp('', row('year', 'השנה (' + L.year + ')') + row('all', 'כל הזמן')) + '</div>', '', 'ביטול'));
-    $('pv-list').onclick = function (e) { var b = e.target.closest('[data-pv]'); if (b) pickPeriod(b.getAttribute('data-pv')); };
+    $('pv-list').onclick = function (e) { var b = e.target.closest('[data-pv]'); if (b) onPick(b.getAttribute('data-pv')); };
   }
   /** בחירה מה-sheet. חודש שאין בתשובה → getAdminHome(token, 'YYYY-MM') (החישוב בשרת), ואז ציור. */
   function pickPeriod(v) {
@@ -1471,7 +1481,7 @@
   /** פרויקט בדף הלקוח: שם, "סוג · תאריך · שולם/לא שולם", מחיר. לחיצה = עריכה. */
   function projRow(p) {
     return '<button class="row" onclick="editProject(' + esc(JSON.stringify(p.id)) + ')"><span class="main"><span class="t-head blk">' + esc(p.name) + '</span>' +
-      '<span class="t-foot sec blk">' + esc(p.type) + ' · ' + date(p.date) + ' · ' + (p.paid ? 'שולם' : 'לא שולם') + '</span></span>' +
+      '<span class="t-foot sec blk">' + esc(p.type) + ' · ' + date(p.date) + ' · ' + (p.paid ? 'שולם' : 'לא שולם') + (p.expenses ? ' · הוצאות <span class="num">' + money(p.expenses) + '</span>' : '') + '</span></span>' +
       (p.price === null ? '<span class="t-body sec">—</span>' : '<span class="t-body num">' + money(p.price) + '</span>') + CHEV + '</button>';
   }
   // פרויקטים: קבוצה קבועה בדף (projRow), לא בהיסטוריה
@@ -1495,7 +1505,8 @@
         return '<div class="row"><div class="main"><div class="t-body">' + date(p.date) + ' · ' + esc(p.method) + (p.label ? ' · קו "' + esc(p.label) + '"' : '') + '</div><div class="t-foot sec">' + esc(p.covered) + (p.ref ? ' · ' + esc(p.ref) : '') + '</div></div><span class="t-body num">' + money(p.amount) + '</span></div>';
       }).join(''); },
       exp: function () { return c.expenses.map(function (x) {
-        return '<div class="row"><div class="main"><div class="t-body">' + date(x.date) + ' · ' + esc(x.category) + '</div>' + (x.notes ? '<div class="t-foot sec">' + esc(x.notes) + '</div>' : '') +
+        return '<div class="row"><div class="main"><div class="t-body">' + date(x.date) + ' · ' + esc(x.category) + '</div>' + (x.project ? '<div class="t-foot sec">פרויקט: ' + esc(x.project.name) + '</div>' : '') +
+          (x.notes ? '<div class="t-foot sec">' + esc(x.notes) + '</div>' : '') +
           (x.ref ? '<div class="t-foot sec">' + (/^https?:/.test(x.ref) ? '<a href="' + esc(x.ref) + '" target="_blank" rel="noopener">אסמכתא</a>' : esc(x.ref)) + '</div>' : '') + '</div><span class="t-body num">' + money(x.amount) + '</span></div>';
       }).join(''); },
       pnl: function () { return c.pnl.months.length ? '<div class="row"><div class="main t-head">סה״כ</div>' + wg(c.pnl.total.missing) + '<span class="t-head num">' + money(c.pnl.total.profit) + '</span></div>' + c.pnl.months.map(function (m) {
@@ -1766,21 +1777,166 @@
   }
 
   function expenseForm(clientName) {
-    var L = S.lists;
-    var fields = [
-      { k: 'תאריך', label: 'תאריך', type: 'date', value: today() },
-      { k: 'לקוח', label: 'לקוח (ריק = הוצאה כללית)', type: 'select', blank: true, options: L.clients, value: clientName || '' },
-      { k: 'קטגוריה', label: 'קטגוריה', type: 'select', options: L.expenseCategories, value: L.expenseCategories[0] },
-      { k: 'סכום', label: 'סכום (₪)', type: 'number', value: '', placeholder: '350' },
-      { k: 'file', label: 'אסמכתא (קובץ, לא חובה)', type: 'file' },
-      { k: 'הערות', label: 'הערות', type: 'text', value: '' }
-    ];
-    openForm('הוצאה חדשה', fields, function (v, files) {
-      uploadThen('הוצאות', '', files.file, function (url) {
-        var f = { 'תאריך': v['תאריך'], 'לקוח': v['לקוח'], 'קטגוריה': v['קטגוריה'], 'סכום': v['סכום'], 'אסמכתא': url, 'הערות': v['הערות'] };
-        runAct({ title: 'הוצאה חדשה', fn: 'actionAddExpense', args: function (cf) { return [getToken(), f, cf]; } });
-      });
+    withProjects(function () {
+      var L = S.lists, proj = S.xpReady !== false;
+      var fields = [
+        { k: 'תאריך', label: 'תאריך', type: 'date', value: today() },
+        { k: 'לקוח', label: 'לקוח (ריק = הוצאה כללית)', type: 'select', blank: true, options: L.clients, value: clientName || '' }]
+        .concat(proj ? [{ k: 'פרויקט', label: 'פרויקט (ריק = לא משויך)', type: 'select', blank: true, options: projOptions(clientName), value: '' }] : [], [
+        { k: 'קטגוריה', label: 'קטגוריה', type: 'select', options: L.expenseCategories, value: L.expenseCategories[0] },
+        { k: 'סכום', label: 'סכום (₪)', type: 'number', value: '', placeholder: '350' },
+        { k: 'file', label: 'אסמכתא (קובץ, לא חובה)', type: 'file' },
+        { k: 'הערות', label: 'הערות', type: 'text', value: '' }]);
+      openForm('הוצאה חדשה', fields, function (v, files) {
+        uploadThen('הוצאות', '', files.file, function (url) {
+          var f = { 'תאריך': v['תאריך'], 'לקוח': v['לקוח'], 'קטגוריה': v['קטגוריה'], 'סכום': v['סכום'], 'אסמכתא': url, 'הערות': v['הערות'] };
+          if (v['פרויקט']) f['פרויקט'] = v['פרויקט'];
+          runAct({ title: 'הוצאה חדשה', fn: 'actionAddExpense', args: function (cf) { return [getToken(), f, cf]; } });
+        });
+      }, '', { onOpen: function (fs) { if (proj) projSync(fs[1], fs[2]); } });
     });
+  }
+  /** רשימת הפרויקטים לטופס (מדף ההוצאות). טוענים פעם אחת אם עוד אין. */
+  function withProjects(cb) {
+    if (S.projList) return cb();
+    call('getExpensesPage', [getToken(), ''], function (r) { if (r.ok) { S.projList = r.page.projects; S.xpReady = r.page.ready; } cb(); }, function () { S.projList = []; cb(); });
+  }
+  /** פרויקטים של הלקוח (בלי לקוח: כולם, עם שם הלקוח). */
+  function projOptions(client) {
+    return (S.projList || []).filter(function (p) { return !client || p.client === client; })
+      .map(function (p) { return { v: p.id, t: (client ? '' : p.client + ' · ') + p.name }; });
+  }
+  /** שינוי לקוח → רשימת הפרויקטים שלו. בחירת פרויקט → הלקוח שלו. */
+  function projSync(fc, fp) {
+    var cl = $(fc._id), pr = $(fp._id);
+    var fill = function () {
+      var cur = pr.value, opts = projOptions(cl.value);
+      pr.innerHTML = '<option value=""></option>' + opts.map(function (o) { return '<option value="' + esc(o.v) + '">' + esc(o.t) + '</option>'; }).join('');
+      pr.value = opts.some(function (o) { return o.v === cur; }) ? cur : '';
+    };
+    cl.onchange = fill;
+    pr.onchange = function () {
+      var p = (S.projList || []).filter(function (x) { return x.id === pr.value; })[0];
+      if (p && cl.value !== p.client) { cl.value = p.client; fill(); pr.value = p.id; }
+    };
+  }
+
+  // ---------- הוצאות: מסך, עריכה, מנויים ----------
+  S.xp = 'month'; S.xf = 'all';
+  var XF = [['all', 'הכול'], ['sub', 'מנויים'], ['one', 'חד-פעמי'], ['proj', 'פרויקטים']];
+  /** בורר תקופה (כמו בבית) · סה״כ · סינון · רשימה לפי קטגוריה · מנויים. התקופה נשלחת לשרת. */
+  function expensesView() {
+    var L = S.xpLabels, p = S.xp === 'month' ? '' : S.xp === 'prev' ? (L ? L.prev : '') : S.xp;
+    call('getExpensesPage', [getToken(), p], function (r) {
+      if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>');
+      S.xpPage = r.page; S.xpLabels = r.page.labels; S.projList = r.page.projects; S.xpReady = r.page.ready;
+      renderExpenses(r.page);
+    }, function (m) { setMain('<div class="msg e">' + esc(m) + '</div>'); });
+  }
+  function expPick(v) {
+    var L = S.xpLabels;
+    if (v === 'pick') return periodSheet(L, S.xp === 'month' ? L.month : S.xp === 'prev' ? L.prev : S.xp, function (x) {
+      closeModal(); S.xp = x === L.month ? 'month' : x === L.prev ? 'prev' : x; expensesView();
+    });
+    S.xp = v; expensesView();
+  }
+  function expFilter(f) { S.xf = f; var y = window.scrollY; renderExpenses(S.xpPage); window.scrollTo(0, y); }
+  function renderExpenses(pg) {
+    var f = S.xf, by = {};
+    var items = pg.items.filter(function (x) { return f === 'all' || (f === 'sub' ? !!x.subscriptionId : f === 'proj' ? !!x.project : !x.subscriptionId && !x.project); });
+    items.forEach(function (x) { (by[x.category] = by[x.category] || []).push(x); });
+    var sum = function (l) { return Math.round(l.reduce(function (a, x) { return a + (x.amount || 0); }, 0) * 100) / 100; };
+    var cats = Object.keys(by).map(function (c) { return { c: c, s: sum(by[c]), items: by[c] }; }).sort(function (a, b) { return b.s - a.s || (a.c < b.c ? -1 : 1); });
+    var fl = XF.filter(function (x) { return x[0] === f; })[0][1];
+    setMain(
+      '<section class="grp hero"><div class="gbody pad">' + periodPicker(pg.labels, S.xp, 'expPick') + '</div></section>' +
+      '<div class="tiles one">' + tile('סה״כ הוצאות' + (f === 'all' ? '' : ' · ' + fl), money(sum(items))) + '</div>' +
+      (pg.ready ? '' : '<div class="msg w t-sub">מנויים ושיוך הוצאה לפרויקט — אחרי הרצת setupSchema.</div>') +
+      '<div class="seg" id="xf" role="group" aria-label="סינון">' + XF.map(function (x) {
+        return '<button type="button" aria-pressed="' + (x[0] === f) + '"' + (x[0] === f ? ' class="on"' : '') + ' onclick="expFilter(\'' + x[0] + '\')">' + x[1] + '</button>';
+      }).join('') + '</div>' +
+      (cats.length ? cats.map(function (g) { return grp(esc(g.c) + ' · <span class="num">' + money(g.s) + '</span>', g.items.map(expRow).join('')); }).join('') : grp('', emptyRow('אין הוצאות בתקופה'))) +
+      subsBlock(pg)
+    );
+  }
+  /** שורת הוצאה: שם/הערות, תאריך, לקוח/פרויקט, סכום. מנוי → תג. בונוס → לקריאה בלבד (בלי עריכה). */
+  function expRow(x) {
+    var sub = [date(x.date)].concat(x.project ? ['פרויקט: ' + esc(x.client) + ' · ' + esc(x.project.name)] : x.client ? [esc(x.client)] : []);
+    var tag = x.subscriptionId ? ' <span class="tag">מנוי</span>' : x.isBonus ? ' <span class="tag">בונוס</span>' : '';
+    var body = '<span class="main"><span class="t-body blk">' + esc(x.notes || x.category) + tag + '</span><span class="t-foot sec blk">' + sub.join(' · ') + '</span></span>' + amt(x.amount, x.amount === null ? 1 : 0);
+    return x.isBonus ? '<div class="row">' + body + '</div>' : '<button class="row" onclick="expEdit(' + esc(JSON.stringify(x.id)) + ')">' + body + CHEV + '</button>';
+  }
+  /** מנויים פעילים (וגם כאלה שעוד לא התחילו) + סיכום חודשי; שהסתיימו — מקופלים. */
+  function subsBlock(pg) {
+    var t = today(), ended = function (s) { return !!s.end && s.end < t; };
+    var row = function (s) {
+      return '<button class="row" onclick="subEdit(' + esc(JSON.stringify(s.id)) + ')"><span class="main"><span class="t-body blk">' + esc(s.name) + '</span>' +
+        '<span class="t-foot sec blk"><span class="num">' + money(s.amount) + '</span> לחודש · חיוב ב-' + esc(s.day) +
+        (ended(s) ? ' · הסתיים ' + date(s.end) : s.active ? '' : ' · מתחיל ' + date(s.start)) + '</span></span>' + CHEV + '</button>';
+    };
+    var on = pg.subscriptions.filter(function (s) { return !ended(s); }), off = pg.subscriptions.filter(ended);
+    return grp('מנויים פעילים', on.map(row).join('') || emptyRow('אין מנויים'), 'סה״כ מנויים ' + money(pg.monthlyTotal) + ' לחודש') +
+      (off.length ? sect('מנויים שהסתיימו (' + off.length + ')', off.map(row).join('')) : '');
+  }
+  /** עריכת הוצאה. הוצאת מנוי: סכום / קטגוריה / הערות בלבד. "מחיקה" בתחתית (אחרי אישור). שולחים רק מה ששונה. */
+  function expEdit(id) {
+    var x = (S.xpPage.items || []).filter(function (i) { return i.id === id; })[0]; if (!x) return;
+    withProjects(function () {
+      var L = S.lists, sub = !!x.subscriptionId, cats = L.expenseCategories.indexOf(x.category) === -1 ? L.expenseCategories.concat([x.category]) : L.expenseCategories;
+      var orig = { 'תאריך': x.date, 'לקוח': x.client, 'פרויקט': x.project ? x.project.id : '', 'קטגוריה': x.category, 'סכום': x.amount === null ? '' : x.amount, 'אסמכתא': x.ref, 'הערות': x.notes };
+      var F = {
+        'תאריך': { k: 'תאריך', label: 'תאריך', type: 'date' }, 'לקוח': { k: 'לקוח', label: 'לקוח (ריק = הוצאה כללית)', type: 'select', blank: true, options: L.clients },
+        'פרויקט': { k: 'פרויקט', label: 'פרויקט (ריק = לא משויך)', type: 'select', blank: true, options: projOptions(x.client) },
+        'קטגוריה': { k: 'קטגוריה', label: 'קטגוריה', type: 'select', options: cats }, 'סכום': { k: 'סכום', label: 'סכום (₪)', type: 'number' },
+        'אסמכתא': { k: 'אסמכתא', label: 'אסמכתא', type: 'text' }, 'הערות': { k: 'הערות', label: 'הערות', type: 'text' } };
+      var keys = sub ? ['קטגוריה', 'סכום', 'הערות'] : ['תאריך', 'לקוח'].concat(S.xpReady === false ? [] : ['פרויקט'], ['קטגוריה', 'סכום', 'אסמכתא', 'הערות']);
+      var fields = keys.map(function (k) { return Object.assign({ value: orig[k] }, F[k]); });
+      openForm('עריכת הוצאה', fields, function (v) {
+        var ch = {};
+        keys.forEach(function (k) { if (String(v[k]) !== String(orig[k] === null || orig[k] === undefined ? '' : orig[k])) ch[k] = v[k]; });
+        if (!Object.keys(ch).length) return formErr('לא שונה כלום');
+        runAct({ title: 'עדכון הוצאה', fn: 'actionUpdateExpense', args: function (cf) { return [getToken(), id, ch, cf]; } });
+      }, sub ? '<p class="note t-foot">הוצאה של מנוי: אפשר לשנות סכום, קטגוריה והערות</p>' : '', {
+        after: '<button class="btn-plain danger full t-body" id="b-del">מחיקה</button>',
+        onOpen: function (fs) {
+          if (!sub && keys.indexOf('פרויקט') !== -1) projSync(fs[1], fs[2]);
+          $('b-del').onclick = function () { runAct({ title: 'מחיקת הוצאה', fn: 'actionDeleteExpense', args: function (cf) { return [getToken(), id, cf]; } }); };
+        } });
+    });
+  }
+  /** מנוי חדש: ההוצאה החודשית נרשמת לבד ביום החיוב. */
+  function subForm() {
+    var L = S.lists;
+    openForm('מנוי חדש', [
+      { k: 'שם', label: 'שם', type: 'text', value: '', placeholder: 'Adobe' },
+      { k: 'קטגוריה', label: 'קטגוריה', type: 'select', options: L.expenseCategories, value: L.expenseCategories.indexOf('מנויים') !== -1 ? 'מנויים' : L.expenseCategories[0] },
+      { k: 'סכום חודשי', label: 'סכום חודשי (₪)', type: 'number', value: '', placeholder: '230' },
+      { k: 'יום חיוב', label: 'יום חיוב בחודש (1–28)', type: 'number', value: '', placeholder: '10' },
+      { k: 'תאריך התחלה', label: 'תאריך התחלה', type: 'date', value: today() },
+      { k: 'הערות', label: 'הערות', type: 'text', value: '' }
+    ], function (v) { runAct({ title: 'מנוי חדש', fn: 'actionAddSubscription', args: function (cf) { return [getToken(), v, cf]; } }); });
+  }
+  /** עריכת מנוי + "סיום מנוי" (תאריך סיום = היום, אחרי אישור). אין מחיקה. */
+  function subEdit(id) {
+    var s = (S.xpPage.subscriptions || []).filter(function (x) { return x.id === id; })[0]; if (!s) return;
+    var L = S.lists, cats = L.expenseCategories.indexOf(s.category) === -1 ? L.expenseCategories.concat([s.category]) : L.expenseCategories;
+    var orig = { 'שם': s.name, 'קטגוריה': s.category, 'סכום חודשי': s.amount === null ? '' : s.amount, 'יום חיוב': s.day === null ? '' : s.day, 'תאריך התחלה': s.start || '', 'תאריך סיום': s.end || '', 'הערות': s.notes };
+    var fields = [
+      { k: 'שם', label: 'שם', type: 'text' }, { k: 'קטגוריה', label: 'קטגוריה', type: 'select', options: cats },
+      { k: 'סכום חודשי', label: 'סכום חודשי (₪)', type: 'number' }, { k: 'יום חיוב', label: 'יום חיוב בחודש (1–28)', type: 'number' },
+      { k: 'תאריך התחלה', label: 'תאריך התחלה', type: 'date' }].concat(s.end ? [{ k: 'תאריך סיום', label: 'תאריך סיום', type: 'date' }] : [], [{ k: 'הערות', label: 'הערות', type: 'text' }])
+      .map(function (f) { return Object.assign({ value: orig[f.k] }, f); });
+    openForm('מנוי · ' + s.name, fields, function (v) {
+      var ch = {};
+      fields.forEach(function (f) { if (String(v[f.k]) !== String(orig[f.k])) ch[f.k] = v[f.k]; });
+      if (!Object.keys(ch).length) return formErr('לא שונה כלום');
+      runAct({ title: 'עדכון מנוי', fn: 'actionUpdateSubscription', args: function (cf) { return [getToken(), id, ch, cf]; } });
+    }, '', { after: s.end ? '' : '<button class="btn-plain danger full t-body" id="b-end">סיום מנוי</button>',
+      onOpen: function () {
+        if ($('b-end')) $('b-end').onclick = function () {
+          runAct({ title: 'סיום מנוי · ' + s.name, fn: 'actionUpdateSubscription', args: function (cf) { return [getToken(), id, { 'תאריך סיום': today() }, cf]; } });
+        };
+      } });
   }
 
   /** 5.5 — הגדרות לקוח. שולחים רק שדות ששונו. */
@@ -2077,6 +2233,7 @@
       setMain(
         grp('חשבון', '<div class="row"><span class="av t-head" aria-hidden="true">' + esc(String(u.email || '?').charAt(0).toUpperCase()) + '</span>' +
           '<div class="main"><div class="t-body em">' + esc(u.email) + '</div><div class="t-foot sec">' + (u.role === 'admin' ? 'מנהל' : 'עורך') + '</div></div></div>') +
+        grp('כספים', '<button class="row" id="b-expenses" onclick="go(\'expenses\')"><span class="main t-body">הוצאות</span><span class="t-foot sec">מנויים וחד-פעמי</span>' + CHEV + '</button>') +
         grp('תצוגה', themeRow()) +
         grp('תחזוקה',
           iconRow(ic('refresh'), 'רענון עכשיו', '', { id: 'b-refresh' }) +
