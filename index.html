@@ -23,11 +23,16 @@
       --white: #FFFFFF;
       --pie-pink: rgb(234,62,132);   /* ורוד לעוגה (~337°): ה-pink של iOS קרוב מדי לאדום, ורוד כחלחל קרוב מדי לסגול */
       --tab-on: rgba(0,136,255,.14); --tab-on-text: #0056B3;   /* טאב פעיל: רקע pill, טקסט+אייקון (כהה מ-tint כדי לעבור 4.5:1) */
-      /* Liquid Glass (שכבת ניווט בלבד). אטימות: המינימום שבו תוויות הטאבים ואייקון הכפתור הצף עוברים 4.5:1 מעל לבן, צהוב וכל צבעי העוגה —
-         בהיר 82% (הגרוע: סגול), כהה 86% (הגרוע: לבן) */
-      --glass-bg: rgba(255,255,255,.82); --glass-edge: rgba(255,255,255,.7); --glass-spec: rgba(255,255,255,.22); --glass-hi: rgba(255,255,255,.12);
-      --glass-shadow: 0 0 0 .5px rgba(0,0,0,.08), 0 6px 20px rgba(0,0,0,.14);   /* בהיר: קו כהה דק בחוץ — אחרת זכוכית לבנה נבלעת בכרטיס לבן */
-      --glass-solid: var(--bar);
+      /* Liquid Glass, Regular variant (WWDC25 219: "works in any size, over any content"). שכבת ניווט בלבד */
+      --glass-bg: rgba(255,255,255,.55);
+      --glass-shadow: inset 0 1px 0 rgba(255,255,255,.65), inset 0 -1px 0 rgba(0,0,0,.05), 0 0 0 .5px rgba(0,0,0,.08), 0 10px 30px rgba(0,0,0,.14);
+      --glass-drop: 0 10px 30px rgba(0,0,0,.14);
+      --glass-solid: var(--bg2);   /* בלי שקיפות: משטח אטום */
+      --pill-spec: inset 0 1px 0 rgba(255,255,255,.35);
+      /* עוגה: הטבעת על רקע הדף. נבחרת "חלבית" = הצבע ב-.38 מעל --bg2 */
+      --pie-edge: rgba(255,255,255,.5); --pie-edge-sel: rgba(255,255,255,.8);
+      --pie-milk: .38; --pie-milk-bg: var(--bg2); --pie-shadow: drop-shadow(0 8px 20px rgba(0,0,0,.10));
+      --g-edge: rgba(0,0,0,.09); --g-shadow: 0 0 7px rgba(0,0,0,.04);   /* עטיפת כפתור Google */
       --tint: var(--blue); --danger: var(--red); --success: var(--green); --warn: var(--orange);
       --link-text: #0A66C2;
       /* טקסט צבעוני נגיש (נגזר; ניגודיות 4.5:1 על לבן ועל רקע תג/הודעה) */
@@ -54,8 +59,10 @@
         --danger-text: rgb(255,105,97); --warn-text: var(--orange); --success-text: var(--green); --gray-text: rgba(235,235,245,.7);
         --tint-bg: rgba(0,136,255,.25); --side-on: rgba(0,136,255,.12); --seg-on: rgb(99,99,102);
         --pie-pink: rgb(255,88,150);
-        --tab-on: rgba(0,145,255,.18); --tab-on-text: rgb(120,190,255);
-        --glass-bg: rgba(28,28,30,.86); --glass-edge: rgba(255,255,255,.14); --glass-shadow: 0 8px 32px rgba(0,0,0,.28); --glass-solid: var(--bg3);
+        --tab-on: rgba(0,145,255,.2); --tab-on-text: rgb(120,190,255);
+        --glass-bg: rgba(30,30,32,.55); --glass-solid: var(--bg3); --glass-drop: 0 10px 30px rgba(0,0,0,.5);
+        --glass-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.35), 0 0 0 .5px rgba(0,0,0,.45), 0 10px 30px rgba(0,0,0,.5);
+        --pie-edge: rgba(255,255,255,.28); --pie-edge-sel: rgba(255,255,255,.5); --pie-milk: .45; --pie-milk-bg: var(--bg); --pie-shadow: none;
       }
     }
     :root[data-theme="dark"] {
@@ -69,8 +76,10 @@
       --danger-text: rgb(255,105,97); --warn-text: var(--orange); --success-text: var(--green); --gray-text: rgba(235,235,245,.7);
       --tint-bg: rgba(0,136,255,.25); --side-on: rgba(0,136,255,.12); --seg-on: rgb(99,99,102);
       --pie-pink: rgb(255,88,150);
-      --tab-on: rgba(0,145,255,.18); --tab-on-text: rgb(120,190,255);
-      --glass-bg: rgba(28,28,30,.86); --glass-edge: rgba(255,255,255,.14); --glass-shadow: 0 8px 32px rgba(0,0,0,.28); --glass-solid: var(--bg3);
+      --tab-on: rgba(0,145,255,.2); --tab-on-text: rgb(120,190,255);
+      --glass-bg: rgba(30,30,32,.55); --glass-solid: var(--bg3); --glass-drop: 0 10px 30px rgba(0,0,0,.5);
+        --glass-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.35), 0 0 0 .5px rgba(0,0,0,.45), 0 10px 30px rgba(0,0,0,.5);
+        --pie-edge: rgba(255,255,255,.28); --pie-edge-sel: rgba(255,255,255,.5); --pie-milk: .45; --pie-milk-bg: var(--bg); --pie-shadow: none;
     }
     @media (prefers-contrast: more) {
       :root { --label2: rgba(60,60,67,.85); --sep: rgba(60,60,67,.5); }
@@ -83,6 +92,7 @@
 
     * { box-sizing: border-box; }
     html { -webkit-text-size-adjust: 100%; }
+    html, body, button, a, input, select, label { touch-action: manipulation; }   /* בלי זום בלחיצה כפולה */
     body {
       margin: 0; background: var(--bg); color: var(--label);
       font-family: system-ui, -apple-system, "SF Hebrew", "Segoe UI", Roboto, Arial, sans-serif;
@@ -116,29 +126,24 @@
 
     /* ===== מבנה: בלי סרגל עליון. כפתורים צפים (חזרה / פעולה), כותרת גדולה, tab bar / sidebar ===== */
     /* כפתור צף: עיגול בפינה העליונה. פעולה (+ / …) בצד inline-end, חזרה בצד inline-start. נשאר במקום בגלילה. */
-    .fab { position: fixed; z-index: 8; top: calc(16px + env(safe-area-inset-top)); width: 48px; height: 48px; border-radius: 50%; border: 0; padding: 0;
+    .fab { position: fixed; z-index: 8; top: calc(16px + env(safe-area-inset-top)); width: 44px; height: 44px; border-radius: 50%; border: 0; padding: 0;
       display: flex; align-items: center; justify-content: center; color: var(--label); cursor: pointer; }
-    .fab svg { width: 24px; height: 24px; position: relative; }
+    .fab .i { width: 22px; height: 22px; position: relative; }
     #fab-end { inset-inline-end: 16px; }
     #fab-back { inset-inline-start: 16px; }
     .fab:active { transform: scale(.94); }
     .fab:hover::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--fill2); pointer-events: none; }
-    /* ===== Liquid Glass: רק שכבת הניווט (tab bar + כפתורים צפים). לא כרטיסים, לא רשימות, לא sheets (שכבת תוכן) ===== */
-    .glass { background: var(--glass-bg); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
-      box-shadow: inset 0 0 0 1px var(--glass-edge), inset 0 1px 0 var(--glass-spec), var(--glass-shadow); }
-    .glass::before { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(180deg, var(--glass-hi), transparent 40%); }
+    /* ===== Liquid Glass (Regular): רק שכבת הניווט — tab bar, כפתורים צפים, סרגל הצד בדסקטופ. לא כרטיסים, רשימות, sheets או שדות ===== */
+    .glass { background: var(--glass-bg); -webkit-backdrop-filter: blur(24px) saturate(170%); backdrop-filter: blur(24px) saturate(170%); box-shadow: var(--glass-shadow); }
     /* בלי שקיפות: הגדרת נגישות, ניגודיות מוגברת, או דפדפן בלי backdrop-filter → משטח אטום עם מסגרת */
     @media (prefers-reduced-transparency: reduce) {
-      .glass { background: var(--glass-solid); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1px var(--sep), var(--glass-shadow); }
-      .glass::before { display: none; }
+      .glass { background: var(--glass-solid); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1px var(--sep), var(--glass-drop); }
     }
     @media (prefers-contrast: more) {
-      .glass { background: var(--glass-solid); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1px var(--sep), var(--glass-shadow); }
-      .glass::before { display: none; }
+      .glass { background: var(--glass-solid); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 0 0 1px var(--sep), var(--glass-drop); }
     }
     @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-      .glass { background: var(--glass-solid); box-shadow: inset 0 0 0 1px var(--sep), var(--glass-shadow); }
-      .glass::before { display: none; }
+      .glass { background: var(--glass-solid); box-shadow: inset 0 0 0 1px var(--sep), var(--glass-drop); }
     }
     /* scroll edge: אחרי גלילה, פס עליון מהרקע לשקוף מתחת לכפתורים הצפים */
     #edge { position: fixed; z-index: 7; top: 0; inset-inline: 0; height: calc(80px + env(safe-area-inset-top)); pointer-events: none; opacity: 0;
@@ -152,27 +157,25 @@
     .ltitle { padding: 8px 0 8px; }
     body:has(#nav.hidden) main { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
 
-    /* tab bar: קפסולה צפה (iOS 26). 5 טאבים ברוחב שווה; פעיל = pill + אייקון ממולא */
+    /* tab bar (טלפון ובינוני): קפסולת זכוכית צפה, 5 טאבים ברוחב שווה, אייקונים בלבד (aria-label + title).
+       פעיל: pill אחד שזז בין הטאבים (translateX, 250ms) + אייקון בצבע הדגשה עם מילוי 20% (ל-Lucide אין גרסה ממולאת). */
     nav#nav {
-      position: fixed; z-index: 8; inset-inline: 16px; bottom: calc(12px + env(safe-area-inset-bottom)); height: 64px; border-radius: 32px;
-      display: flex; align-items: center; padding: 0 10px;
+      position: fixed; z-index: 8; inset-inline: 0; margin-inline: auto; width: calc(100% - 32px); max-width: 420px;
+      bottom: calc(12px + env(safe-area-inset-bottom)); height: 64px; border-radius: 32px; display: flex; align-items: center; padding: 0 3px;
     }
-    nav#nav button { position: relative; flex: 1 1 0; min-width: 0; height: 64px; border: 0; background: none; color: var(--label2); padding: 0; cursor: pointer;
+    nav#nav button { position: relative; z-index: 1; flex: 1 1 0; min-width: 0; height: 64px; border: 0; background: none; color: var(--label); padding: 0; cursor: pointer;
       display: flex; align-items: center; justify-content: center; }
-    nav .tp { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: calc(100% - 4px); max-width: 76px; height: 44px;
-      border-radius: 20px; transition: background-color 200ms cubic-bezier(.2,.8,.2,1), color 200ms cubic-bezier(.2,.8,.2,1); }
+    nav .tp { display: flex; align-items: center; justify-content: center; }
+    nav .tl { display: none; }
+    nav .ic { display: inline-flex; }
+    nav .ic .i { width: 26px; height: 26px; transition: color 250ms ease-out, fill-opacity 250ms ease-out; fill: currentColor; fill-opacity: 0; }
     nav#nav button.on { color: var(--tab-on-text); }
-    nav#nav button:active .tp { background: var(--fill2); }
-    nav#nav button.on .tp { background: var(--tab-on); }
-    nav .ic { position: relative; display: inline-flex; }
-    nav .ic svg { width: 24px; height: 24px; }
-    nav .on .ic .f { fill: currentColor; }
-    nav .ic .fo, nav .on .ic .oo { display: none; }
-    nav .on .ic .fo { display: inline; }
-    /* תוויות הטאבים לא גדלות עם הגדלת הטקסט (כמו ב-iOS: אין מקום ל-5 תוויות גדולות בקפסולה) */
-    nav .tl { white-space: nowrap; font-size: 11px; line-height: 13px; }
-    .dot { position: absolute; top: -3px; inset-inline-end: -10px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; box-shadow: 0 0 0 2px var(--glass-solid);
-      background: var(--danger); color: var(--white); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+    nav#nav button.on .ic .i { fill-opacity: .2; }
+    nav#nav button:active .ic .i { opacity: .6; }
+    .pill { position: absolute; z-index: 0; inset: 0 auto auto 0; width: 0; height: 52px; border-radius: 26px; background: var(--tab-on); box-shadow: var(--pill-spec);
+      pointer-events: none; opacity: 0; transition: transform 250ms ease-out, width 250ms ease-out, height 250ms ease-out; }
+    .dot { position: absolute; top: 10px; inset-inline-start: calc(50% + 4px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; box-shadow: 0 0 0 2px var(--glass-solid);
+      background: var(--red); color: var(--white); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
     .sb-head, .sb-prof, .sb-only { display: none !important; }
 
     /* בינוני: עמודת תוכן עד 640 */
@@ -186,33 +189,29 @@
     }
     /* רחב: sidebar */
     @media (min-width: 1024px) {
-      body:has(#nav:not(.hidden)) { display: grid; grid-template-columns: 240px minmax(0, 1fr); }
+      body:has(#nav:not(.hidden)) { display: grid; grid-template-columns: 272px minmax(0, 1fr); }
       body:has(#nav:not(.hidden)) #nav { grid-column: 1; grid-row: 1; }
       body:has(#nav:not(.hidden)) main { grid-column: 2; grid-row: 1; }
       /* כפתורים צפים בתוך עמודת התוכן (760, באמצע השטח שליד הסרגל הצדי) */
-      body:has(#nav:not(.hidden)) #fab-end { inset-inline-end: max(24px, calc((100vw - 1000px) / 2 + 24px)); }
-      body:has(#nav:not(.hidden)) #fab-back { inset-inline-start: calc(240px + max(24px, calc((100vw - 1000px) / 2 + 24px))); }
-      body:has(#nav:not(.hidden)) #sync { inset-inline-start: calc(240px + 72px); }
-      body:has(#nav:not(.hidden)) #edge { inset-inline-start: 240px; }
-      nav#nav, nav#nav.glass {
-        position: sticky; top: 0; bottom: auto; inset-inline: auto; height: 100vh; border-radius: 0; align-items: stretch; flex-direction: column; gap: 2px; padding: 0 8px 8px;
-        background: var(--bg2); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; border-inline-end: .5px solid var(--sep);
-      }
-      nav#nav.glass::before { display: none; }
-      nav#nav button { flex: none; height: auto; min-height: 44px; justify-content: flex-start; padding: 0 12px; border-radius: 8px; color: var(--label); }
-      nav .tp { flex-direction: row; gap: 12px; width: auto; max-width: none; min-height: 0; padding: 0; border-radius: 0; }
-      nav#nav button.on .tp { background: none; }
-      nav#nav button:hover { background: var(--fill2); }
-      nav#nav button.on { background: var(--side-on); color: var(--tint); }
-      nav#nav button.on .tl { color: var(--link-text); }
-      nav .ic svg { width: 20px; height: 20px; }
-      nav .tl { font-size: 1.0625rem; line-height: 1.375rem; font-weight: 400; }
+      /* כפתורים צפים בתוך עמודת התוכן (760, באמצע השטח שליד הפאנל: 240 + 16 מכל צד) */
+      body:has(#nav:not(.hidden)) #fab-end { inset-inline-end: max(24px, calc((100vw - 1032px) / 2 + 24px)); }
+      body:has(#nav:not(.hidden)) #fab-back { inset-inline-start: calc(272px + max(24px, calc((100vw - 1032px) / 2 + 24px))); }
+      body:has(#nav:not(.hidden)) #sync { inset-inline-start: calc(272px + 72px); }
+      body:has(#nav:not(.hidden)) #edge { inset-inline-start: 272px; }
+      /* סרגל צד = פאנל זכוכית צף (אותה שפה כמו בטלפון), עם טקסט */
+      nav#nav { position: sticky; top: 16px; bottom: auto; inset-inline: auto; margin: 16px; width: 240px; max-width: none; height: calc(100vh - 32px); border-radius: 24px;
+        align-items: stretch; flex-direction: column; gap: 2px; padding: 0 8px 8px; }
+      nav#nav button { flex: none; height: 44px; justify-content: flex-start; padding: 0 12px; border-radius: 22px; }
+      nav .tp { gap: 12px; }
+      nav .tl { display: inline; font-size: 1.0625rem; line-height: 1.375rem; font-weight: 400; }
+      nav .ic .i { width: 22px; height: 22px; }
+      nav#nav button:not(.on):hover { background: var(--fill2); }
       .sb-head { display: block !important; padding: 16px 12px; }
       .sb-prof { display: flex !important; margin-top: auto; }
       .sb-only { display: flex !important; }
-      nav#nav .sb-prof.on { background: none; color: var(--label); }
-      .sb-prof .tl, nav#nav .sb-prof.on .tl { overflow: hidden; text-overflow: ellipsis; color: var(--label2); }
-      .dot { top: -6px; }
+      nav#nav .sb-prof { height: auto; min-height: 44px; }
+      .sb-prof .tl { overflow: hidden; text-overflow: ellipsis; color: var(--label2); }
+      .dot { top: 4px; inset-inline-start: 26px; }
       main { max-width: 760px; width: 100%; margin-inline: auto; padding: calc(72px + env(safe-area-inset-top)) 24px 48px; }
     }
 
@@ -243,12 +242,12 @@
     .row .ico { width: 28px; height: 28px; border-radius: 7px; background: var(--tint); color: var(--white); display: inline-flex; align-items: center; justify-content: center; flex: none; }
     .row .ico svg { width: 18px; height: 18px; }
     .row.red .ico { background: var(--danger); }
-    .row.red .ico svg { transform: scaleX(-1); }
     .row.row-c { justify-content: center; }
     .row.danger, .row .danger { color: var(--danger-text); }
-    .chev { display: inline-block; flex: none; width: 7px; height: 12px; background: var(--label3);
-      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 12'%3E%3Cpath d='M6 1 1 6l5 5' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
-      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 12'%3E%3Cpath d='M6 1 1 6l5 5' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
+    /* אייקון Lucide: קו 1.75 (קרוב ל-SF Regular), גריד 24 */
+    .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+    .i { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+    .chev { width: 18px; height: 18px; color: var(--label3); stroke-width: 2.25; }
     .row .chev { order: 9; }
     .row.open > .chev { transform: rotate(-90deg); }
     .empty { padding: 16px; color: var(--label2); display: flex; align-items: center; gap: 12px; }
@@ -316,7 +315,8 @@
     .banner .main { flex: 1; min-width: 0; }
     .banner .chev { align-self: center; }
     .wg { color: var(--warn-text); font-weight: 600; flex: none; }
-    .calc { margin-top: 12px; padding-top: 12px; border-top: .5px solid var(--sep); }
+    .calc { padding: 0 16px; }
+    .pie + .calc, .calc + .calc { margin-top: 8px; }
 
     /* ===== כפתורים ===== */
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; padding: 0 16px; border: 0; border-radius: 12px;
@@ -372,11 +372,11 @@
     @keyframes up { from { transform: translateY(100%); } to { transform: none; } }
     /* כהה: sheet הוא משטח "מוגבה" — בהיר יותר מהרקע, וקבוצות בתוכו עוד דרגה */
     @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) #modal .sheet { background: var(--bg2); }
+      :root:not([data-theme="light"]) #modal .sheet { background: var(--bg2); --pie-milk-bg: var(--bg2); }
       :root:not([data-theme="light"]) #modal .gbody, :root:not([data-theme="light"]) #modal details.grp > .in, :root:not([data-theme="light"]) #modal details.grp > summary.gbody { background: var(--bg3); }
       :root:not([data-theme="light"]) #modal .ring path { stroke: var(--bg3); }
     }
-    :root[data-theme="dark"] #modal .sheet { background: var(--bg2); }
+    :root[data-theme="dark"] #modal .sheet { background: var(--bg2); --pie-milk-bg: var(--bg2); }
     :root[data-theme="dark"] #modal .gbody, :root[data-theme="dark"] #modal details.grp > .in, :root[data-theme="dark"] #modal details.grp > summary.gbody { background: var(--bg3); }
     :root[data-theme="dark"] #modal .ring path { stroke: var(--bg3); }
     .grab { width: 36px; height: 5px; border-radius: 3px; background: var(--label3); margin: 8px auto 0; }
@@ -407,9 +407,7 @@
     ::placeholder { color: var(--label3); }
     .selw { position: relative; display: block; }
     .selw select { appearance: none; -webkit-appearance: none; padding-inline-end: 24px; cursor: pointer; }
-    .selw::after { content: ''; position: absolute; inset-inline-end: 0; top: 50%; width: 12px; height: 14px; margin-top: -7px; background: var(--label3); pointer-events: none;
-      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Cpath d='M2 5l4-4 4 4M2 9l4 4 4-4' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
-      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Cpath d='M2 5l4-4 4 4M2 9l4 4 4-4' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
+    .selw .sel-ic { position: absolute; inset-inline-end: 0; top: 50%; width: 18px; height: 18px; margin-top: -9px; transform: rotate(-90deg); color: var(--label3); pointer-events: none; }
     .hint { color: var(--label2); padding-bottom: 4px; }
     .swr { flex-wrap: nowrap; }
     .swr > label { flex: 1; min-height: 22px; cursor: pointer; }
@@ -439,23 +437,27 @@
     :root[data-theme="dark"] #toast { background: var(--gray5); }
     @keyframes down { from { transform: translateY(-120%); } to { transform: none; } }
 
-    /* ===== עוגות (אינטראקטיביות) ===== */
-    .pie { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 24px; }
+    /* ===== עוגות (אינטראקטיביות). הטבעת על רקע הדף, בלי כרטיס; המקרא = רשימה מקובצת מתחת ===== */
+    .pie { display: flex; flex-direction: column; gap: 16px; }
+    .pgrp .gh + .pie { margin-top: 8px; }
     .ring { position: relative; width: 180px; height: 180px; flex: none; margin-inline: auto; }
-    .ring svg { width: 100%; height: 100%; display: block; overflow: visible; }
-    .ring path { stroke: var(--bg2); stroke-width: 2; fill: var(--c); transition: opacity 150ms cubic-bezier(.2,.8,.2,1), fill 150ms cubic-bezier(.2,.8,.2,1); cursor: pointer; }
-    .ring path.glow { stroke: none; opacity: .7; pointer-events: none; }
-    .pie.act .ring path[data-i]:not(.sel) { opacity: .25; }
-    @supports (color: hsl(from red h s l)) { .ring path.sel { fill: hsl(from var(--c) h s calc(l + 10)); } }
+    .ring svg { width: 100%; height: 100%; display: block; overflow: visible; filter: var(--pie-shadow); }
+    /* פרוסה: גרדיאנט של הצבע שלה (אחד לכל צבע ב-defs). נבחרת = חלבית מעל base */
+    .ring .sl { cursor: pointer; transition: fill-opacity 150ms cubic-bezier(.2,.8,.2,1); }
+    .ring .sl.sel { fill-opacity: var(--pie-milk); }
+    .ring .base { fill: var(--pie-milk-bg); pointer-events: none; }
+    .ring .edge { fill: none; stroke: var(--pie-edge); stroke-width: 1.5; pointer-events: none; transition: stroke 150ms cubic-bezier(.2,.8,.2,1); }
+    .ring .edge.sel { stroke: var(--pie-edge-sel); }
+    .ring stop { stop-color: var(--c); }
+    @supports (color: hsl(from red h s l)) { .ring .g-hi { stop-color: hsl(from var(--c) h s calc(l + 12)); } }
     .ring .ctr { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; text-align: center; }
     .ring .ctr .c-n { color: var(--label2); max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ring .ctr .t-cap1 { color: var(--label2); }
     @media (min-width: 1024px) { .ring { width: 200px; height: 200px; } }
-    .legend { flex: 1 1 14rem; min-width: min(100%, 14rem); margin: 0; padding: 0; list-style: none; }
+    .legend { margin: 0; padding: 0; list-style: none; }
     .legend li { position: relative; }
-    .legend li + li::before { content: ''; position: absolute; top: 0; inset-inline: 26px 0; border-top: .5px solid var(--sep); }
-    @media (min-width: 600px) { .legend { max-width: 22rem; } }
-    .lrow { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-height: 44px; width: 100%; padding: 6px 8px; margin: 0; border: 0; border-radius: 8px;
+    .legend li + li::before { content: ''; position: absolute; top: 0; inset-inline: 34px 0; border-top: .5px solid var(--sep); }
+    .lrow { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-height: 44px; width: 100%; padding: 6px 16px; margin: 0; border: 0;
       background: none; color: var(--label); text-align: start; cursor: pointer; transition: background-color 150ms cubic-bezier(.2,.8,.2,1); }
     .lrow.sel { background: var(--fill2); }
     .lrow .main { flex: 1 1 8rem; min-width: 0; }
@@ -480,7 +482,7 @@
     .codein { text-align: center; letter-spacing: 8px; direction: ltr; font-size: 1.375rem !important; line-height: 1.75rem !important; font-weight: 700; }
     .or { display: flex; align-items: center; gap: 12px; color: var(--label2); margin: 24px 0 0; }
     .or + .grp { margin-top: 16px; }
-    .login #g-btn { margin-top: 32px; }
+    .login #g-box { margin-top: 32px; }
     .frow { display: flex; align-items: center; gap: 8px; }
     .frow input { flex: 1; min-width: 0; }
     .fld input[readonly] { color: var(--label2); }
@@ -491,10 +493,20 @@
     .dots > span { display: block; margin-inline-start: -14px; }
     .dots > span > span { display: inline-block; white-space: nowrap; }
     .dots > span > span::before { content: '·'; display: inline-block; width: 14px; text-align: center; }
-    .row .check { width: 22px; height: 22px; flex: none; color: var(--link-text); }
+    .row .check { width: 22px; height: 22px; color: var(--link-text); stroke-width: 2.25; }
+    .i.flip { transform: scaleX(-1); }   /* חץ "יציאה" בכיוון הקריאה (RTL) */
+    #b-logout .i { width: 20px; height: 20px; }
+    .ia { display: inline-flex; align-items: center; gap: 4px; }
+    .ia .i { width: 16px; height: 16px; }
+    #menu .mi { gap: 12px; }
+    #menu .mi .i { width: 20px; height: 20px; color: var(--label2); }
+    #toast-x { min-width: 44px; justify-content: center; color: var(--label2); }
+    #toast-x .i { width: 20px; height: 20px; }
     .or::before, .or::after { content: ''; flex: 1; border-top: .5px solid var(--sep); }
     /* color-scheme: light — ה-iframe של Google הוא מסמך בהיר; אחרת בכהה הדפדפן מצייר מאחוריו מלבן לבן */
-    #g-btn { display: flex; justify-content: center; min-height: 44px; color-scheme: light; }
+    #g-btn { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; margin-inline: auto; border-radius: 11px; color-scheme: light;
+      background: var(--bg2); border: .3px solid var(--g-edge); box-shadow: var(--g-shadow); }
+    .g-cap { text-align: center; color: var(--label2); margin-top: 8px; }
     .foot-link { text-align: center; margin-top: 32px; color: var(--label2); }
     .foot-link a { color: var(--label2); }
 
@@ -512,17 +524,37 @@
   </style>
 </head>
 <body>
+  <!-- אייקונים: Lucide v1.60.0 (ISC), 16 סמלים. שימוש: <svg class="i"><use href="#i-house"/></svg>. רישיון: docs/README.md -->
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></symbol>
+    <symbol id="i-pie" viewBox="0 0 24 24"><path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z"/><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+    <symbol id="i-ellipsis" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-house" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-clapper" viewBox="0 0 24 24"><path d="m12.296 3.464 3.02 3.956"/><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3z"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="m6.18 5.276 3.1 3.899"/></symbol>
+    <symbol id="i-person2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  </svg>
   <nav id="nav" class="glass hidden" aria-label="ניווט ראשי">
+    <span class="pill" id="tab-pill" aria-hidden="true"></span>
     <div class="sb-head t-head">Brande CashFlow</div>
-    <button data-v="home" aria-label="בית"><span class="tp"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="f" d="M2.8 10.3 12 2.9l9.2 7.4v9.1a1.6 1.6 0 0 1-1.6 1.6h-4.3v-5.8a.9.9 0 0 0-.9-.9h-4.8a.9.9 0 0 0-.9.9v5.8H4.4a1.6 1.6 0 0 1-1.6-1.6z"/></svg></span><span class="tl t-cap2">בית</span></span></button>
-    <button data-v="clients" aria-label="לקוחות"><span class="tp"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle class="f" cx="9" cy="8" r="3.4"/><path class="f" d="M2.9 19.6c.4-3.7 2.9-5.8 6.1-5.8s5.7 2.1 6.1 5.8a.8.8 0 0 1-.8.9H3.7a.8.8 0 0 1-.8-.9z"/><circle class="f" cx="16.6" cy="7.4" r="2.6"/><path class="f" d="M17.3 13.4c2.4.3 3.9 2.1 4.2 4.8a.8.8 0 0 1-.8.9h-3.2c-.2-2.3-1-4.2-2.4-5.5.7-.2 1.4-.3 2.2-.2z"/></svg></span><span class="tl t-cap2">לקוחות</span></span></button>
-    <button data-v="editors" aria-label="עורכים"><span class="tp"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="f" d="M3.4 10.8h17.2v7.6a2 2 0 0 1-2 2H5.4a2 2 0 0 1-2-2z"/><g transform="rotate(-14 3.4 10.8)"><path class="oo" d="M4.4 6.6h15.2a1 1 0 0 1 1 1v3.2H3.4V7.6a1 1 0 0 1 1-1zM9.6 6.6 8 10.8M15 6.6l-1.6 4.2"/><path class="f fo" fill-rule="evenodd" d="M4.4 6.6h15.2a1 1 0 0 1 1 1v3.2H3.4V7.6a1 1 0 0 1 1-1zM8.1 6.6h3.4l-1.6 4.2H6.5zM13.5 6.6h3.4l-1.6 4.2h-3.4z"/></g></svg></span><span class="tl t-cap2">עורכים</span></span></button>
-    <button data-v="alerts" aria-label="התראות"><span class="tp"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="f" d="M5.4 16.4v-5.5a6.6 6.6 0 0 1 13.2 0v5.5l1.7 2.1H3.7z"/><path d="M9.6 20.8a2.6 2.6 0 0 0 4.8 0"/></svg><span class="dot t-cap2 hidden" id="alert-dot"></span></span><span class="tl t-cap2">התראות</span></span></button>
-    <button data-v="partners" class="sb-only" aria-label="שותפים"><span class="tp"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="f" d="M4 20V11h3.5v9zM10.25 20V5h3.5v15zM16.5 20v-6H20v6z"/></svg></span><span class="tl t-cap2">שותפים</span></span></button>
-    <button data-v="settings" aria-label="הגדרות"><span class="tp"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g transform="matrix(1.06 0 0 1.06 -.72 .08)"><path class="f" vector-effect="non-scaling-stroke" fill-rule="evenodd" d="M10.3 2.8h3.4l.5 2.6 1.6.9 2.5-.9 1.7 2.9-2 1.7v1.9l2 1.7-1.7 2.9-2.5-.9-1.6.9-.5 2.6h-3.4l-.5-2.6-1.6-.9-2.5.9-1.7-2.9 2-1.7v-1.9l-2-1.7 1.7-2.9 2.5.9 1.6-.9z M14.8 12a2.8 2.8 0 1 1-5.6 0 2.8 2.8 0 1 1 5.6 0z"/></g></svg></span><span class="tl t-cap2">הגדרות</span></span></button>
+    <button data-v="home" aria-label="בית" title="בית"><span class="tp"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-house"/></svg></span><span class="tl t-cap2">בית</span></span></button>
+    <button data-v="clients" aria-label="לקוחות" title="לקוחות"><span class="tp"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-person2"/></svg></span><span class="tl t-cap2">לקוחות</span></span></button>
+    <button data-v="editors" aria-label="עורכים" title="עורכים"><span class="tp"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-clapper"/></svg></span><span class="tl t-cap2">עורכים</span></span></button>
+    <button data-v="alerts" aria-label="התראות" title="התראות"><span class="tp"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-bell"/></svg><span class="dot t-cap2 hidden" id="alert-dot"></span></span><span class="tl t-cap2">התראות</span></span></button>
+    <button data-v="partners" class="sb-only" aria-label="שותפים" title="שותפים"><span class="tp"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-pie"/></svg></span><span class="tl t-cap2">שותפים</span></span></button>
+    <button data-v="settings" aria-label="הגדרות" title="הגדרות"><span class="tp"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-gear"/></svg></span><span class="tl t-cap2">הגדרות</span></span></button>
     <button data-v="settings" class="sb-prof" aria-label="חשבון"><span class="av t-foot" id="av" aria-hidden="true"></span><span class="tl t-foot" id="who"></span></button>
   </nav>
-  <button id="fab-back" class="fab glass hidden" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 5.5 6.5 6.5-6.5 6.5"/></svg></button>
+  <button id="fab-back" class="fab glass hidden" type="button"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-chevron-right"/></svg></button>
   <button id="fab-end" class="fab glass hidden" type="button"></button>
   <div id="sync" class="t-foot sec hidden" role="status">מתעדכן…</div>
   <div id="edge" aria-hidden="true"></div>
@@ -627,7 +659,7 @@
     opt = opt || {};
     var el = $('toast'), hide = function () { el.classList.add('hidden'); };
     el.innerHTML = '<span class="tx">' + esc(t) + '</span>' + (opt.retry ? '<button class="btn-plain t-sub" id="toast-retry">לנסות שוב</button>' : '') +
-      (opt.error ? '<button class="btn-plain t-sub" id="toast-x">סגירה</button>' : '');
+      (opt.error ? '<button class="btn-plain t-sub" id="toast-x" aria-label="סגירה" title="סגירה">' + ic('x') + '</button>' : '');
     el.classList.toggle('err', !!opt.error);
     el.classList.remove('hidden'); clearTimeout(toast.t);
     if (!opt.error) toast.t = setTimeout(hide, 3500);
@@ -640,7 +672,9 @@
   var SCREENS = { home: { t: 'בית', large: 1 }, clients: { t: 'לקוחות', large: 1 }, editors: { t: 'עורכים', large: 1 },
     alerts: { t: 'התראות', large: 1 }, settings: { t: 'הגדרות', large: 1 }, partners: { t: 'שותפים', large: 1, back: 'home' },
     client: { large: 1, back: 'clients' }, editor: { large: 1, back: 'editors' } };
-  var CHEV = '<span class="chev" aria-hidden="true"></span>';
+  /** אייקון מה-sprite (Lucide). */
+  function ic(id, cls) { return '<svg class="i' + (cls ? ' ' + cls : '') + '" aria-hidden="true" focusable="false"><use href="#i-' + id + '"/></svg>'; }
+  var CHEV = ic('chevron-left', 'chev');
   function setMain(html) {
     var sc = S.screen || {}, back = $('fab-back'), end = $('fab-end'), a = sc.action;
     closeMenu();
@@ -663,7 +697,7 @@
   function openMenu(btn, items) {
     if (S.menu && S.menu.btn === btn) return closeMenu(true);   // לחיצה שנייה על אותו כפתור = סגירה
     var m = $('menu'), r = btn.getBoundingClientRect();
-    m.innerHTML = items.map(function (x, i) { return '<button class="mi t-body" role="menuitem" tabindex="-1" data-mi="' + i + '">' + esc(x.t) + '</button>'; }).join('');
+    m.innerHTML = items.map(function (x, i) { return '<button class="mi t-body" role="menuitem" tabindex="-1" data-mi="' + i + '">' + (x.icon ? ic(x.icon) : '') + '<span>' + esc(x.t) + '</span></button>'; }).join('');
     m.style.top = Math.round(r.bottom + 4) + 'px';
     if (r.left + r.width / 2 < innerWidth / 2) { m.style.left = Math.max(8, Math.round(r.left)) + 'px'; m.style.right = ''; }
     else { m.style.right = Math.max(8, Math.round(innerWidth - r.right)) + 'px'; m.style.left = ''; }
@@ -688,14 +722,17 @@
   };
   document.addEventListener('click', function (e) { if (S.menu && !e.target.closest('#menu') && e.target.closest('button') !== S.menu.btn) closeMenu(); }, true);
   /** "+" בסרגל הבית: פרויקט חדש / הוצאה חדשה. */
-  function addMenu(btn) { openMenu(btn, [{ t: 'פרויקט חדש', fn: function () { projectForm(null, ''); } }, { t: 'הוצאה חדשה', fn: function () { expenseForm(''); } }]); }
-  var IC_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>';
-  var IC_MORE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="6" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="18" cy="12" r="1.9"/></svg>';
+  function addMenu(btn) { openMenu(btn, [{ t: 'פרויקט חדש', icon: 'plus', fn: function () { projectForm(null, ''); } }, { t: 'הוצאה חדשה', icon: 'doc', fn: function () { expenseForm(''); } }]); }
+
 
   /** קבוצה בסגנון iOS: כותרת מעל, גוף, הסבר מתחת. */
   function grp(title, body, foot, cls) {
     return '<section class="grp' + (cls ? ' ' + cls : '') + '">' + (title ? '<h2 class="gh t-foot">' + title + '</h2>' : '') +
       '<div class="gbody">' + body + '</div>' + (foot ? '<p class="gf t-foot">' + foot + '</p>' : '') + '</section>';
+  }
+  /** קבוצה לעוגה: כותרת, ואז הטבעת על רקע הדף (בלי gbody). המקרא בתוך pieBlock הוא הרשימה המקובצת. */
+  function pieGrp(title, body, foot) {
+    return '<section class="grp pgrp">' + (title ? '<h2 class="gh t-foot">' + title + '</h2>' : '') + body + (foot ? '<p class="gf t-foot">' + foot + '</p>' : '') + '</section>';
   }
   function emptyRow(t) { return '<div class="empty t-sub">' + (t || 'אין') + '</div>'; }
   // לחיצה במקלדת על שורות לחיצות
@@ -771,7 +808,7 @@
     var g = GOOGLE_CLIENT_ID && !GAS;
     setMain('<div class="login"><div class="brand"><h1 class="t-large">Brande CashFlow</h1><p class="t-sub">כניסה למנהלים ולעורכים של Brande</p></div>' +
       (note ? '<div class="msg w">' + esc(note) + '</div>' : '') +
-      (g ? '<div id="g-btn"></div><div class="or t-foot">או</div>' : '') +
+      (g ? '<div id="g-box"><div id="g-btn" role="group" aria-label="התחברות עם Google"></div><p class="g-cap t-foot" aria-hidden="true">התחברות עם Google</p></div><div class="or t-foot">או</div>' : '') +
       '<section class="grp"><div class="gbody"><div class="fld"><label for="email">מייל</label><div class="frow"><input id="email" type="email" class="ltr t-body" autocomplete="email" inputmode="email" placeholder="name@example.com">' +
       '<button class="btn-plain t-sub hidden" type="button" id="b-chg">שינוי מייל</button></div></div></div></section>' +
       '<div id="login-msg"></div>' +
@@ -799,7 +836,7 @@
     // אחרי שליחת קוד: המייל לקריאה בלבד + "שינוי מייל" (מחזיר לשלב הראשון)
     var codeStep = function (on) {
       $('email').readOnly = on; $('b-chg').classList.toggle('hidden', !on);
-      if ($('g-btn')) { $('g-btn').classList.toggle('hidden', on); $('g-btn').nextElementSibling.classList.toggle('hidden', on); }
+      if ($('g-box')) { $('g-box').classList.toggle('hidden', on); $('g-box').nextElementSibling.classList.toggle('hidden', on); }
       $('send-box').classList.toggle('hidden', on); $('code-box').classList.toggle('hidden', !on);
     };
     $('b-chg').onclick = function () { codeStep(false); $('code').value = ''; lm(''); $('email').focus(); };
@@ -830,8 +867,7 @@
   /** מצייר (שוב) את כפתור Google לפי המראה בפועל. נקרא גם כשהמראה משתנה. */
   function gRender() {
     if (!$('g-btn') || !(window.google && google.accounts && google.accounts.id)) return;
-    google.accounts.id.renderButton($('g-btn'), { theme: effectiveTheme() === 'dark' ? 'filled_black' : 'outline', size: 'large', shape: 'pill', text: 'signin_with', locale: 'he',
-      width: Math.min(400, $('g-btn').offsetWidth || 360) });
+    google.accounts.id.renderButton($('g-btn'), { type: 'icon', shape: 'square', size: 'large', theme: effectiveTheme() === 'dark' ? 'filled_black' : 'outline', locale: 'he' });
   }
 
   function logout() {
@@ -839,7 +875,7 @@
   }
   /** שורת "התנתקות" (#b-logout) — במסך "הגדרות" ובדף העורך. */
   function logoutGroup() {
-    return grp('', '<button class="row row-c t-body danger" id="b-logout" onclick="logout()">התנתקות</button>');
+    return grp('', '<button class="row row-c t-body danger" id="b-logout" onclick="logout()">' + ic('logout', 'flip') + 'התנתקות</button>');
   }
 
   // ---------- מראה: אוטומטי (ברירת מחדל, לפי המכשיר) / בהיר / כהה. נשמר במכשיר בלבד ----------
@@ -868,7 +904,7 @@
   function themeRow() {
     return '<button class="row" id="b-theme" onclick="themeSheet()"><span class="main t-body">מראה</span><span class="t-body sec" id="theme-v">' + themeLabel() + '</span>' + CHEV + '</button>';
   }
-  var ICON_CHECK = '<svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+  var ICON_CHECK = ic('check', 'check');
   /** 3 שורות עם סימון (לא מתג: 3 ערכים). */
   function themeSheet() {
     var draw = function () {
@@ -920,7 +956,7 @@
   /** 6.1.2 ניתוב לפי תפקיד. */
   function start(user) {
     applyUser(user);
-    if (user.role === 'admin') { $('nav').classList.remove('hidden'); go('home'); }
+    if (user.role === 'admin') { $('nav').classList.remove('hidden'); go('home'); movePill(); }
     else { $('nav').classList.add('hidden'); myPage(); }
   }
 
@@ -1007,7 +1043,7 @@
       return '<div class="fld">' + lab + '<span class="selw"><select id="' + id + '">' + (f.blank ? '<option value=""></option>' : '') + f.options.map(function (o) {
         var v = typeof o === 'object' ? o.v : o, t = typeof o === 'object' ? o.t : o;
         return '<option value="' + esc(v) + '"' + (String(v) === String(f.value) ? ' selected' : '') + '>' + esc(t) + '</option>';
-      }).join('') + '</select></span>' + hint + '</div>';
+      }).join('') + '</select>' + ic('chevron-left', 'sel-ic') + '</span>' + hint + '</div>';
     }
     if (f.type === 'textarea') return '<div class="fld">' + lab + '<textarea id="' + id + '" rows="2">' + esc(f.value) + '</textarea>' + hint + '</div>';
     if (f.type === 'file') return '<div class="fld"><span class="lbl">' + esc(f.label) + '</span><div class="filerow"><label for="' + id + '" class="btn-plain t-head">בחירת קובץ</label>' +
@@ -1067,10 +1103,10 @@
   Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) { b.onclick = function () { go(b.getAttribute('data-v')); }; });
   // הכפתור הצף של כל מסך (#fab-end): "+" / "…". menu = פותח תפריט.
   var FAB = {
-    home: { icon: IC_PLUS, label: 'הוספה', menu: 1, fn: function (b) { addMenu(b); } },
-    editors: { icon: IC_PLUS, label: 'עורך חדש', fn: function () { newEditorForm(); } },
-    client: { icon: IC_MORE, label: 'פעולות נוספות', menu: 1, fn: function (b) { clientMenu(b); } },
-    editor: { icon: IC_MORE, label: 'פעולות נוספות', menu: 1, fn: function (b) { editorMenu(b); } }
+    home: { icon: ic('plus'), label: 'הוספה', menu: 1, fn: function (b) { addMenu(b); } },
+    editors: { icon: ic('plus'), label: 'עורך חדש', fn: function () { newEditorForm(); } },
+    client: { icon: ic('ellipsis'), label: 'פעולות נוספות', menu: 1, fn: function (b) { clientMenu(b); } },
+    editor: { icon: ic('ellipsis'), label: 'פעולות נוספות', menu: 1, fn: function (b) { editorMenu(b); } }
   };
   var WIDE_MQ = window.matchMedia ? matchMedia('(min-width: 1024px)') : null;
   function go(view, arg) {
@@ -1082,6 +1118,7 @@
       b.classList.toggle('on', on);
       if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
     });
+    movePill();
     S.screen = Object.assign({}, SCREENS[view], arg ? { t: arg } : {});
     if (view === 'partners' && tab === 'partners') S.screen = { t: 'שותפים', large: 1 };   // מסרגל הצד: מסך ראשי
     if (FAB[view]) S.screen.action = FAB[view];
@@ -1090,6 +1127,18 @@
     ({ home: homeView, clients: clientsView, editors: editorsView, alerts: alertsView, settings: settingsView, partners: partnersView,
       client: clientView, editor: editorView })[view](arg);
   }
+  /** ה-pill של הטאב הפעיל: אלמנט אחד שזז (טלפון: גובה 52, inset 6; דסקטופ: בגודל השורה). בפעם הראשונה — בלי תנועה. */
+  var pillPlaced = false;
+  function movePill() {
+    var nav = $('nav'), p = $('tab-pill'), on = nav.querySelector('button.on:not(.sb-prof)');
+    if (!on || nav.classList.contains('hidden') || !on.offsetWidth) { p.style.opacity = '0'; return; }
+    var wide = WIDE_MQ && WIDE_MQ.matches;
+    var x = on.offsetLeft + (wide ? 0 : 3), y = wide ? on.offsetTop : 6, w = on.offsetWidth - (wide ? 0 : 6), h = wide ? on.offsetHeight : 52;
+    if (!pillPlaced) p.style.transition = 'none';
+    p.style.width = w + 'px'; p.style.height = h + 'px'; p.style.transform = 'translate(' + x + 'px,' + y + 'px)'; p.style.opacity = '1';
+    if (!pillPlaced) { void p.offsetWidth; p.style.transition = ''; pillPlaced = true; }
+  }
+  window.addEventListener('resize', movePill);
   function reload() { if (S.user && S.user.role === 'admin') go(S.view || 'home', S.arg); else myPage(); }
 
   /**
@@ -1151,8 +1200,8 @@
         '<div class="pad hero-seg">' + periodSeg(D.labels, function () { renderHome(h); }) + '</div></div></section>' +
       '<div class="tiles">' + tile('לגבייה מלקוחות', money(h.debtTotal.amount), '', 'clients') + tile('לתשלום לעורכים', money(h.dueTotal.amount), '', 'editors') + '</div>' +
       missingBanner(h, B) +
-      grp('רווח לפי לקוח · ' + esc(periodShort(D.labels)), '<div class="pad">' +
-        pieBlock(B, D.colors, 'רווח לפי לקוח', { sumLabel: 'רווח מלקוחות', totalLabel: 'רווח', dedName: function (x) { return x.general ? x.key : x.key + ' (הפסד)'; } }) + '</div>') +
+      pieGrp('רווח לפי לקוח · ' + esc(periodShort(D.labels)),
+        pieBlock(B, D.colors, 'רווח לפי לקוח', { sumLabel: 'רווח מלקוחות', totalLabel: 'רווח', dedName: function (x) { return x.general ? x.key : x.key + ' (הפסד)'; } })) +
       grp('', '<button class="row" onclick="go(\'editors\')"><span class="main"><span class="t-body blk">עורכים</span><span class="t-foot sec blk">מה עשה כל אחד ב' + monthName(D.labels.month) + '</span></span>' + CHEV + '</button>' +
         '<button class="row" id="b-ours" onclick="oursSheet()"><span class="main"><span class="t-body blk">סה״כ שלנו</span><span class="t-foot sec blk">העסק + העריכות שלנו</span></span>' +
         '<span class="t-body num">' + money(P.ours.total) + '</span>' + CHEV + '</button>')
@@ -1186,7 +1235,7 @@
     var oursPie = { total: P.ours.total, sliceSum: P.ours.sliceSum, deductions: P.ours.deductions,
       slices: P.ours.slices.map(function (x) { return Object.assign({}, x, { key: x.key === 'העסק' ? '__biz' : x.key, label: x.key === 'העסק' ? 'רווח העסק' : 'עריכות של ' + x.key }); }) };
     openModal(sheetHtml('סה״כ שלנו', '<p class="note t-foot">' + esc(periodName(D.labels)) + ' · רווח העסק + מה שהמנהלים הרוויחו כעורכים</p>' +
-      grp('', '<div class="pad">' + pieBlock(oursPie, D.editorColors, 'סה״כ שלנו', { dedName: function () { return 'הפסד העסק'; } }) + '</div>'), '', 'סגור'));
+      pieGrp('', pieBlock(oursPie, D.editorColors, 'סה״כ שלנו', { dedName: function () { return 'הפסד העסק'; } })), '', 'סגור'));
   }
   /** חלוקה לשותפים בחודש (בגיליון החודש). */
   function partnerRows(p) {
@@ -1215,7 +1264,7 @@
       cur = h;
       S.screen.sub = 'לגבייה ' + money(h.debtTotal.amount);
       if ($('q') && $('list')) { document.querySelector('.lsub').textContent = S.screen.sub; return draw(); }   // רענון ברקע: לא מאפסים את החיפוש
-      setMain('<label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></svg>' +
+      setMain('<label class="search">' +
         '<span class="vh">חיפוש לקוח</span><input id="q" type="search" placeholder="חיפוש" class="t-body"></label>' + grp('', '<div id="list"></div>') + '<div id="off"></div>');
       $('q').oninput = draw; draw();
     });
@@ -1294,9 +1343,9 @@
   /** "…" בסרגל הלקוח. */
   function clientMenu(btn) {
     var c = S.client; if (!c || c.name !== S.arg) return;
-    var items = [{ t: 'פרויקט חדש', fn: function () { projectForm(null, c.name); } }, { t: 'הוצאה חדשה', fn: function () { expenseForm(c.name); } },
-      { t: 'הגדרות ומחירים', fn: function () { clientSettingsForm(c); } }];
-    if (c.contentUrl) items.push({ t: 'טבלת התוכן', fn: function () { window.open(c.contentUrl, '_blank', 'noopener'); } });
+    var items = [{ t: 'פרויקט חדש', icon: 'plus', fn: function () { projectForm(null, c.name); } }, { t: 'הוצאה חדשה', icon: 'doc', fn: function () { expenseForm(c.name); } },
+      { t: 'הגדרות ומחירים', icon: 'sliders', fn: function () { clientSettingsForm(c); } }];
+    if (c.contentUrl) items.push({ t: 'טבלת התוכן', icon: 'doc', fn: function () { window.open(c.contentUrl, '_blank', 'noopener'); } });
     openMenu(btn, items);
   }
   // ---------- טעינה ----------
@@ -1329,21 +1378,31 @@
     o.amount = Math.round(o.amount * 100) / 100; o.pct = Math.round(o.pct * 10) / 10;
     return slices.slice(0, MAX_SLICES - 1).concat([o]);
   }
-  /** SVG בלבד (aria-hidden). 12 בשעון, עם כיוון השעון. פרוסה = path עם data-i. glow = עותק מטושטש מאחורי הנבחרת. */
-  function donut(slices, colors, fid) {
-    var R = 86, r = 54, c = 90, total = slices.reduce(function (a, x) { return a + x.amount; }, 0), a0 = -Math.PI / 2;
+  /**
+   * SVG בלבד (aria-hidden). 12 בשעון, עם כיוון השעון. פרוסה = path.sl עם data-i, מילוי = גרדיאנט של הצבע שלה
+   * (userSpaceOnUse: למעלה-שמאל בהיר ב-12% → למטה-ימין הצבע). רווח 2px בין פרוסות = גאומטריה (לא stroke, שהיה מצייר טבעת בהירה על הצל).
+   * edge = הקשת החיצונית בלבד. base = מה שמתחת לפרוסה החלבית (מקבל את ה-d שלה בבחירה).
+   */
+  function donut(slices, colors, gid) {
+    var R = 86, r = 54, c = 90, RE = R - .75, total = slices.reduce(function (a, x) { return a + x.amount; }, 0), a0 = -Math.PI / 2, grads = {};
     var pt = function (rad, a) { return (c + rad * Math.cos(a)).toFixed(2) + ' ' + (c + rad * Math.sin(a)).toFixed(2); };
-    var paths = slices.map(function (x, i) {
-      var at = ' class="' + colors[x.key] + '" data-i="' + i + '"';
-      if (slices.length === 1) return '<path' + at + ' fill-rule="evenodd" d="M' + pt(R, 0) + ' A' + R + ' ' + R + ' 0 1 1 ' + pt(R, Math.PI) + ' A' + R + ' ' + R + ' 0 1 1 ' + pt(R, 0) +
-        ' M' + pt(r, 0) + ' A' + r + ' ' + r + ' 0 1 0 ' + pt(r, Math.PI) + ' A' + r + ' ' + r + ' 0 1 0 ' + pt(r, 0) + 'Z"/>';
-      var a1 = a0 + 2 * Math.PI * x.amount / total, big = a1 - a0 > Math.PI ? 1 : 0;
-      var d = 'M' + pt(R, a0) + ' A' + R + ' ' + R + ' 0 ' + big + ' 1 ' + pt(R, a1) + ' L' + pt(r, a1) + ' A' + r + ' ' + r + ' 0 ' + big + ' 0 ' + pt(r, a0) + 'Z';
+    var circ = function (rad, sweep) { return 'M' + pt(rad, 0) + ' A' + rad + ' ' + rad + ' 0 1 ' + sweep + ' ' + pt(rad, Math.PI) + ' A' + rad + ' ' + rad + ' 0 1 ' + sweep + ' ' + pt(rad, 0); };
+    var arc = function (rad, b, e, sweep) { return ' A' + rad + ' ' + rad + ' 0 ' + (Math.abs(e - b) > Math.PI ? 1 : 0) + ' ' + sweep + ' ' + pt(rad, e); };
+    var paths = '', edges = '';
+    slices.forEach(function (x, i) {
+      var cls = colors[x.key], g = gid + '-' + cls;
+      if (!grads[cls]) grads[cls] = '<linearGradient id="' + g + '" class="' + cls + '" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="180" y2="180"><stop offset="0" class="g-hi"/><stop offset="1"/></linearGradient>';
+      var at = ' class="sl ' + cls + '" data-i="' + i + '" fill="url(#' + g + ')"';
+      if (slices.length === 1) { paths += '<path' + at + ' fill-rule="evenodd" d="' + circ(R, 1) + ' ' + circ(r, 0) + 'Z"/>'; edges += '<path class="edge" data-i="0" d="' + circ(RE, 1) + '"/>'; return; }
+      var a1 = a0 + 2 * Math.PI * x.amount / total, m = (a0 + a1) / 2;
+      // 1px מכל צד: זווית 1/R בחוץ, 1/r בפנים (רוחב רווח קבוע). פרוסה צרה מדי → מתכנסת לאמצע.
+      var o0 = Math.min(a0 + 1 / R, m), o1 = Math.max(a1 - 1 / R, m), i0 = Math.min(a0 + 1 / r, m), i1 = Math.max(a1 - 1 / r, m);
+      paths += '<path' + at + ' d="M' + pt(R, o0) + arc(R, o0, o1, 1) + ' L' + pt(r, i1) + arc(r, i1, i0, 0) + 'Z"/>';
+      if (o1 > o0) edges += '<path class="edge" data-i="' + i + '" d="M' + pt(RE, o0) + arc(RE, o0, o1, 1) + '"/>';
       a0 = a1;
-      return '<path' + at + ' d="' + d + '"/>';
-    }).join('');
-    return '<svg viewBox="0 0 180 180" aria-hidden="true" focusable="false"><defs><filter id="' + fid + '" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter></defs>' +
-      '<path class="glow hidden" filter="url(#' + fid + ')"/>' + paths + '</svg>';
+    });
+    return '<svg viewBox="0 0 180 180" aria-hidden="true" focusable="false"><defs>' + Object.keys(grads).map(function (k) { return grads[k]; }).join('') + '</defs>' +
+      '<path class="base hidden"/>' + paths + edges + '</svg>';
   }
   function counts(x) {
     var p = [];
@@ -1358,7 +1417,7 @@
   function pieBlock(pie, colors, label, opts) {
     opts = opts || {};
     var slices = fold(pie.slices.map(function (x) { return Object.assign({ label: opts.name ? opts.name(x) : x.key }, x); }));
-    if (!slices.length && !(pie.deductions || []).length) return '<div class="empty t-sub">אין נתונים לתקופה</div>';
+    if (!slices.length && !(pie.deductions || []).length) return '<div class="gbody"><div class="empty t-sub">אין נתונים לתקופה</div></div>';
     // צבע לפי ישות; אם שתי ישויות באותה עוגה נופלות על אותו צבע → הצבע הפנוי הבא. "רווח העסק" (אם יש) ראשון.
     var used = {}, col = {};
     slices.slice().sort(function (a, b) { return (b.key === '__biz') - (a.key === '__biz'); }).forEach(function (x) {
@@ -1376,10 +1435,10 @@
         (sub ? '<span class="t-foot sec blk">' + sub + '</span>' : '') + '</span><span class="t-sub num">' + money(x.amount) + '</span><span class="pct t-cap1 num">' + x.pct + '%</span></button></li>';
     }).join('');
     var top = slices[0], summary = top ? label + '. סה״כ ' + money(sum) + '. הגדול: ' + top.label + ' ' + money(top.amount) + ', ' + top.pct + '%.' : label;
-    var fid = 'pg' + (++PIE_N);
-    return (slices.length ? '<div class="pie" data-lock="" data-sum="' + esc(money(sum)) + '"><div class="ring"><div role="img" aria-label="' + esc(summary) + '">' + donut(slices, col, fid) + '</div>' +
+    var gid = 'pg' + (++PIE_N);
+    return (slices.length ? '<div class="pie" data-lock="" data-sum="' + esc(money(sum)) + '"><div class="ring"><div role="img" aria-label="' + esc(summary) + '">' + donut(slices, col, gid) + '</div>' +
       '<div class="ctr" aria-live="polite"><span class="t-foot c-n hidden"></span><span class="t-title2 num c-a">' + money(sum) + '</span><span class="t-cap1 c-p">סה״כ</span></div></div>' +
-      '<ul class="legend" aria-label="' + esc(label) + '">' + leg + '</ul></div>' : '') +
+      '<ul class="legend gbody" aria-label="' + esc(label) + '">' + leg + '</ul></div>' : '') +
       calcLine(pie, sum, opts);
   }
   /** מציג פרוסה i (או null = ברירת מחדל: "סה״כ" + סכום הפרוסות). */
@@ -1387,9 +1446,9 @@
     var sel = i === null ? null : pie.querySelector('.lrow[data-i="' + i + '"]');
     pie.classList.toggle('act', !!sel);
     Array.prototype.forEach.call(pie.querySelectorAll('[data-i]'), function (el) { el.classList.toggle('sel', !!sel && el.getAttribute('data-i') === String(i)); });
-    var g = pie.querySelector('.glow'), p = sel && pie.querySelector('path[data-i="' + i + '"]');
-    g.classList.toggle('hidden', !p);
-    if (p) { g.setAttribute('d', p.getAttribute('d')); g.setAttribute('class', 'glow ' + p.getAttribute('class').replace(/\s*sel\b/, '')); if (p.getAttribute('fill-rule')) g.setAttribute('fill-rule', 'evenodd'); }
+    var b = pie.querySelector('.base'), p = sel && pie.querySelector('.sl[data-i="' + i + '"]');
+    b.classList.toggle('hidden', !p);
+    if (p) { b.setAttribute('d', p.getAttribute('d')); b.setAttribute('fill-rule', p.getAttribute('fill-rule') || 'nonzero'); }
     var n = pie.querySelector('.c-n');
     n.textContent = sel ? sel.getAttribute('data-n') : ''; n.classList.toggle('hidden', !sel);
     pie.querySelector('.c-a').textContent = sel ? sel.getAttribute('data-a') : pie.getAttribute('data-sum');
@@ -1606,11 +1665,11 @@
         missMsg(miss, 'בלי עלות') +
         '<div class="actions"><button class="btn btn-fill full t-head" id="b-pay"' + (items.length ? '' : ' disabled') + '>שילמתי לעורך</button></div>' +
         sect('פתוח (' + items.length + ')', items.map(itemRow).join(''), items.length > 0) +
-        (D ? grp('עבד ב' + mn, '<div class="pad">' + (ed ? pieBlock(ed.pie, D.colors, 'מה ' + e.name + ' עשה ב' + mn) : '<div class="empty t-sub">לא עבד ב' + mn + '</div>') + '</div>',
-          ed ? 'לפי עלות עורך, כולל מה שכבר שולם' : '') : '') +
+        (D ? (ed ? pieGrp('עבד ב' + mn, pieBlock(ed.pie, D.colors, 'מה ' + e.name + ' עשה ב' + mn), 'לפי עלות עורך, כולל מה שכבר שולם') :
+          grp('עבד ב' + mn, '<div class="empty t-sub">לא עבד ב' + mn + '</div>')) : '') +
         sect('היסטוריית תשלומים', e.payments.map(function (p) {
           return '<div class="row"><div class="main"><div class="t-body">' + date(p.date) + ' · ' + nOf(p.count, 'פריט', 'פריטים') + '</div>' + (p.notes ? '<div class="t-foot sec">' + esc(p.notes) + '</div>' : '') +
-            '<div class="t-foot sec">' + (p.invoice ? '<a href="' + esc(p.invoice) + '" target="_blank" rel="noopener">חשבונית</a>' : '<span class="warn">⚠︎ אין חשבונית</span>') + ' · <span class="ltr">' + esc(p.id) + '</span></div></div>' + paidVal(p.amount, p.bonus) + '</div>';
+            '<div class="t-foot sec">' + (p.invoice ? '<a class="ia" href="' + esc(p.invoice) + '" target="_blank" rel="noopener">' + ic('doc') + 'חשבונית</a>' : '<span class="warn">⚠︎ אין חשבונית</span>') + ' · <span class="ltr">' + esc(p.id) + '</span></div></div>' + paidVal(p.amount, p.bonus) + '</div>';
         }).join(''))
       );
       $('b-pay').onclick = function () { paySheet(e, items); };
@@ -1714,7 +1773,7 @@
       : '<span class="t-body num">' + money(amount) + '</span>';
   }
   /** "…" בדף העורך. */
-  function editorMenu(btn) { if (S.editorPage && S.editorPage.name === S.arg) openMenu(btn, [{ t: 'הגדרות עורך', fn: editorSettings }]); }
+  function editorMenu(btn) { if (S.editorPage && S.editorPage.name === S.arg) openMenu(btn, [{ t: 'הגדרות עורך', icon: 'sliders', fn: editorSettings }]); }
   function editorSettings() {
     var e = S.editorPage; if (!e || e.name !== S.arg) return;
     var s = e.settings;
@@ -1737,7 +1796,7 @@
   }
 
   // ---------- התראות ----------
-  var ICON_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="m7.5 12.3 3 3 6-6.3"/></svg>';
+  var ICON_OK = ic('check');
   /** קבוצה לכל סוג התראה. לחיצה על שורה → המסך שבו מתקנים. "טופל" = כפתור טקסט. */
   function alertsView() {
     call('getAlerts', [getToken()], function (r) {
@@ -1776,7 +1835,6 @@
     return '<button class="row' + (opts.cls ? ' ' + opts.cls : '') + '"' + (opts.id ? ' id="' + opts.id + '"' : '') + (onclick ? ' onclick="' + onclick + '"' : '') + '>' +
       (icon ? '<span class="ico" aria-hidden="true">' + icon + '</span>' : '') + '<span class="main t-body">' + label + '</span>' + (opts.chev ? CHEV : '') + '</button>';
   }
-  var IC = function (d) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; };
   // זמני ביצועים: רק עם ?debug=1 (למפתח, לא לבעלים)
   var DEBUG = /[?&]debug=1(&|$)/.test(location.search);
   function settingsView() {
@@ -1787,8 +1845,8 @@
           '<div class="main"><div class="t-body em">' + esc(u.email) + '</div><div class="t-foot sec">' + (u.role === 'admin' ? 'מנהל' : 'עורך') + '</div></div></div>') +
         grp('תצוגה', themeRow()) +
         grp('תחזוקה',
-          iconRow(IC('<path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/>'), 'רענון עכשיו', '', { id: 'b-refresh' }) +
-          iconRow(IC('<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>'), 'ביטול הפעולה האחרונה', 'undoLast()', { cls: 'danger red' }),
+          iconRow(ic('refresh'), 'רענון עכשיו', '', { id: 'b-refresh' }) +
+          iconRow(ic('x'), 'ביטול הפעולה האחרונה', 'undoLast()', { cls: 'danger red' }),
           'רענון קורא את טבלאות התוכן. עד דקה.') +
         (DEBUG ? grp('ביצועים', '<div id="perf">' + perfRows() + '</div>') : '') +
         logoutGroup() +
@@ -1875,15 +1933,15 @@
             (v.amount === null ? '<span class="t-sub sec">בלי מחיר</span>' : '<span class="t-body num">' + money(v.amount) + '</span>') + '</div>';
         }).join('');
       }).join(''), true) +
-      grp('הכסף שלי לפי לקוח · ' + esc(periodShort(E.labels)),
-        '<div class="pad">' + periodSeg(E.labels, function () { renderMy(p); }) + '<div class="pie-gap"></div>' +
+      pieGrp('הכסף שלי לפי לקוח · ' + esc(periodShort(E.labels)),
+        periodSeg(E.labels, function () { renderMy(p); }) + '<div class="pie-gap"></div>' +
         pieBlock({ slices: X.slices, deductions: [], total: X.amount }, colors, 'הכסף שלי לפי לקוח, ' + periodName(E.labels)) +
-        (X.pending.length ? '<p class="calc t-foot sec">עוד בלי מחיר (לא בעוגה): ' + X.pending.map(function (x) { return '<span class="nw">' + esc(x.key) + ' · ' + counts(x) + '</span>'; }).join(', ') + '</p>' : '') +
-        '</div>', 'כולל מה שכבר שולם') +
+        (X.pending.length ? '<p class="calc t-foot sec">עוד בלי מחיר (לא בעוגה): ' + X.pending.map(function (x) { return '<span class="nw">' + esc(x.key) + ' · ' + counts(x) + '</span>'; }).join(', ') + '</p>' : ''),
+        'כולל מה שכבר שולם') +
       sect('היסטוריית תשלומים', p.payments.map(function (x) {
         return '<div class="row"><div class="main"><div class="t-body">' + date(x.date) + ' · ' + nOf(x.count, 'פריט', 'פריטים') + '</div><div class="t-foot">' +
           (x.hasInvoice ? '<span class="ok">חשבונית ✓</span>' : '<span class="warn">⚠︎ אין חשבונית</span>') + '</div>' +
-          (x.hasInvoice ? '' : '<button class="btn-plain t-sub inl" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">העלאת חשבונית</button>') + '</div>' + paidVal(x.amount, x.bonus) + '</div>';
+          (x.hasInvoice ? '' : '<button class="btn-plain t-sub inl ia" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">' + ic('doc') + 'העלאת חשבונית</button>') + '</div>' + paidVal(x.amount, x.bonus) + '</div>';
       }).join(''), true) +
       grp('תצוגה', themeRow()) +
       logoutGroup()
@@ -1917,7 +1975,7 @@
     var snap = role ? readSnap() : null;
     if (snap && snap.role !== role) snap = null;
     if (role === 'admin') {
-      S.boot = true; $('nav').classList.remove('hidden');
+      S.boot = true; $('nav').classList.remove('hidden'); setTimeout(movePill);
       if (snap && snap.data && snap.data.home) {   // ציור מיידי מה-snapshot; go('home') מרענן ברקע
         S.home = snap.data.home; S.lists = snap.data.lists; S.homeAt = Date.now(); S.fromSnap = true; S.snapAt = snap.at;
         if (snap.data.user) applyUser(snap.data.user);
