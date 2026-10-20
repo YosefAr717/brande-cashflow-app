@@ -297,6 +297,15 @@
     .pp .pp-m { color: var(--label2); }
     .pp .on .pp-m { color: var(--seg-on-sub); }   /* כהה: --label2 על --seg-on = 2.9:1 → --label */
     .btn .ch-in { width: 18px; height: 18px; }
+    /* עוגות הבית: בטלפון כמו בלי העטיפה (העוגה הראשונה לא "first-child" לעניין הרווח) */
+    .hgrid > .grp:first-child { margin-top: 32px; }
+    .tiles + .hgrid > .grp:first-child { margin-top: 24px; }
+    @media (min-width: 1024px) {
+      .hgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-areas: "p1 p2" "due due"; gap: 24px; align-items: start; margin-top: 32px; }
+      .tiles + .hgrid { margin-top: 24px; }
+      .hgrid > .grp:first-child, .hgrid > .grp, .hgrid > .h-due > .grp:first-child { margin-top: 0; }
+      .hgrid .h-p1 { grid-area: p1; } .hgrid .h-p2 { grid-area: p2; } .hgrid .h-due { grid-area: due; }
+    }
     .lsub { margin-top: -4px; }
     .hero .hero-tag { margin-top: 8px; }
     /* תפריט מהסרגל */
@@ -745,8 +754,8 @@
       '<div class="gbody">' + body + '</div>' + (foot ? '<p class="gf t-foot">' + foot + '</p>' : '') + '</section>';
   }
   /** קבוצה לעוגה: כותרת, ואז הטבעת על רקע הדף (בלי gbody). המקרא בתוך pieBlock הוא הרשימה המקובצת. */
-  function pieGrp(title, body, foot) {
-    return '<section class="grp pgrp">' + (title ? '<h2 class="gh t-foot">' + title + '</h2>' : '') + body + (foot ? '<p class="gf t-foot">' + foot + '</p>' : '') + '</section>';
+  function pieGrp(title, body, foot, cls) {
+    return '<section class="grp pgrp' + (cls ? ' ' + cls : '') + '">' + (title ? '<h2 class="gh t-foot">' + title + '</h2>' : '') + body + (foot ? '<p class="gf t-foot">' + foot + '</p>' : '') + '</section>';
   }
   function emptyRow(t) { return '<div class="empty t-sub">' + (t || 'אין') + '</div>'; }
   // לחיצה במקלדת על שורות לחיצות
@@ -1219,12 +1228,14 @@
         '<div class="pad hero-seg">' + periodPicker(D.labels) + '</div></div></section>' +
       '<div class="tiles">' + tile('לגבייה מלקוחות', money(h.debtTotal.amount), '', 'clients') + tile('לתשלום לעורכים', money(h.dueTotal.amount), '', 'editors') + '</div>' +
       missingBanner(h, B) +
+      // טלפון/בינוני: עוגה · מגיע לעורכים · הכסף שלי. דסקטופ: שתי העוגות זו לצד זו, מגיע לעורכים מתחת ברוחב מלא (.hgrid)
+      '<div class="hgrid">' +
       (rev ? pieGrp('הכנסה לפי לקוח · ' + short, pieBlock(P.revenue, D.colors, 'הכנסה לפי לקוח',
-          { calc: calcP([['', 'הכנסות', B.revenue], ['− ', 'עלויות עורכים', B.editorCost], ['− ', 'הוצאות', B.expenses], ['= ', 'רווח', B.total]]) }))
+          { calc: calcP([['', 'הכנסות', B.revenue], ['− ', 'עלויות עורכים', B.editorCost], ['− ', 'הוצאות', B.expenses], ['= ', 'רווח', B.total]]) }), '', 'h-p1')
         : pieGrp('רווח לפי לקוח · ' + short, pieBlock(B, D.colors, 'רווח לפי לקוח',
-          { sumLabel: 'רווח מלקוחות', totalLabel: 'רווח', dedName: function (x) { return x.general ? x.key : x.key + ' (הפסד)'; } }))) +
-      dueList(h) +
-      minePie(P.mine, D.colors, short)
+          { sumLabel: 'רווח מלקוחות', totalLabel: 'רווח', dedName: function (x) { return x.general ? x.key : x.key + ' (הפסד)'; } }), '', 'h-p1')) +
+      '<div class="h-due">' + dueList(h) + '</div>' +
+      minePie(P.mine, D.colors, short) + '</div>'
     );
     markPaint();
   }
@@ -1293,7 +1304,7 @@
     var foot = (M.partnerError ? 'אין חלק ברווח: ' + esc(M.partnerError) : M.sharePct === null ? 'אין אחוז שותפות בטאב הרשאות' : 'חלק ' + M.sharePct + '% מרווח העסק') +
       (M.editor ? ' + העריכות שלך (' + esc(M.editor) + ') לפי עלות עורך, כולל מה שכבר שולם' : ' · החשבון לא מקושר לעורך');
     return pieGrp('הכסף שלי · ' + short, pieBlock(pie, colors, 'הכסף שלי',
-      { sumLabel: 'העריכות שלי', totalLabel: 'שלי', dedName: function () { return 'חלקי בהפסד העסק'; } }), foot);
+      { sumLabel: 'העריכות שלי', totalLabel: 'שלי', dedName: function () { return 'חלקי בהפסד העסק'; } }), foot, 'h-p2');
   }
   /** "א · ב · ג" שנשבר לשורות בלי "·" בתחילת שורה (המפריד הראשון בכל שורה מחוץ לקופסה ונחתך). */
   function dots(parts) { return '<span class="dots"><span>' + parts.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</span></span>'; }
