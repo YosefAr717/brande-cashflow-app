@@ -633,11 +633,13 @@
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
     <symbol id="i-logout" viewBox="0 0 24 24"><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></symbol>
     <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></symbol>
+    <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
   </svg>
   <nav id="nav" class="glass hidden" aria-label="ניווט ראשי">
     <span class="pill" id="tab-pill" aria-hidden="true"></span>
     <div class="sb-head t-head">Brande CashFlow</div>
+    <button data-v="expenses" aria-label="הוצאות" title="הוצאות"><span class="tp"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-receipt"/></svg></span><span class="tl t-cap2">הוצאות</span></span></button>
     <button data-v="home" aria-label="בית" title="בית"><span class="tp"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-house"/></svg></span><span class="tl t-cap2">בית</span></span></button>
     <button data-v="clients" aria-label="לקוחות" title="לקוחות"><span class="tp"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-person2"/></svg></span><span class="tl t-cap2">לקוחות</span></span></button>
     <button data-v="editors" aria-label="עורכים" title="עורכים"><span class="tp"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-clapper"/></svg></span><span class="tl t-cap2">עורכים</span></span></button>
@@ -751,19 +753,21 @@
     opt = opt || {};
     var el = $('toast'), hide = function () { el.classList.add('hidden'); };
     el.innerHTML = '<span class="tx">' + esc(t) + '</span>' + (opt.retry ? '<button class="btn-plain t-sub" id="toast-retry">לנסות שוב</button>' : '') +
+      (opt.undo ? '<button class="btn-plain t-sub" id="toast-undo">ביטול</button>' : '') +
       (opt.error ? '<button class="btn-plain t-sub" id="toast-x" aria-label="סגירה" title="סגירה">' + ic('x') + '</button>' : '');
     el.classList.toggle('err', !!opt.error);
     el.classList.remove('hidden'); clearTimeout(toast.t);
     if (!opt.error) toast.t = setTimeout(hide, 3500);
     if ($('toast-x')) $('toast-x').onclick = hide;
     if ($('toast-retry')) $('toast-retry').onclick = function () { hide(); opt.retry(); };
+    if ($('toast-undo')) $('toast-undo').onclick = function () { hide(); undoLast(); };
   }
   function toastErr(m, retry) { toast(m, { error: true, retry: retry }); }
 
   // ---------- מבנה מסך: כותרת גדולה + כפתורים צפים (UI בלבד). אין סרגל עליון ----------
   var SCREENS = { home: { t: 'בית', large: 1, hide: 1 }, clients: { t: 'לקוחות', large: 1 }, editors: { t: 'עורכים', large: 1 },
     alerts: { t: 'התראות', large: 1 }, settings: { t: 'הגדרות', large: 1 }, partners: { t: 'שותפים', large: 1, back: 'home' },
-    client: { large: 1, back: 'clients' }, editor: { large: 1, back: 'editors' }, expenses: { t: 'הוצאות', large: 1, back: 'settings' },
+    client: { large: 1, back: 'clients' }, editor: { large: 1, back: 'editors' }, expenses: { t: 'הוצאות', large: 1 },
     ledger: { t: 'התחשבנות', large: 1, back: 'settings' }, untagged: { t: 'לא מתויגות', large: 1, back: 'ledger' } };
   /** אייקון מה-sprite (Lucide). */
   function ic(id, cls) { return '<svg class="i' + (cls ? ' ' + cls : '') + '" aria-hidden="true" focusable="false"><use href="#i-' + id + '"/></svg>'; }
@@ -1121,6 +1125,22 @@
   }
 
   /**
+   * הוצאות ומנויים: בלי תצוגה מקדימה — לחיצה אחת מבצעת (confirm = 'direct', השרת מתיר רק בפעולות האלה).
+   * btn = הכפתור שנלחץ (ברירת מחדל "שמירה"). שגיאה → בטופס. אחרי: הודעה קצרה עם "ביטול" (= ביטול הפעולה האחרונה).
+   */
+  function saveNow(act, btn) {
+    var b = $(btn || 'b-next'), t = b.textContent;
+    b.disabled = true; b.textContent = 'שומר…';
+    var fail = function (m) { b.disabled = false; b.textContent = t; formErr(m); };
+    call(act.fn, act.args('direct'), function (d) {
+      if (!d.ok) return fail(d.message);
+      S.home = null; closeModal();
+      toast((act.ok || 'נשמר') + (d.warnings.length ? ' · ' + d.warnings[0] : ''), { undo: 1 });
+      reload();
+    }, fail);
+  }
+
+  /**
    * טופס גנרי. fields = [{ k, label, type: text|number|date|select|check|file|textarea, options, value, hint, placeholder, g }]
    * g = כותרת קבוצה: שדות רצופים עם אותו g באותה קבוצה. grid = הקבוצה ב-2×2 בדסקטופ (4 שדות מספריים). gfoot = הערה מתחת לקבוצה.
    * onSubmit(values, files) — files = { k: File }.
@@ -1184,7 +1204,7 @@
     opts = opts || {};
     S.formBack = null; S.modalSeq = (S.modalSeq || 0) + 1;
     openModal(sheetHtml(title, (typeof extra === 'function' ? extra() : extra || '') + formHtml(fields) + '<div id="form-msg"></div>',
-      (typeof opts.foot === 'function' ? opts.foot() : opts.foot || '') + '<button class="btn btn-fill full t-head" id="b-next">המשך</button>' + (opts.after || '')));
+      (typeof opts.foot === 'function' ? opts.foot() : opts.foot || '') + '<button class="btn btn-fill full t-head" id="b-next">' + (opts.next || 'המשך') + '</button>' + (opts.after || '')));
     if (opts.onOpen) opts.onOpen(fields);
     $('b-next').onclick = function () {
       var fv = formValues(fields);
@@ -1233,7 +1253,7 @@
     S.view = view; S.arg = arg;
     // שותפים: בדסקטופ פריט משלו בסרגל הצד; בטלפון מגיעים מהבית → "בית" מסומן
     var wide = WIDE_MQ && WIDE_MQ.matches, lb = S.ledgerBack === 'partners' ? (wide ? 'partners' : 'home') : 'settings';
-    var tab = { client: 'clients', editor: 'editors', expenses: 'settings', partners: wide ? 'partners' : 'home', ledger: lb, untagged: lb }[view] || view;
+    var tab = { client: 'clients', editor: 'editors', partners: wide ? 'partners' : 'home', ledger: lb, untagged: lb }[view] || view;
     Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) {
       var on = b.getAttribute('data-v') === tab && !b.classList.contains('sb-prof');
       b.classList.toggle('on', on);
@@ -1819,9 +1839,9 @@
           var f = { 'תאריך': v['תאריך'], 'לקוח': v['לקוח'], 'קטגוריה': v['קטגוריה'], 'סכום': v['סכום'], 'אסמכתא': url, 'הערות': v['הערות'] };
           if (v['פרויקט']) f['פרויקט'] = v['פרויקט'];
           if (v.who) f['שולם על ידי'] = v.who;
-          runAct({ title: 'הוצאה חדשה', fn: 'actionAddExpense', args: function (cf) { return [getToken(), f, cf]; } });
+          saveNow({ fn: 'actionAddExpense', args: function (cf) { return [getToken(), f, cf]; } });
         });
-      }, '', { onOpen: function (fs) { if (proj) projSync(fs[1], fs[2]); } });
+      }, '', { next: 'שמירה', onOpen: function (fs) { if (proj) projSync(fs[1], fs[2]); } });
     });
   }
   /** רשימת הפרויקטים לטופס (מדף ההוצאות). טוענים פעם אחת אם עוד אין. */
@@ -1927,12 +1947,12 @@
         var ch = {};
         keys.forEach(function (k) { if (String(v[k]) !== String(orig[k] === null || orig[k] === undefined ? '' : orig[k])) ch[k] = v[k]; });
         if (!Object.keys(ch).length) return formErr('לא שונה כלום');
-        runAct({ title: 'עדכון הוצאה', fn: 'actionUpdateExpense', args: function (cf) { return [getToken(), id, ch, cf]; } });
+        saveNow({ fn: 'actionUpdateExpense', args: function (cf) { return [getToken(), id, ch, cf]; } });
       }, sub ? '<p class="note t-foot">הוצאה של מנוי: אפשר לשנות סכום, קטגוריה, הערות ו"שולם על ידי"</p>' : '', {
-        after: '<button class="btn-plain danger full t-body" id="b-del">מחיקה</button>',
+        next: 'שמירה', after: '<button class="btn-plain danger full t-body" id="b-del">מחיקה</button>',
         onOpen: function (fs) {
           if (!sub && keys.indexOf('פרויקט') !== -1) projSync(fs[1], fs[2]);
-          $('b-del').onclick = function () { runAct({ title: 'מחיקת הוצאה', fn: 'actionDeleteExpense', args: function (cf) { return [getToken(), id, cf]; } }); };
+          $('b-del').onclick = function () { saveNow({ ok: 'ההוצאה נמחקה', fn: 'actionDeleteExpense', args: function (cf) { return [getToken(), id, cf]; } }, 'b-del'); };
         } });
     });
   }
@@ -1947,27 +1967,35 @@
       { k: 'תאריך התחלה', label: 'תאריך התחלה', type: 'date', value: today() },
       { k: 'backfill', label: 'לרשום גם חודשים קודמים', type: 'check', value: true, hint: 'כשההתחלה בעבר' },
       { k: 'הערות', label: 'הערות', type: 'text', value: '' }
-    ], function (v) { runAct({ title: 'מנוי חדש', fn: 'actionAddSubscription', args: function (cf) { return [getToken(), v, cf]; } }); });
+    ].concat(whoField('שולם על ידי')), function (v) {
+      if (v.who) v['שולם על ידי'] = v.who;
+      delete v.who;
+      saveNow({ fn: 'actionAddSubscription', args: function (cf) { return [getToken(), v, cf]; } });
+    }, '', { next: 'שמירה' });
   }
   /** עריכת מנוי + "סיום מנוי" (תאריך סיום = היום, אחרי אישור). אין מחיקה. */
   function subEdit(id) {
     var s = (S.xpPage.subscriptions || []).filter(function (x) { return x.id === id; })[0]; if (!s) return;
     var L = S.lists, cats = L.expenseCategories.indexOf(s.category) === -1 ? L.expenseCategories.concat([s.category]) : L.expenseCategories;
-    var orig = { 'שם': s.name, 'קטגוריה': s.category, 'סכום חודשי': s.amount === null ? '' : s.amount, 'יום חיוב': s.day === null ? '' : s.day, 'תאריך התחלה': s.start || '', 'תאריך סיום': s.end || '', 'הערות': s.notes };
+    var orig = { 'שם': s.name, 'קטגוריה': s.category, 'סכום חודשי': s.amount === null ? '' : s.amount, 'יום חיוב': s.day === null ? '' : s.day, 'תאריך התחלה': s.start || '', 'תאריך סיום': s.end || '', 'הערות': s.notes,
+      'שולם על ידי': s.paidBy || '' };
+    // "שולם על ידי": ריק נשאר ריק עד שבוחרים. שינוי חל על חיובים הבאים בלבד
+    var who = whoField('שולם על ידי', orig['שולם על ידי'])[0];
+    if (who) who.k = 'שולם על ידי';
     var fields = [
       { k: 'שם', label: 'שם', type: 'text' }, { k: 'קטגוריה', label: 'קטגוריה', type: 'select', options: cats },
       { k: 'סכום חודשי', label: 'סכום חודשי (₪)', type: 'number' }, { k: 'יום חיוב', label: 'יום חיוב בחודש (1–28)', type: 'number' },
-      { k: 'תאריך התחלה', label: 'תאריך התחלה', type: 'date' }].concat(s.end ? [{ k: 'תאריך סיום', label: 'תאריך סיום', type: 'date' }] : [], [{ k: 'הערות', label: 'הערות', type: 'text' }])
+      { k: 'תאריך התחלה', label: 'תאריך התחלה', type: 'date' }].concat(s.end ? [{ k: 'תאריך סיום', label: 'תאריך סיום', type: 'date' }] : [], [{ k: 'הערות', label: 'הערות', type: 'text' }], who ? [who] : [])
       .map(function (f) { return Object.assign({ value: orig[f.k] }, f); });
     openForm('מנוי · ' + s.name, fields, function (v) {
       var ch = {};
       fields.forEach(function (f) { if (String(v[f.k]) !== String(orig[f.k])) ch[f.k] = v[f.k]; });
       if (!Object.keys(ch).length) return formErr('לא שונה כלום');
-      runAct({ title: 'עדכון מנוי', fn: 'actionUpdateSubscription', args: function (cf) { return [getToken(), id, ch, cf]; } });
-    }, '', { after: s.end ? '' : '<button class="btn-plain danger full t-body" id="b-end">סיום מנוי</button>',
+      saveNow({ fn: 'actionUpdateSubscription', args: function (cf) { return [getToken(), id, ch, cf]; } });
+    }, '', { next: 'שמירה', after: s.end ? '' : '<button class="btn-plain danger full t-body" id="b-end">סיום מנוי</button>',
       onOpen: function () {
         if ($('b-end')) $('b-end').onclick = function () {
-          runAct({ title: 'סיום מנוי · ' + s.name, fn: 'actionUpdateSubscription', args: function (cf) { return [getToken(), id, { 'תאריך סיום': today() }, cf]; } });
+          saveNow({ ok: 'המנוי הסתיים', fn: 'actionUpdateSubscription', args: function (cf) { return [getToken(), id, { 'תאריך סיום': today() }, cf]; } }, 'b-end');
         };
       } });
   }
