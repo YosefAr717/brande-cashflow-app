@@ -153,7 +153,8 @@
     /* "מתעדכן…": בשורה של הכפתורים, בין שניהם; נגלל עם הדף */
     #sync { position: absolute; z-index: 1; top: calc(16px + env(safe-area-inset-top)); inset-inline: 72px; height: 48px; display: flex; align-items: center; justify-content: center;
       white-space: nowrap; overflow: hidden; pointer-events: none; }
-    main { padding: calc(72px + env(safe-area-inset-top)) 16px calc(64px + 12px + 16px + env(safe-area-inset-bottom)); }
+    /* התוכן מתחיל 16 מתחת לכפתור הצף (16 + 44 + 16), בטלפון ובדסקטופ */
+    main { padding: calc(16px + 44px + 16px + env(safe-area-inset-top)) 16px calc(64px + 12px + 16px + env(safe-area-inset-bottom)); }
     .ltitle { padding: 8px 0 8px; }
     body:has(#nav.hidden) main { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
 
@@ -212,7 +213,7 @@
       nav#nav .sb-prof { height: auto; min-height: 44px; }
       .sb-prof .tl { overflow: hidden; text-overflow: ellipsis; color: var(--label2); }
       .dot { top: 4px; inset-inline-start: 26px; }
-      main { max-width: 760px; width: 100%; margin-inline: auto; padding: calc(72px + env(safe-area-inset-top)) 24px 48px; }
+      main { max-width: 760px; width: 100%; margin-inline: auto; padding: calc(16px + 44px + 16px + env(safe-area-inset-top)) 24px 48px; }
     }
 
     /* ===== קבוצות (inset grouped) ===== */
@@ -346,8 +347,11 @@
     .tr .ck { flex: none; width: 52px; min-height: 44px; display: inline-flex; align-items: center; justify-content: flex-start; border: 0; background: none; padding: 0; padding-inline-start: 16px; cursor: pointer; }
     .tr .tx { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 16px 0 12px; border: 0; background: none; color: var(--label); text-align: start; cursor: pointer; }
     .tr .tx .main { flex: 1; min-width: 0; }
-    .tr .tx .chev { transform: rotate(-90deg); transition: transform 200ms cubic-bezier(.2,.8,.2,1); }
-    .tr .tx[aria-expanded="true"] .chev { transform: rotate(90deg); }
+    .tr .tx .chev, .tr2 .chev { transform: rotate(-90deg); transition: transform 200ms cubic-bezier(.2,.8,.2,1); }
+    .tr .tx[aria-expanded="true"] .chev, .tr2[aria-expanded="true"] .chev { transform: rotate(90deg); }
+    .row.tr2 { min-height: 44px; padding-block: 0; cursor: pointer; flex-wrap: nowrap; }
+    .tsub.v > .row { padding-inline-start: 32px; min-height: 44px; padding-block: 0; }
+    .tsub.v::before, .tsub.v .row + .row::before { inset-inline-start: 32px; }
     .ck[aria-checked="true"] .ckc, .ck[aria-checked="mixed"] .ckc { background: var(--tint); border-color: var(--tint); }
     .ck[aria-checked="false"] .ckc svg, .ck[aria-checked="mixed"] .ckc svg { display: none; }
     .ck[aria-checked="mixed"] .ckc::after { content: ''; width: 10px; height: 2px; border-radius: 1px; background: var(--white); }   /* חלק מסומן */
@@ -1834,7 +1838,7 @@
         hero('מגיע עכשיו', money(total), nOf(items.length, 'פריט פתוח', 'פריטים פתוחים')) +
         missMsg(miss, 'בלי עלות') +
         '<div class="actions"><button class="btn btn-fill full t-head" id="b-pay"' + (items.length ? '' : ' disabled') + '>שילמתי לעורך</button></div>' +
-        sect('פתוח (' + items.length + ')', items.map(itemRow).join(''), items.length > 0) +
+        openList(items) +
         (D ? (ed ? pieGrp('עבד ב' + mn, pieBlock(ed.pie, D.colors, 'מה ' + e.name + ' עשה ב' + mn), 'לפי עלות עורך, כולל מה שכבר שולם') :
           grp('עבד ב' + mn, '<div class="empty t-sub">לא עבד ב' + mn + '</div>')) : '') +
         sect('היסטוריית תשלומים', e.payments.map(function (p) {
@@ -1845,11 +1849,29 @@
       $('b-pay').onclick = function () { paySheet(e, items); };
     }, function (m) { setMain('<div class="msg e">' + esc(m) + '</div>'); });
   }
-  /** שורת פריט פתוח של עורך. בלי עלות → ⚠ ו-"—". */
-  function itemRow(i) {
-    return '<div class="row"><div class="main"><div class="t-body">' + i.name + '</div>' + (i.sub ? '<div class="t-foot sec">' + i.sub + '</div>' : '') + '</div>' +
-      (i.amount === null ? wg(1, 'בלי עלות') + '<span class="t-body sec">—</span>' : '<span class="t-body num">' + money(i.amount) + '</span>') + '</div>';
+  /**
+   * פריטים פתוחים של עורך (תצוגה בלבד, כמו ב"שילמתי"): קבוצה לכל לקוח (סכום יורד) → שורה לכל סוג אורך (מכווצת; לחיצה = הסרטונים) →
+   * "N בלי עלות ⚠" → פרויקטים בקבוצה בסוף. items = [{ kind: v|p, client, type, num, date, amount, pname }].
+   */
+  function openList(items) {
+    if (!items.length) return grp('פתוח', emptyRow('אין פריטים פתוחים'));
+    var groups = payGroups(items), projs = items.filter(function (i) { return i.kind === 'p'; });
+    var amt$ = function (n) { return n === null ? wg(1, 'בלי עלות') + '<span class="t-body sec">—</span>' : '<span class="t-body num">' + money(n) + '</span>'; };
+    return groups.map(function (g, gi) {
+      return grp('<bdi>' + esc(g.client) + '</bdi> · <span class="num">' + money(g.sum) + '</span> · ' + nOf(g.n, 'סרטון', 'סרטונים'), g.types.map(function (t, ti) {
+        var id = 'ov-' + gi + '-' + ti;
+        return '<button type="button" class="row tr2" aria-expanded="false" aria-controls="' + id + '" onclick="disc(this)"><span class="main t-body">' + esc(t.type) + ' — ' + nOf(t.items.length, 'סרטון', 'סרטונים') + '</span>' +
+          '<span class="t-body num">' + money(t.sum) + '</span>' + CHEV + '</button>' +
+          '<div class="tsub v hidden" id="' + id + '">' + t.items.map(function (i) {
+            return '<div class="row"><span class="main t-body"><span class="num">#' + esc(i.num) + '</span>' + (i.date ? ' · ' + esc(i.date) : '') + '</span>' + amt$(i.amount) + '</div>';
+          }).join('') + '</div>';
+      }).join('') + (g.miss ? '<div class="row"><span class="main t-body sec">' + g.miss + ' בלי עלות' + wg(g.miss, 'בלי עלות') + '</span><span class="t-body sec">—</span></div>' : ''));
+    }).join('') + (projs.length ? grp('פרויקטים', projs.map(function (i) {
+      return '<div class="row"><span class="main t-body"><bdi>' + esc(i.client) + '</bdi> · ' + esc(i.pname) + '</span>' + amt$(i.amount) + '</div>';
+    }).join('')) : '');
   }
+  /** כפתור שפותח/סוגר את האלמנט ב-aria-controls. */
+  function disc(b) { var on = b.getAttribute('aria-expanded') !== 'true'; b.setAttribute('aria-expanded', on ? 'true' : 'false'); $(b.getAttribute('aria-controls')).classList.toggle('hidden', !on); }
   /**
    * גיליון "שילמתי לעורך": קבוצה לכל לקוח (סכום יורד) → שורה לכל סוג אורך עם סימון אחד (נפתחת לסרטונים הבודדים) → פרויקטים בסוף.
    * פריט בלי עלות לא ניתן לסימון. הכול מסומן כברירת מחדל. אחר כך בונוס (הצעות + שדה חופשי) → תאריך / סכום / חשבונית.
@@ -2127,24 +2149,17 @@
    * היסטוריית תשלומים · מראה · התנתקות. רק מה שהשרת החזיר ל-getMyPage.
    */
   function renderMy(p) {
-    var byClient = {};
-    p.videos.forEach(function (v) { (byClient[v.client] = byClient[v.client] || []).push({ t: '#' + esc(v.num), sub: esc(v.type || ''), amount: v.amount }); });
-    p.projects.forEach(function (x) { (byClient[x.client] = byClient[x.client] || []).push({ t: 'פרויקט: ' + esc(x.name), sub: '', amount: x.amount }); });
+    var items = p.videos.map(function (v) { return { kind: 'v', client: v.client, type: v.type || 'בלי סוג', num: v.num, date: '', amount: v.amount }; })
+      .concat(p.projects.map(function (x) { return { kind: 'p', client: x.client, pname: x.name, amount: x.amount }; }));
     var E = p.earnings, X = E.periods[S.period], colors = {};
     // צבע קבוע ללקוח בכל התקופות: לפי הסדר הא״ב של כל הלקוחות שלו
     var keys = {}; Object.keys(E.periods).forEach(function (k) { E.periods[k].slices.forEach(function (x) { keys[x.key] = 1; }); });
     Object.keys(keys).sort().forEach(function (k, i) { colors[k] = i; });
-    var n = p.videos.length + p.projects.length;
     S.screen = { t: 'שלום ' + p.name, large: 1 };
     setMain(
       hero('מגיע לך עכשיו', money(p.due.amount), nOf(p.due.count, 'פריט', 'פריטים') + ' מאז התשלום האחרון') +
       (p.due.missing ? '<div class="msg w t-sub">' + nOf(p.due.missing, 'פריט', 'פריטים') + ' עוד בלי מחיר. הסכום יתעדכן כשיוסף ישלים.</div>' : '') +
-      sect((p.projects.length ? 'סרטונים ופרויקטים שלא שולמו' : 'סרטונים שלא שולמו') + ' (' + n + ')', Object.keys(byClient).sort().map(function (c) {
-        return '<div class="subh t-foot">' + esc(c) + '</div>' + byClient[c].map(function (v) {
-          return '<div class="row"><div class="main"><div class="t-body">' + v.t + '</div>' + (v.sub ? '<div class="t-foot sec">' + v.sub + '</div>' : '') + '</div>' +
-            (v.amount === null ? '<span class="t-sub sec">בלי מחיר</span>' : '<span class="t-body num">' + money(v.amount) + '</span>') + '</div>';
-        }).join('');
-      }).join(''), true) +
+      openList(items) +
       pieGrp('הכסף שלי לפי לקוח · ' + esc(periodShort(E.labels)),
         periodSeg(E.labels, function () { renderMy(p); }) + '<div class="pie-gap"></div>' +
         pieBlock({ slices: X.slices, deductions: [], total: X.amount }, colors, 'הכסף שלי לפי לקוח, ' + periodName(E.labels)) +
