@@ -195,8 +195,8 @@
       body:has(#nav:not(.hidden)) main { grid-column: 2; grid-row: 1; }
       /* כפתורים צפים בתוך עמודת התוכן (760, באמצע השטח שליד הסרגל הצדי) */
       /* כפתורים צפים בתוך עמודת התוכן (760, באמצע השטח שליד הפאנל: 240 + 16 מכל צד) */
-      body:has(#nav:not(.hidden)) #fab-end { inset-inline-end: max(24px, calc((100vw - 1032px) / 2 + 24px)); }
-      body:has(#nav:not(.hidden)) #fab-back { inset-inline-start: calc(272px + max(24px, calc((100vw - 1032px) / 2 + 24px))); }
+      body:has(#nav:not(.hidden)) #fab-end { inset-inline-end: max(24px, calc((100vw - 272px - var(--mw, 760px)) / 2 + 24px)); }
+      body:has(#nav:not(.hidden)) #fab-back { inset-inline-start: calc(272px + max(24px, calc((100vw - 272px - var(--mw, 760px)) / 2 + 24px))); }
       body:has(#nav:not(.hidden)) #sync { inset-inline-start: calc(272px + 72px); }
       body:has(#nav:not(.hidden)) #edge { inset-inline-start: 272px; }
       /* סרגל צד = פאנל זכוכית צף (אותה שפה כמו בטלפון), עם טקסט */
@@ -213,7 +213,8 @@
       nav#nav .sb-prof { height: auto; min-height: 44px; }
       .sb-prof .tl { overflow: hidden; text-overflow: ellipsis; color: var(--label2); }
       .dot { top: 4px; inset-inline-start: 26px; }
-      main { max-width: 760px; width: 100%; margin-inline: auto; padding: calc(16px + 44px + 16px + env(safe-area-inset-top)) 24px 48px; }
+      main { max-width: var(--mw, 760px); width: 100%; margin-inline: auto; padding: calc(16px + 44px + 16px + env(safe-area-inset-top)) 24px 48px; }
+      body.wide { --mw: 1120px; }   /* התחשבנות: רשת קוביות (lg-*) */
     }
 
     /* ===== קבוצות (inset grouped) ===== */
@@ -231,6 +232,38 @@
     }
     details { position: relative; }
     details.grp + details.grp::before { content: none; }
+    /* ===== התחשבנות: טלפון = כמו שהיה (העטיפות בלי קופסה); דסקטופ ≥1024 = רשת קוביות ===== */
+    .lg-cards, .lg-low { display: contents; }
+    .lg-main { display: block; }
+    @media (max-width: 1023.98px) { .lg-cards > .grp, .lg-low > .grp { margin-top: 32px; } }
+    @media (min-width: 1024px) {
+      .lg-sum .gbody { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; padding: 20px 24px; }
+      .lg-sum .lg-det { text-align: end; }
+      .lg-cards, .lg-low { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 24px; align-items: start; }
+      .banner + .lg-cards, .msg + .lg-cards { margin-top: 24px; }
+      .lg-cards > .grp, .lg-low > .grp { margin-top: 0; min-width: 0; }
+      /* כרטיס שותף: כותרת + קוביות. אותן שורות (.row) כמו בטלפון — רק נראות אחרת */
+      .lg-card { background: var(--bg2); border-radius: 16px; padding: 16px; }
+      .lg-card > .gh { padding: 0 4px 12px; font-size: 1.0625rem; line-height: 1.375rem; font-weight: 600; color: var(--label); }
+      .lg-card > .gbody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; background: none; overflow: visible; border-radius: 0; }
+      .lg-card .row { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 2px; width: auto; min-height: 0; padding: 12px 16px; border-radius: 10px; background: var(--bg); }
+      .lg-card .gbody > .row::before, .ut-bulk .gbody > .row::before, .lg-low #b-transfer::before, #b-historic::before { content: none; }
+      .lg-card .row > .main { display: contents; }
+      .lg-card .row > .main > .t-body { order: 1; color: var(--label2); }
+      .lg-card .row > .num { order: 2; text-align: end; font-size: 1.5rem; line-height: 1.875rem; font-weight: 600; }
+      .lg-card .row > .main > .t-foot { order: 3; }
+      .lg-card .row.lg-bal { grid-column: 1 / -1; padding: 16px; background: var(--tab-on); }
+      .lg-card .row.lg-bal > .num { font-size: 2.125rem; line-height: 2.5625rem; font-weight: 700; }
+      .lg-card .row.lg-bal > .main > .t-body { color: var(--label); font-weight: 600; }
+      /* לפי חודש + העברות: שני כרטיסים; "רישום העברה" ככפתור בתוך הכרטיס */
+      .lg-low #b-transfer, #b-historic { width: auto; justify-content: center; min-height: 44px; margin: 12px 16px 16px; border-radius: 12px; background: none; color: var(--link-text); box-shadow: inset 0 0 0 1px var(--link-text); }
+      /* לא מתויגות: קוביות ברשת, "סמן הכול" ככפתורים בשורה */
+      .ut-bulk > .gbody { display: flex; gap: 12px; background: none; overflow: visible; }
+      .ut-bulk .row { flex: 1 1 0; justify-content: center; min-height: 44px; border-radius: 12px; background: none; color: var(--link-text); box-shadow: inset 0 0 0 1px var(--link-text); width: auto; }
+      .ut-list > .gbody { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; background: none; overflow: visible; }
+      .ut-list .urow { background: var(--bg2); border-radius: 12px; overflow: hidden; }
+      .ut-list .urow .useg { padding-top: 0; }
+    }
     .row + .row::before, .row + details::before, details + .row::before, details + details::before {
       content: ''; position: absolute; top: 0; inset-inline-start: 16px; inset-inline-end: 0; border-top: .5px solid var(--sep);
     }
@@ -768,13 +801,14 @@
   var SCREENS = { home: { t: 'בית', large: 1, hide: 1 }, clients: { t: 'לקוחות', large: 1 }, editors: { t: 'עורכים', large: 1 },
     alerts: { t: 'התראות', large: 1 }, settings: { t: 'הגדרות', large: 1 }, partners: { t: 'שותפים', large: 1, back: 'home' },
     client: { large: 1, back: 'clients' }, editor: { large: 1, back: 'editors' }, expenses: { t: 'הוצאות', large: 1 },
-    ledger: { t: 'התחשבנות', large: 1, back: 'settings' }, untagged: { t: 'לא מתויגות', large: 1, back: 'ledger' } };
+    ledger: { t: 'התחשבנות', large: 1, back: 'settings', wide: 1 }, untagged: { t: 'לא מתויגות', large: 1, back: 'ledger', wide: 1 } };
   /** אייקון מה-sprite (Lucide). */
   function ic(id, cls) { return '<svg class="i' + (cls ? ' ' + cls : '') + '" aria-hidden="true" focusable="false"><use href="#i-' + id + '"/></svg>'; }
   var CHEV = ic('chevron-left', 'chev');
   function setMain(html) {
     var sc = S.screen || {}, back = $('fab-back'), end = $('fab-end'), a = sc.action;
     closeMenu();
+    document.body.classList.toggle('wide', !!sc.wide);   // דסקטופ: עמודת תוכן רחבה (רשת קוביות)
     back.classList.toggle('hidden', !sc.back);
     if (sc.back) { back.setAttribute('aria-label', 'חזרה ל' + SCREENS[sc.back].t); back.title = back.getAttribute('aria-label'); back.onclick = function () { go(sc.back); }; }
     end.classList.toggle('hidden', !a);
@@ -1251,6 +1285,8 @@
       openMenu(b, [{ t: 'הוצאה חדשה', icon: 'doc', fn: function () { expenseForm(''); } }, { t: 'מנוי חדש', icon: 'refresh', fn: subForm }]); } }
   };
   var WIDE_MQ = window.matchMedia ? matchMedia('(min-width: 1024px)') : null;
+  // התחשבנות: "לפי חודש" פתוח (כרטיס) בדסקטופ ומקופל בטלפון — מציירים מחדש כשחוצים את הגבול
+  if (WIDE_MQ && WIDE_MQ.addEventListener) WIDE_MQ.addEventListener('change', function () { if (S.view === 'ledger' && S.ledger) renderLedger(S.ledger); });
   function go(view, arg) {
     // התחשבנות: "חזרה" למסך שממנו הגיעו
     if (view === 'ledger' && (S.view === 'settings' || S.view === 'partners')) S.ledgerBack = S.view;
@@ -2444,16 +2480,16 @@
   /** התחשבנות: מי מעביר למי · כרטיס לכל מנהל · לפי חודש · העברות · קבלות היסטוריות. הכול מהשרת. */
   function ledgerView() { ledgerLoad(renderLedger); }
   function renderLedger(L) {
-    var n = L.untagged.length, last = L.historicTo;
-    var row = function (k, v, sub, cls) {
-      return '<div class="row"><div class="main"><div class="t-body">' + k + '</div>' + (sub ? '<div class="t-foot sec">' + sub + '</div>' : '') + '</div><span class="' + (cls || 't-body') + ' num">' + v + '</span></div>';
+    var n = L.untagged.length, last = L.historicTo, wide = !!(WIDE_MQ && WIDE_MQ.matches);
+    var row = function (k, v, sub, cls, rcls) {
+      return '<div class="row' + (rcls ? ' ' + rcls : '') + '"><div class="main"><div class="t-body">' + k + '</div>' + (sub ? '<div class="t-foot sec">' + sub + '</div>' : '') + '</div><span class="' + (cls || 't-body') + ' num">' + v + '</span></div>';
     };
     var card = function (p) {
       var bal = p.balance === null ? '' : p.balance > 0 ? 'מחזיק יותר ממה שמגיע לו' : p.balance < 0 ? 'מגיע לו עוד' : 'מאוזן';
       return grp(esc(p.name) + (p.pct === null ? '' : ' · ' + p.pct + '%'),
         row('קיבל', money(p.received), 'מלקוחות') + row('שילם', money(p.paid), 'הוצאות ותשלומים לעורכים') +
         row('העברות', smoney(Math.round((p.transfersIn - p.transfersOut) * 100) / 100), 'קיבל ' + money(p.transfersIn) + ' · העביר ' + money(p.transfersOut)) +
-        row('מגיע לו', smoney(p.entitlement), p.pct === null ? '' : p.pct + '% מהנטו') + row('יתרה', smoney(p.balance), bal, 't-head'), '', 'lg-card');
+        row('מגיע לו', smoney(p.entitlement), p.pct === null ? '' : p.pct + '% מהנטו') + row('יתרה', smoney(p.balance), bal, 't-head', 'lg-bal'), '', 'lg-card');
     };
     var tr = L.transfers.map(function (t) {
       return row(esc(adminName(t.from)) + ' ← ' + esc(adminName(t.to)), money(t.amount), date(t.date) + (t.notes ? ' · ' + esc(t.notes) : ''));
@@ -2462,14 +2498,18 @@
       return row(esc(x.client), money(x.amount), date(x.date) + (x.who ? ' · התקבל אצל ' + esc(adminName(x.who)) : '') + (x.notes ? ' · ' + esc(x.notes) : ''));
     }).join('');
     setMain(
-      hero('התחשבנות · מ-' + date(L.since), L.error || !L.ready ? '—' : L.settlement ? money(L.settlement.amount) : 'מאוזן',
-        L.error ? '' : 'קיבלו ' + money(L.total.received) + ' · שילמו ' + money(L.total.paid) + ' · נטו ' + smoney(L.total.net)).replace('<span class="blk">', L.settlement ? '<span class="t-title3 blk" id="lg-who">' + esc(settleWho(L)) + '</span><span class="blk">' : '<span class="blk">') +
+      // כרטיס סיכום: תווית · מי מעביר · סכום (lg-main) ושורת פירוט (lg-det). בדסקטופ: זה לצד זה
+      '<section class="grp hero lg-sum"><div class="gbody pad"><span class="lg-main"><span class="t-foot sec blk">התחשבנות · מ-' + date(L.since) + '</span>' +
+        (L.settlement ? '<span class="t-title3 blk" id="lg-who">' + esc(settleWho(L)) + '</span>' : '') +
+        '<span class="blk"><span class="t-large num">' + (L.error || !L.ready ? '—' : L.settlement ? money(L.settlement.amount) : 'מאוזן') + '</span></span></span>' +
+        (L.error ? '' : '<span class="t-foot sec blk lg-det">קיבלו ' + money(L.total.received) + ' · שילמו ' + money(L.total.paid) + ' · נטו ' + smoney(L.total.net) + '</span>') + '</div></section>' +
       (L.ready ? '' : '<div class="msg w t-sub">תיוג, קבלות היסטוריות והעברות — אחרי הרצת setupSchema.</div>') +
       (L.error ? '<div class="msg w t-sub">' + esc(L.error) + '</div>' : '') +
       (n ? '<button class="msg w banner t-sub" id="b-untagged" onclick="go(\'untagged\')"><span class="main">' + nOf(n, 'תנועה לא מתויגת', 'תנועות לא מתויגות') + ' — היתרה חלקית</span>' + CHEV + '</button>' : '') +
-      L.partners.map(card).join('') +
-      sect('לפי חודש', L.monthly.map(function (m) { return row(monthName(m.month, true), smoney(m.net), 'נכנס ' + money(m.received) + ' · יצא ' + money(m.paid)); }).join('')) +
-      grp('העברות', (tr || emptyRow('אין העברות')) + (L.ready && L.partners.length === 2 ? '<button class="row t-body lnk" id="b-transfer">רישום העברה</button>' : '')) +
+      '<div class="lg-cards">' + L.partners.map(card).join('') + '</div>' +
+      '<div class="lg-low">' + (function (rows) { return wide ? grp('לפי חודש', rows || emptyRow()) : sect('לפי חודש', rows); })(L.monthly.map(function (m) {
+        return row(monthName(m.month, true), smoney(m.net), 'נכנס ' + money(m.received) + ' · יצא ' + money(m.paid)); }).join('')) +
+      grp('העברות', (tr || emptyRow('אין העברות')) + (L.ready && L.partners.length === 2 ? '<button class="row t-body lnk" id="b-transfer">רישום העברה</button>' : '')) + '</div>' +
       grp('קבלות היסטוריות', (hr || emptyRow('אין קבלות היסטוריות')) + (L.ready ? '<button class="row t-body lnk" id="b-historic">הוספת קבלה היסטורית</button>' : ''),
         'קבלות מ-' + date(L.since) + ' עד ' + date(last) + ' (לפני ההשקה). לא משנות חוב לקוח ולא כותבות קו חלוקה.') +
       (L.warnings.length ? sect('אזהרות (' + L.warnings.length + ')', L.warnings.map(function (w) { return '<div class="row"><span class="main t-sub">' + esc(w) + '</span></div>'; }).join('')) : '')
@@ -2518,7 +2558,7 @@
     };
     setMain(
       '<p class="t-sub sec lsub">' + nOf(L.untagged.length, 'תנועה', 'תנועות') + ' בלי "מי" — לא נספרות עד שמתייגים.</p>' +
-      '<div id="ut">' + grp('', A.map(function (a) { return '<button class="row t-body lnk" data-all="' + esc(a.email) + '">סמן הכול כ' + esc(a.name) + '</button>'; }).join('')) +
+      '<div id="ut">' + grp('', A.map(function (a) { return '<button class="row t-body lnk" data-all="' + esc(a.email) + '">סמן הכול כ' + esc(a.name) + '</button>'; }).join(''), '', 'ut-bulk') +
       grp('', L.untagged.map(item).join(''), '', 'ut-list') + '</div>'
     );
     $('ut').onclick = function (e) {
