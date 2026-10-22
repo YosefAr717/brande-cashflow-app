@@ -245,6 +245,7 @@
       /* כרטיס שותף: כותרת + קוביות. אותן שורות (.row) כמו בטלפון — רק נראות אחרת */
       .lg-card { background: var(--bg2); border-radius: 16px; padding: 16px; }
       .lg-card > .gh { padding: 0 4px 12px; font-size: 1.0625rem; line-height: 1.375rem; font-weight: 600; color: var(--label); }
+      .lg-card > .gf { padding: 12px 4px 0; }
       .lg-card > .gbody { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; background: none; overflow: visible; border-radius: 0; }
       .lg-card .row { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 2px; width: auto; min-height: 0; padding: 12px 16px; border-radius: 10px; background: var(--bg); }
       .lg-card .gbody > .row::before, .ut-bulk .gbody > .row::before, .lg-low #b-transfer::before, #b-historic::before { content: none; }
@@ -1386,8 +1387,8 @@
         '<button class="row" id="b-profit" aria-labelledby="hero-l hero-v" onclick="go(\'partners\')"><span class="main" id="hero-v"><span class="blk"><span class="t-large num">' + money(rev ? B.revenue : B.total) + '</span></span></span>' + CHEV + '</button>' +
         '<div class="hero-sub t-foot sec">' + sub + '</div>' +
         '<div class="pad hero-seg">' + periodPicker(D.labels) + '</div></div></section>' +
-      '<div class="tiles">' + tile('לגבייה מלקוחות', money(h.debtTotal.amount), '', 'clients') + tile('לתשלום לעורכים', money(h.dueTotal.amount), '', 'editors') + '</div>' +
-      missingBanner(h, B) +
+      '<div class="tiles">' + tile('לגבייה מלקוחות', money(h.debtTotal.amount), xpTile(h.expected), 'clients') + tile('לתשלום לעורכים', money(h.dueTotal.amount), '', 'editors') + '</div>' +
+      missingBanner(h, B) + xpList(h.expected) +
       // טלפון/בינוני: עוגה · מגיע לעורכים · הכסף שלי. דסקטופ: שתי העוגות זו לצד זו, מגיע לעורכים מתחת ברוחב מלא (.hgrid)
       '<div class="hgrid">' +
       (rev ? pieGrp('הכנסה לפי לקוח · ' + short, pieBlock(P.revenue, D.colors, 'הכנסה לפי לקוח',
@@ -1400,6 +1401,24 @@
     markPaint();
   }
   var MONTH_RE = /^\d{4}-\d{2}$/, HM_KEY = 'brande_home_mode';
+  // ---------- גבייה צפויה: מידע בלבד (לא הכנסה / תקבול / התחשבנות). הכול מהשרת ----------
+  function xpDays(n) { return n === null || n === undefined ? '' : n === 0 ? 'היום' : nOf(n, 'יום', 'ימים'); }
+  /** בתוך אריח "לגבייה מלקוחות": צפוי להיכנס (+ ימים מהבקשה הוותיקה) ועוד לא ביקשתי. */
+  function xpTile(E) {
+    if (!E || !E.ready) return '';
+    return '<div class="t-foot sec xp-l">צפוי להיכנס <span class="num">' + money(E.requested) + '</span></div>' +
+      (E.requested > 0 && E.days !== null ? '<div class="t-foot sec xp-l">מהבקשה הוותיקה ' + xpDays(E.days) + '</div>' : '') +
+      '<div class="t-foot sec xp-l">עוד לא ביקשתי <span class="num">' + money(E.notRequested) + '</span></div>';
+  }
+  /** רשימה לפי לקוח (סכום יורד). בקשה בלי חוב → "אין חוב — לבטל". */
+  function xpList(E) {
+    if (!E || !E.ready || !E.items.length) return '';
+    return grp('צפוי להיכנס', E.items.map(function (x) {
+      var sub = [x.date ? 'מ-' + date(x.date) : '', xpDays(x.days), x.receivedByName ? 'אצל ' + esc(x.receivedByName) : ''].filter(Boolean).join(' · ');
+      return '<button class="row" onclick="go(\'client\',' + esc(JSON.stringify(x.client)) + ')"><span class="main"><span class="t-body blk">' + esc(x.client) + '</span>' +
+        '<span class="t-foot sec blk">' + (x.requested > 0 ? sub : 'אין חוב פתוח — לבטל את הבקשה') + '</span></span>' + amt(x.requested, 0) + CHEV + '</button>';
+    }).join(''), 'מידע בלבד — לא נספר כהכנסה / תקבול / התחשבנות.', 'xp-list');
+  }
   /** "רווח" (ברירת מחדל) / "הכנסה". נשמר במכשיר (לא סוד). */
   function homeMode() { return lsGet(HM_KEY) === 'revenue' ? 'revenue' : 'profit'; }
   function setHomeMode(m) { lsSet(HM_KEY, m); reHome(); }
@@ -1546,7 +1565,11 @@
       setMain(
         hero('חוב פתוח', money(d.total), sub.join(' · ') || 'אין פריטים פתוחים', c.status && c.status !== 'פעיל' ? '<span class="tag hero-tag">' + esc(c.status) + '</span>' : '') +
         missMsg(d.missing) +
-        '<div class="actions"><button class="btn btn-fill full t-head" id="b-paid"' + (openCount ? '' : ' disabled') + '>לקוח שילם</button></div>' +
+        xpClient(c.expected) +
+        '<div class="actions"><button class="btn btn-fill full t-head" id="b-paid"' + (openCount ? '' : ' disabled') + '>לקוח שילם</button>' +
+        '<button class="btn btn-tint t-head" id="b-request"' + (c.expected.ready && d.total > 0 ? '' : ' disabled') + '>סגרתי תשלום</button>' +
+        (c.expected.open ? '<button class="btn btn-tint t-head" id="b-cancel-req">בטל בקשה</button>' : '') + '</div>' +
+        (c.expected.ready ? '' : '<div class="msg w t-sub">"סגרתי תשלום" — צריך להריץ setupSchema (מוסיף את הטאב "גבייה צפויה").</div>') +
         sect('פתוח (' + openCount + ')', o.videos.map(function (v) {
           return '<div class="row"><div class="main"><div class="t-body">#' + esc(v.num) + '</div><div class="t-foot sec">' + esc(v.type || 'בלי סוג') + (v.date ? ' · ' + esc(v.date) : '') + '</div></div>' +
             (v.price === null ? wg(1) + '<span class="t-body sec">—</span>' : '<span class="t-body num">' + money(v.price) + '</span>') + '</div>';
@@ -1558,10 +1581,29 @@
       );
       drawHist();
       $('b-paid').onclick = function () { clientPaidForm(c); };
+      $('b-request').onclick = function () { requestForm(c); };
+      if ($('b-cancel-req')) $('b-cancel-req').onclick = function () {
+        runAct({ title: 'ביטול בקשת תשלום', fn: 'actionCancelPaymentRequest', args: function (cf) { return [getToken(), c.expected.open.id, cf]; } });
+      };
       if (S.afterClient === c.name) { S.afterClient = null; clientSettingsForm(c); }   // מהתראת "מחיר חסר"
     }, function (m) { setMain('<div class="msg e">' + esc(m) + '</div>'); });
   }
   /** פרויקט בדף הלקוח: שם, "סוג · תאריך · שולם/לא שולם", מחיר. לחיצה = עריכה. */
+  /** דף לקוח: צפוי להיכנס (עם תאריך הבקשה / ימים / אצל מי) ועוד לא ביקשתי. */
+  function xpClient(X) {
+    if (!X || !X.ready) return '';
+    var o = X.open, row = function (k, sub, v) { return '<div class="row"><div class="main"><div class="t-body">' + k + '</div>' + (sub ? '<div class="t-foot sec">' + sub + '</div>' : '') + '</div><span class="t-body num">' + money(v) + '</span></div>'; };
+    return grp('', row('צפוי להיכנס', o ? ['מ-' + date(o.date), xpDays(o.days), o.receivedByName ? 'אצל ' + esc(o.receivedByName) : ''].filter(Boolean).join(' · ') : 'אין בקשה פתוחה', X.requested) +
+      row('עוד לא ביקשתי', '', X.notRequested), X.dups ? 'יש עוד ' + X.dups + ' בקשות פתוחות — לבדוק בטאב "גבייה צפויה".' : 'מידע בלבד — לא נספר כהכנסה / תקבול.', 'xp-client');
+  }
+  /** "סגרתי תשלום": הסכום = החוב הפתוח עכשיו (מחושב בשרת). יש בקשה פתוחה → התצוגה המקדימה שואלת אם לעדכן אותה. */
+  function requestForm(c) {
+    var X = c.expected.open, fields = whoField('אמור לקבל', X ? X.receivedBy : undefined);
+    openForm('סגרתי תשלום — ' + c.name, fields, function (v) {
+      runAct({ title: 'סגרתי תשלום', fn: 'actionRequestPayment', args: function (cf) { return [getToken(), { client: c.name, receivedBy: v.who || undefined }, cf]; } });
+    }, '<p class="note t-foot">הסכום = החוב הפתוח עכשיו (' + money(c.debt ? c.debt.total : 0) + '), מחושב בשרת.' +
+      (X ? ' יש בקשה פתוחה על ' + money(X.amount) + ' מ-' + date(X.date) + ' — היא תתעדכן.' : '') + ' מידע בלבד: לא נספר כתקבול.</p>');
+  }
   function projRow(p) {
     return '<button class="row" onclick="editProject(' + esc(JSON.stringify(p.id)) + ')"><span class="main"><span class="t-head blk">' + esc(p.name) + '</span>' +
       '<span class="t-foot sec blk">' + esc(p.type) + ' · ' + date(p.date) + ' · ' + (p.paid ? 'שולם' : 'לא שולם') + (p.expenses ? ' · הוצאות <span class="num">' + money(p.expenses) + '</span>' : '') + '</span></span>' +
@@ -1800,10 +1842,10 @@
     openModal(sheetHtml('לקוח שילם — ' + c.name, '<div class="center t-sub"><span class="spin" aria-hidden="true"></span>קורא את טבלת התוכן…</div>'));
     call('getClientContentInfo', [getToken(), c.name], function (r) {
       if (!r.ok) return openModal(sheetHtml('לקוח שילם', linesHtml([r.message], 'e'), '', 'סגור'));
-      var info = r.info, o = c.open;
+      var info = r.info, o = c.open, X = c.expected && c.expected.open;
       var nums = info.belowNums.slice().reverse();
       var fields = [
-        { k: 'amount', label: 'סכום ששולם (₪)', type: 'number', value: c.debt ? c.debt.total : '' },
+        { k: 'amount', label: 'סכום ששולם (₪)', type: 'number', value: X && X.requested > 0 ? X.requested : c.debt ? c.debt.total : '' },
         { k: 'date', label: 'תאריך', type: 'date', value: today() },
         { k: 'method', label: 'אמצעי', type: 'select', options: S.lists.payMethods, value: S.lists.payMethods[0] },
         { k: 'ref', label: 'אסמכתא (מס׳ / הערה)', type: 'text', value: '' },
@@ -1819,8 +1861,9 @@
       o.retainers.forEach(function (x) { fields.push({ k: 'r:' + x.key, label: 'ריטיינר ' + monthName(x.month, true) + ' · ' + money(x.amount), type: 'check', value: true }); });
       fields.push({ k: 'manualDivider', label: info.allowed ? 'אני אוסיף את הקו ידנית (לא לכתוב בטבלה)' : 'הקו יתווסף ידנית (הטבלה הזו לא ברשימת ההיתר)',
         type: 'check', value: !info.allowed, disabled: !info.allowed });
-      fields = fields.concat(whoField('התקבל אצל'));
+      if (!X) fields = fields.concat(whoField('התקבל אצל'));   // יש בקשה פתוחה → "התקבל אצל" ממנה (השרת), בלי בורר
       var extra = info.lastDivider ? '<p class="note t-foot">קו אחרון בטבלה: "' + esc(info.lastDivider.label) + '" (עמודה ' + esc(info.lastDivider.colLetter) + ')</p>' : '';
+      if (X) extra += '<p class="note t-foot">בקשת תשלום פתוחה על ' + money(X.amount) + (X.receivedByName ? ' — התשלום יירשם אצל ' + esc(X.receivedByName) : '') + ' והבקשה תיסגר.</p>';
       if (!nums.length) extra += '<div class="msg w">אין סרטונים מתחת לקו האחרון בטבלה</div>';
       openForm('לקוח שילם — ' + c.name, fields, function (v) {
         var params = { client: c.name, amount: v.amount, date: v.date, method: v.method, ref: v.ref, upToVideo: v.upToVideo, label: v.label,
@@ -2473,7 +2516,7 @@
     loadHome(function () {
       call('getLedger', [getToken()], function (r) {
         if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>');
-        S.ledger = r.ledger; cb(r.ledger);
+        S.ledger = r.ledger; S.lgExpected = r.expected; cb(r.ledger);
       }, function (m) { setMain('<div class="msg e">' + esc(m) + '</div>'); });
     }, { onRefresh: function () {} });
   }
@@ -2489,7 +2532,9 @@
       return grp(esc(p.name) + (p.pct === null ? '' : ' · ' + p.pct + '%'),
         row('קיבל', money(p.received), 'מלקוחות') + row('שילם', money(p.paid), 'הוצאות ותשלומים לעורכים') +
         row('העברות', smoney(Math.round((p.transfersIn - p.transfersOut) * 100) / 100), 'קיבל ' + money(p.transfersIn) + ' · העביר ' + money(p.transfersOut)) +
-        row('מגיע לו', smoney(p.entitlement), p.pct === null ? '' : p.pct + '% מהנטו') + row('יתרה', smoney(p.balance), bal, 't-head', 'lg-bal'), '', 'lg-card');
+        row('מגיע לו', smoney(p.entitlement), p.pct === null ? '' : p.pct + '% מהנטו') + row('יתרה', smoney(p.balance), bal, 't-head', 'lg-bal'),
+        // צפוי אצלו: מידע בלבד (השרת, מחוץ לחישוב ההתחשבנות)
+        S.lgExpected && S.lgExpected.ready && S.lgExpected.byPartner[p.email] ? 'צפוי אצלו: <span class="num">' + money(S.lgExpected.byPartner[p.email].amount) + '</span> · לא נספר בהתחשבנות' : '', 'lg-card');
     };
     var tr = L.transfers.map(function (t) {
       return row(esc(adminName(t.from)) + ' ← ' + esc(adminName(t.to)), money(t.amount), date(t.date) + (t.notes ? ' · ' + esc(t.notes) : ''));
