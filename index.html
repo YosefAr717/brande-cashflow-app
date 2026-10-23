@@ -391,9 +391,9 @@
     .row.tr2 { min-height: 44px; padding-block: 0; cursor: pointer; flex-wrap: nowrap; }
     .tsub.v > .row { padding-inline-start: 32px; min-height: 44px; padding-block: 0; }
     .tsub.v::before, .tsub.v .row + .row::before { inset-inline-start: 32px; }
-    .ck[aria-checked="true"] .ckc, .ck[aria-checked="mixed"] .ckc { background: var(--tint); border-color: var(--tint); }
-    .ck[aria-checked="false"] .ckc svg, .ck[aria-checked="mixed"] .ckc svg { display: none; }
-    .ck[aria-checked="mixed"] .ckc::after { content: ''; width: 10px; height: 2px; border-radius: 1px; background: var(--white); }   /* חלק מסומן */
+    .ck[aria-checked="true"] .ckc, .ck[aria-checked="mixed"] .ckc, .pk[aria-checked="mixed"] .ckc { background: var(--tint); border-color: var(--tint); }
+    .ck[aria-checked="false"] .ckc svg, .ck[aria-checked="mixed"] .ckc svg, .pk[aria-checked="mixed"] .ckc svg { display: none; }
+    .ck[aria-checked="mixed"] .ckc::after, .pk[aria-checked="mixed"] .ckc::after { content: ''; width: 10px; height: 2px; border-radius: 1px; background: var(--white); }   /* חלק מסומן */
     .tsub .row.pk { padding-inline-start: 52px; min-height: 44px; padding-block: 0; }
     .tsub { position: relative; }
     .tsub::before { content: ''; position: absolute; top: 0; inset-inline: 52px 0; border-top: .5px solid var(--sep); }
@@ -624,6 +624,7 @@
     .i.flip { transform: scaleX(-1); }   /* חץ "יציאה" בכיוון הקריאה (RTL) */
     #b-logout .i { width: 20px; height: 20px; }
     .ia { display: inline-flex; align-items: center; gap: 4px; }
+    a.row { text-decoration: none; }
     .ia .i { width: 16px; height: 16px; }
     #menu .mi { gap: 12px; }
     #menu .mi .i { width: 20px; height: 20px; color: var(--label2); }
@@ -2211,12 +2212,17 @@
         openList(items) +
         (D ? (ed ? pieGrp('עבד ב' + mn, pieBlock(ed.pie, D.colors, 'מה ' + e.name + ' עשה ב' + mn), 'לפי עלות עורך, כולל מה שכבר שולם') :
           grp('עבד ב' + mn, '<div class="empty t-sub">לא עבד ב' + mn + '</div>')) : '') +
-        sect('היסטוריית תשלומים', e.payments.map(function (p) {
-          return '<div class="row"><div class="main"><div class="t-body">' + date(p.date) + ' · ' + nOf(p.count, 'פריט', 'פריטים') + '</div>' + (p.notes ? '<div class="t-foot sec">' + esc(p.notes) + '</div>' : '') +
-            '<div class="t-foot sec">' + (p.invoice ? '<a class="ia" href="' + esc(p.invoice) + '" target="_blank" rel="noopener">' + ic('doc') + 'חשבונית</a>' : '<span class="warn">⚠︎ אין חשבונית</span>') + ' · <span class="ltr">' + esc(p.id) + '</span></div></div>' + paidVal(p.amount, p.bonus) + '</div>';
+        // לחיצה על תשלום → הפריטים שלו + "בטל סימון שולם" (החשבונית — בגיליון)
+        sect('היסטוריית תשלומים', e.payments.map(function (p, i) {
+          var off = (p.items || []).some(function (x) { return x.note; });
+          return '<button type="button" class="row" data-pay="' + i + '"><span class="main"><span class="t-body blk">' + date(p.date) + ' · ' + nOf(p.count, 'פריט', 'פריטים') + '</span>' +
+            (p.notes ? '<span class="t-foot sec blk">' + esc(p.notes) + '</span>' : '') +
+            '<span class="t-foot sec blk">' + (p.invoice ? '<span class="ia">' + ic('doc') + 'חשבונית</span>' : '<span class="warn">⚠︎ אין חשבונית</span>') + ' · <span class="ltr">' + esc(p.id) + '</span>' +
+            (off ? ' · <span class="warn nw">⚠︎ לא מסונכרן</span>' : '') + '</span></span>' + paidVal(p.amount, p.bonus) + CHEV + '</button>';
         }).join(''))
       );
       $('b-pay').onclick = function () { paySheet(e, items); };
+      Array.prototype.forEach.call(document.querySelectorAll('[data-pay]'), function (b) { b.onclick = function () { unmarkSheet(e, e.payments[Number(b.getAttribute('data-pay'))]); }; });
     }, function (m) { setMain('<div class="msg e">' + esc(m) + '</div>'); });
   }
   /**
@@ -2337,6 +2343,53 @@
         $('bn-in').oninput = function () { bonusTxt = $('bn-in').value; sync(); };
         amt.oninput = sync;
         sync();
+      }
+    });
+  }
+  /**
+   * תשלום לעורך: פרטים, חשבונית, והפריטים שלו עם בחירה ("בחר הכול") → "בטל סימון שולם" (actionUnmarkEditorPaid: תצוגה מקדימה ואישור).
+   * הסימון יוצא משני המקומות יחד (רשימת התשלום + השורה). סכום / בונוס / הוצאות לא משתנים. פריט שאי אפשר (can=false) — בלי תיבה.
+   * כלום לא מסומן בהתחלה: ביטול הוא בחירה מפורשת.
+   */
+  function unmarkSheet(e, p) {
+    var sel = {}, items = p.items || [], ok = items.filter(function (x) { return x.can; });
+    var n = function () { return ok.filter(function (x) { return sel[x.key]; }).length; };
+    var all = function () { var k = n(); return k && k === ok.length ? 'true' : k ? 'mixed' : 'false'; };
+    var box = '<span class="ckc" aria-hidden="true">' + ICON_CHECK + '</span>';
+    var row = function (x) {
+      var body = '<span class="main"><span class="t-body blk">' + esc(x.label) + '</span>' + (x.sub ? '<span class="t-foot sec blk">' + esc(x.sub) + '</span>' : '') +
+        (x.note ? '<span class="t-foot warn blk">⚠︎ ' + esc(x.note) + '</span>' : '') + '</span>';
+      return x.can ? '<button type="button" class="row pk" role="checkbox" aria-checked="false" data-uk="' + esc(x.key) + '">' + box + body + '</button>' : '<div class="row">' + body + '</div>';
+    };
+    var body = function () {
+      return grp('', '<div class="row"><span class="main"><span class="t-body blk">' + date(p.date) + '</span><span class="t-foot sec blk ltr">' + esc(p.id) + '</span></span>' + paidVal(p.amount, p.bonus) + '</div>' +
+          (p.notes ? '<div class="row"><span class="main t-sub sec">' + esc(p.notes) + '</span></div>' : '') +
+          (p.invoice ? '<a class="row" href="' + esc(p.invoice) + '" target="_blank" rel="noopener"><span class="main t-body ia">' + ic('doc') + 'פתיחת החשבונית</span>' + CHEV + '</a>' : '<div class="row"><span class="main t-sub warn">⚠︎ אין חשבונית</span></div>')) +
+        (p.amount > 0 ? '<p class="note t-foot">הכסף ששולם (' + money(p.amount) + ') נשאר בכסף שיצא. מבוטל רק הסימון — הפריטים שתבחר יחזרו ל"מגיע לעורך".</p>' : '') +
+        '<div id="um-list">' + grp('פריטים (' + items.length + ')', (ok.length > 1 ? '<button type="button" class="row pk" role="checkbox" aria-checked="false" id="um-all">' + box + '<span class="main t-body">בחר הכול</span></button>' : '') +
+          (items.map(row).join('') || emptyRow('אין פריטים בתשלום'))) + '</div>';
+    };
+    var sum = function () { return '<span class="main t-sub">נבחרו <span class="num">' + n() + '</span> מתוך <span class="num">' + ok.length + '</span></span>'; };
+    openForm('תשלום ' + date(p.date), [], function () {
+      var keys = ok.filter(function (x) { return sel[x.key]; }).map(function (x) { return x.key; });
+      if (!keys.length) return formErr('לא נבחר פריט');
+      runAct({ title: 'ביטול סימון שולם · ' + e.name, fn: 'actionUnmarkEditorPaid', args: function (cf) { return [getToken(), { editor: e.name, keys: keys }, cf]; } });
+    }, body, {
+      next: 'בטל סימון שולם',
+      foot: function () { return '<div class="pick-sum t-sub" id="um-n" aria-live="polite">' + sum() + '</div>'; },
+      onOpen: function () {
+        var paint = function () {
+          Array.prototype.forEach.call($('um-list').querySelectorAll('[data-uk]'), function (b) { b.setAttribute('aria-checked', sel[b.getAttribute('data-uk')] ? 'true' : 'false'); });
+          if ($('um-all')) $('um-all').setAttribute('aria-checked', all());
+          $('um-n').innerHTML = sum(); $('b-next').disabled = !n();
+        };
+        $('um-list').onclick = function (ev) {
+          var b = ev.target.closest('[data-uk], #um-all'); if (!b) return;
+          if (b.id === 'um-all') { var on = all() !== 'true'; ok.forEach(function (x) { sel[x.key] = on; }); }
+          else { var k = b.getAttribute('data-uk'); sel[k] = !sel[k]; }
+          paint();
+        };
+        paint();
       }
     });
   }
