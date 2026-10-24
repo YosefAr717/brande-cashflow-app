@@ -443,6 +443,10 @@
     .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid currentColor; border-inline-end-color: transparent; border-radius: 50%; animation: rot .7s linear infinite; vertical-align: -3px; }
     @keyframes rot { to { transform: rotate(360deg); } }
     .center { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 32px 16px; color: var(--label2); }
+    /* אסמכתת תשלום: התמונה עצמה (canvas → PNG), בהירה תמיד */
+    .rc-img { display: block; width: 100%; max-width: 420px; height: auto; margin: 8px auto 0; border-radius: 12px; border: .5px solid var(--sep); }
+    .rc-tmp { position: absolute; inset-inline-start: -10000px; top: 0; }
+    .sh-foot .btn + .btn { margin-top: 8px; }
 
     /* ===== segmented ===== */
     .seg { display: flex; background: var(--fill2); border-radius: 9px; padding: 2px; gap: 2px; margin-top: 16px; min-height: 32px; }
@@ -1199,8 +1203,10 @@
           if (!d.ok) return err(d.message);
           back = null;
           openModal(sheetHtml('בוצע', linesHtml(d.done, 'o') + linesHtml(d.warnings, 'w') + '<p class="note t-foot">מזהה: <span class="ltr">' + esc(d.id) + '</span></p>',
+            (act.receipt ? '<button class="btn btn-tint full t-head" id="b-receipt">' + ic('receipt') + ' אסמכתא לעורך</button>' : '') +
             '<button class="btn btn-fill full t-head" id="b-done">סיום</button>', false));
           $('b-done').onclick = function () { closeModal(); (act.after || reload)(); };
+          if ($('b-receipt')) $('b-receipt').onclick = function () { receiptOpen(d.id); };
         }, err);
       };
     }, err);
@@ -2413,7 +2419,7 @@
         var params = { editor: e.name, date: v.date, amount: v.amount, bonus: bonus, invoiceUrl: url, notes: v.notes, paidBy: v.who || undefined,
           keys: ks.filter(function (k) { return k.indexOf('v:') === 0; }).map(function (k) { return k.slice(2); }),
           projectIds: ks.filter(function (k) { return k.indexOf('p:') === 0; }).map(function (k) { return k.slice(2); }) };
-        runAct({ title: 'שילמתי לעורך', fn: 'actionEditorPaid', args: function (cf) { return [getToken(), params, cf]; } });
+        runAct({ title: 'שילמתי לעורך', fn: 'actionEditorPaid', receipt: 1, args: function (cf) { return [getToken(), params, cf]; } });
       });
     }, list, {
       foot: function () { return '<div class="pick-sum t-sub" id="picked" aria-live="polite">' + sumHtml() + '</div>'; },
@@ -2466,6 +2472,7 @@
           (p.notes ? '<div class="row"><span class="main t-sub sec">' + esc(p.notes) + '</span></div>' : '') +
           (p.invoice ? '<a class="row" href="' + esc(p.invoice) + '" target="_blank" rel="noopener"><span class="main t-body ia">' + ic('doc') + 'פתיחת החשבונית</span>' + CHEV + '</a>' : '') +
           '<div class="row"><span class="main t-body">' + morningTag(p) + '</span></div>' +
+          (isOpeningPay(p.id) ? '' : '<button type="button" class="row" id="b-receipt"><span class="main t-body ia">' + ic('receipt') + 'אסמכתא (תמונה לשליחה)</span>' + CHEV + '</button>') +
           (e.morningReady ? '<button type="button" class="row' + (p.morning ? ' danger' : '') + '" id="b-morning"><span class="main t-body">' + (p.morning ? 'ביטול הסימון "הועלה ל-Morning"' : 'סימנתי שהועלה') + '</span>' + CHEV + '</button>' : '')) +
         (e.morningReady ? '' : '<p class="note t-foot">"סימנתי שהועלה" — אחרי הרצת setupSchema (מוסיף את העמודה "הועלה ל-Morning").</p>') +
         (p.amount > 0 ? '<p class="note t-foot">הכסף ששולם (' + money(p.amount) + ') נשאר בכסף שיצא. מבוטל רק הסימון — הפריטים שתבחר יחזרו ל"מגיע לעורך".</p>' : '') +
@@ -2482,6 +2489,7 @@
       foot: function () { return '<div class="pick-sum t-sub" id="um-n" aria-live="polite">' + sum() + '</div>'; },
       onOpen: function () {
         if ($('b-morning')) $('b-morning').onclick = function () { setMorning(p, !p.morning); };
+        if ($('b-receipt')) $('b-receipt').onclick = function () { receiptOpen(p.id); };
         var paint = function () {
           Array.prototype.forEach.call($('um-list').querySelectorAll('[data-uk]'), function (b) { b.setAttribute('aria-checked', sel[b.getAttribute('data-uk')] ? 'true' : 'false'); });
           if ($('um-all')) $('um-all').setAttribute('aria-checked', all());
@@ -2873,6 +2881,117 @@
     };
   }
 
+  // ---------- אסמכתת תשלום לעורך (תמונה לוואטסאפ) ----------
+  /**
+   * getPaymentReceipt (השרת מסנן: רק עלויות עורך של התשלום; עורך — רק תשלום שלו) → ציור ב-canvas → PNG.
+   * "שיתוף" (Web Share עם קובץ → וואטסאפ) אם נתמך, אחרת "הורדה". בלי ספרייה. סימון פתיחה — בלי אסמכתא.
+   */
+  function isOpeningPay(id) { return /^פתיחה-/.test(String(id || '')); }
+  function receiptName(r) { return ('אסמכתא-' + r.id + '-' + r.editor + '.png').replace(/[\\/:*?"<>|\s]+/g, '-'); }
+  function receiptOpen(id) {
+    var seq = S.modalSeq = (S.modalSeq || 0) + 1, live = function () { return S.modalSeq === seq; };
+    var err = function (m) { if (live()) openModal(sheetHtml('אסמכתא', linesHtml([m], 'e'), '', 'סגור')); };
+    openModal(sheetHtml('אסמכתא', '<div class="center t-sub"><span class="spin" aria-hidden="true"></span>מכין אסמכתא…</div>', '', 'סגור'));
+    call('getPaymentReceipt', [getToken(), id], function (r) {
+      if (!live()) return;
+      if (!r.ok) return err(r.message);
+      var R = r.receipt, cv = receiptCanvas(R), name = receiptName(R);
+      S.rcCanvas = cv;
+      var show = function (blob) {
+        if (!live()) return;
+        if (S.rcUrl) { try { URL.revokeObjectURL(S.rcUrl); } catch (e) {} }
+        var url = S.rcUrl = blob ? URL.createObjectURL(blob) : cv.toDataURL('image/png'), file = null;
+        try { file = blob ? new File([blob], name, { type: 'image/png' }) : null; } catch (e) {}
+        // הקובץ מוכן מראש: navigator.share חייב לרוץ ישר מהלחיצה
+        var share = !!(file && navigator.canShare && navigator.canShare({ files: [file] }));
+        openModal(sheetHtml('אסמכתא · ' + R.editor, '<img class="rc-img" id="rc-img" src="' + url + '" alt="' + esc('אסמכתת תשלום ' + R.id + ' · ' + R.editor + ' · ' + money(R.amount)) + '">',
+          (share ? '<button class="btn btn-fill full t-head" id="b-rc-share">שיתוף</button>' : '') +
+          '<button class="btn ' + (share ? 'btn-tint' : 'btn-fill') + ' full t-head" id="b-rc-dl">הורדה</button>', 'סגור'));
+        if ($('b-rc-share')) $('b-rc-share').onclick = function () { navigator.share({ files: [file], title: 'אסמכתת תשלום' }).catch(function () {}); };
+        $('b-rc-dl').onclick = function () { var a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); };
+      };
+      if (cv.toBlob) cv.toBlob(show, 'image/png'); else show(null);
+    }, err);
+  }
+  /**
+   * הציור: 1080px רוחב, בהיר תמיד, RTL. כותרת · פרטים · פריטים לפי לקוח וסוג (מס׳ סרטונים, כמות × עלות עורך = סה״כ) · פרויקטים ·
+   * סה״כ פריטים · בונוס · התאמה (הפרש מהסכום שנרשם) · סה״כ שולם (= הסכום מהטאב). סכומים ומספרים — משמאל, LTR.
+   */
+  function receiptCanvas(r) {
+    var W = 1080, P = 72, FF = '-apple-system, "SF Pro Text", "Segoe UI", Roboto, "Noto Sans Hebrew", "Arial Hebrew", Arial, sans-serif';
+    var C = { ink: '#1c1c1e', sec: '#6e6e73', line: '#d1d1d6', accent: '#0a7aff', band: '#f2f2f7', warn: '#b25000', bg: '#ffffff' };
+    var cv = document.createElement('canvas'), ctx = cv.getContext('2d'), ops = [], y = P;
+    cv.setAttribute('dir', 'rtl'); cv.className = 'rc-tmp'; document.body.appendChild(cv);   // כיוון RTL גם בדפדפן בלי ctx.direction
+    var font = function (px, w) { return (w || 400) + ' ' + px + 'px ' + FF; };
+    var width = function (t, f) { ctx.font = f; return ctx.measureText(t).width; };
+    var text = function (t, side, f, c, dir, max) { ops.push({ k: 't', t: String(t), side: side, y: y, f: f, c: c, d: dir || (side === 'left' ? 'ltr' : 'rtl'), max: max }); };
+    var rule = function () { ops.push({ k: 'r', y: y }); };
+    var day = function (s) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(s || '—'); };
+    var row = function (label, value, f, vf, vc) {   // תווית מימין, ערך משמאל (LTR) — התווית לא נכנסת לשטח של הערך
+      var fv = vf || font(36, 600), room = W - 2 * P - width(value, fv) - 32;
+      text(label, 'right', f || font(34), C.ink, 'rtl', room); text(value, 'left', fv, vc || C.ink, 'ltr');
+    };
+    // כותרת
+    y += 52; text('Brande', 'right', font(60, 800), C.accent, 'ltr');
+    y += 58; text('אסמכתת תשלום', 'right', font(42, 700), C.ink);
+    y += 36; rule();
+    // פרטים
+    [['מזהה תשלום', r.id, 'ltr'], ['תאריך', day(r.date), 'ltr'], ['עורך', r.editor, 'rtl']].concat(r.paidBy ? [['שולם על ידי', r.paidBy, 'rtl']] : []).forEach(function (m) {
+      y += 54; text(m[0], 'right', font(32), C.sec); text(m[1], 'left', font(34, 600), C.ink, m[2]);
+    });
+    y += 36; rule();
+    // פריטים
+    if (r.noItems) { y += 64; text('פירוט פריטים לא זמין', 'right', font(34), C.sec); }
+    (r.groups || []).forEach(function (g) {
+      y += 74; text(g.client, 'right', font(38, 700), C.ink);
+      g.lines.forEach(function (l) {
+        var v = l.unit !== null ? l.count + ' × ' + money(l.unit) + ' = ' + money(l.total) : '';
+        y += 54;
+        if (v) row(l.type, v, font(34), font(34, 600));
+        else { text(l.type, 'right', font(34), C.ink); text(l.missing === l.count ? 'עלות לא ידועה' : money(l.total) + ' + לא ידוע', 'left', font(32, 600), C.warn, 'rtl'); }
+        // מספרי הסרטונים — שורה (או כמה) מתחת, משמאל לימין
+        var parts = l.nums.map(function (n) { return '#' + n; }), cur = '', lines = [], f2 = font(30);
+        parts.forEach(function (x) { var t = cur ? cur + '  ' + x : x; if (cur && width(t, f2) > W - 2 * P) { lines.push(cur); cur = x; } else cur = t; });
+        if (cur) lines.push(cur);
+        lines.forEach(function (t) { y += 42; text(t, 'right', f2, C.sec, 'ltr'); });
+      });
+    });
+    if ((r.projects || []).length) {
+      y += 74; text('פרויקטים', 'right', font(38, 700), C.ink);
+      r.projects.forEach(function (x) {
+        y += 54;
+        if (x.cost === null) { text(x.client + ' · ' + x.name, 'right', font(34), C.ink); text('עלות לא ידועה', 'left', font(32, 600), C.warn, 'rtl'); }
+        else row(x.client + ' · ' + x.name, money(x.cost), font(34), font(34, 600));
+      });
+    }
+    // סיכום
+    y += 44; rule();
+    if (!r.noItems) { y += 58; row('סה״כ פריטים', money(r.itemsTotal)); }
+    if (r.missing) { y += 44; text(r.missing + ' פריטים בלי עלות ידועה', 'right', font(28), C.warn); }
+    if (r.bonus) { y += 58; row('בונוס', money(r.bonus)); }
+    if (r.adjustment) {
+      y += 58; row('התאמה', (r.adjustment > 0 ? '+' : '−') + money(Math.abs(r.adjustment)), null, null, C.warn);
+      y += 40; text('הפרש בין הסכום שנרשם לסכום הפריטים', 'right', font(26), C.sec);
+    }
+    y += 36; ops.push({ k: 'b', y: y, h: 108 });
+    y += 70; row('סה״כ שולם', money(r.amount), font(40, 700), font(52, 800), C.accent);
+    y += 38 + 56; text('Brande CashFlow', 'right', font(24), C.sec, 'ltr');
+    // ציור
+    cv.width = W; cv.height = Math.ceil(y + P - 20);
+    ctx.fillStyle = C.bg; ctx.fillRect(0, 0, cv.width, cv.height);
+    ops.forEach(function (o) {
+      if (o.k === 'r') { ctx.fillStyle = C.line; ctx.fillRect(P, o.y, W - 2 * P, 2); return; }
+      if (o.k === 'b') { ctx.fillStyle = C.band; ctx.fillRect(P - 24, o.y, W - 2 * P + 48, o.h); return; }
+      ctx.font = o.f; ctx.fillStyle = o.c; ctx.textBaseline = 'alphabetic';
+      if ('direction' in ctx) ctx.direction = o.d;
+      ctx.textAlign = o.side;
+      var x = o.side === 'right' ? W - P : P;
+      if (o.max && o.max > 40) ctx.fillText(o.t, x, o.y, o.max); else ctx.fillText(o.t, x, o.y);
+    });
+    cv.remove(); cv.className = '';
+    return cv;
+  }
+
   // ---------- 6.5 דף עורך אישי ----------
   function myPage() {
     S.screen = { t: 'שלום', large: 1 };
@@ -2919,11 +3038,13 @@
       sect('היסטוריית תשלומים', p.payments.map(function (x) {
         return '<div class="row"><div class="main"><div class="t-body">' + date(x.date) + ' · ' + nOf(x.count, 'פריט', 'פריטים') + '</div><div class="t-foot">' +
           (x.hasInvoice ? '<span class="ok">חשבונית ✓</span>' : '<span class="warn">⚠︎ אין חשבונית</span>') + '</div>' +
-          (x.hasInvoice ? '' : '<button class="btn-plain t-sub inl ia" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">' + ic('doc') + 'העלאת חשבונית</button>') + '</div>' + paidVal(x.amount, x.bonus) + '</div>';
+          (x.hasInvoice ? '' : '<button class="btn-plain t-sub inl ia" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">' + ic('doc') + 'העלאת חשבונית</button>') +
+          (isOpeningPay(x.id) ? '' : '<button class="btn-plain t-sub inl ia" data-rc="' + esc(x.id) + '">' + ic('receipt') + 'אסמכתא</button>') + '</div>' + paidVal(x.amount, x.bonus) + '</div>';
       }).join(''), true) +
       grp('תצוגה', themeRow()) +
       logoutGroup()
     );
+    Array.prototype.forEach.call(document.querySelectorAll('[data-rc]'), function (b) { b.onclick = function () { receiptOpen(b.getAttribute('data-rc')); }; });
     markPaint();
   }
   function myInvoice(paymentId) {
