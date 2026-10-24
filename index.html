@@ -153,6 +153,7 @@
     /* "מתעדכן…": בשורה של הכפתורים, בין שניהם; נגלל עם הדף */
     #sync { position: absolute; z-index: 1; top: calc(16px + env(safe-area-inset-top)); inset-inline: 72px; height: 48px; display: flex; align-items: center; justify-content: center;
       white-space: nowrap; overflow: hidden; pointer-events: none; }
+    #sync.stale { pointer-events: auto; cursor: pointer; }
     /* התוכן מתחיל 16 מתחת לכפתור הצף (16 + 44 + 16), בטלפון ובדסקטופ */
     main { padding: calc(16px + 44px + 16px + env(safe-area-inset-top)) 16px calc(64px + 12px + 16px + env(safe-area-inset-bottom)); }
     .ltitle { padding: 8px 0 8px; }
@@ -946,23 +947,25 @@
       return r[fn].apply(r, args);
     }
     // text/plain → בלי preflight. credentials: omit → בלי עוגיות Google.
-    // timeout: קריאה — 15 שניות, ניסיון אחד נוסף, ואז שגיאה. כתיבה — ניסיון אחד בלבד (ניסיון חוזר עלול לבצע פעמיים).
+    // קריאה — 15 שניות; timeout / כשל רשת / תשובה שבורה → ניסיון אחד נוסף, ואז שגיאה. כתיבה — ניסיון אחד בלבד (ניסיון חוזר עלול לבצע פעמיים).
     var write = isWriteFn(fn), limit = callLimit(fn);
+    var again = function (e) { e.again = true; return e; };   // כשל שמותר לנסות שוב (רק בקריאה)
     var attempt = function (n) {
       var ctrl = typeof AbortController === 'function' ? new AbortController() : null, timedOut = false;
       var timer = ctrl ? setTimeout(function () { timedOut = true; ctrl.abort(); }, limit) : null;
       fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, credentials: 'omit', redirect: 'follow',
         body: JSON.stringify({ fn: fn, args: args }), signal: ctrl ? ctrl.signal : undefined })
         .then(function (res) {
-          if (!res.ok) { errLog({ type: 'http', fn: fn, ms: ms(), attempt: n, status: res.status }); throw new Error('שגיאת שרת (' + res.status + '). לנסות שוב.'); }
-          return res.text().then(function (t) { try { return JSON.parse(t); } catch (e) { errLog({ type: 'json', fn: fn, ms: ms(), attempt: n }); throw new Error('תשובה לא תקינה מהשרת. לנסות שוב.'); } });
-        }, function () { if (!timedOut) errLog({ type: 'fetch', fn: fn, ms: ms(), attempt: n }); throw new Error('אין חיבור לשרת. לנסות שוב.'); })
+          if (!res.ok) { errLog({ type: 'http', fn: fn, ms: ms(), attempt: n, status: res.status }); throw again(new Error('שגיאת שרת (' + res.status + '). לנסות שוב.')); }
+          return res.text().then(function (t) { try { return JSON.parse(t); } catch (e) { errLog({ type: 'json', fn: fn, ms: ms(), attempt: n }); throw again(new Error('תשובה לא תקינה מהשרת. לנסות שוב.')); } });
+        }, function () { if (!timedOut) errLog({ type: 'fetch', fn: fn, ms: ms(), attempt: n }); throw again(new Error('אין חיבור לשרת. לנסות שוב.')); })
         .then(function (d) {
           clearTimeout(timer);
           if (d && d.ok) ok(d.result, d.t); else fail((d && d.error) || 'תשובה לא תקינה מהשרת', d && d.t);
         })
         .catch(function (e) {
           clearTimeout(timer);
+          if (!timedOut && e && e.again && !write && n < 2) return attempt(n + 1);   // קריאה: ניסיון חוזר אחד גם על כשל רשת / תשובה שבורה
           if (!timedOut) return fail((e && e.message) || 'אין חיבור לשרת');
           errLog({ type: 'timeout', fn: fn, ms: ms(), attempt: n });
           if (write) return fail('לא ברור אם הפעולה בוצעה. לרענן ולבדוק לפני שמנסים שוב.');
@@ -1358,6 +1361,7 @@
     if (view === 'partners') S.screen.back = wide ? '' : pb;   // דסקטופ: מסך ראשי בסרגל הצד
     if (FAB[view]) S.screen.action = FAB[view];
     S.navSeq = (S.navSeq || 0) + 1;
+    setSync(false);   // "לא עודכן" של המסך הקודם לא עובר למסך הבא
     // שותפים מצייר בעצמו מקום שמור לכל חלק (שתי קריאות במקביל)
     if (view !== 'partners' && !(homeFresh() && /^(home|clients|editors|settings)$/.test(view))) setMain(skeleton(view));
     ({ home: homeView, clients: clientsView, editors: editorsView, alerts: alertsView, settings: settingsView, partners: partnersView,
@@ -1385,9 +1389,20 @@
   var HOME_TTL_MS = 120000;
   function homeFresh() { return !!S.home && Date.now() - S.homeAt < HOME_TTL_MS; }
   function setSync(on) {
-    var old = on && S.snapAt && Date.now() - S.snapAt > SNAP_OLD_MS;
-    $('sync').textContent = old ? 'עודכן לפני ' + Math.round((Date.now() - S.snapAt) / 60000) + ' דקות · מתעדכן…' : 'מתעדכן…';
-    $('sync').classList.toggle('hidden', !on);
+    var old = on && S.snapAt && Date.now() - S.snapAt > SNAP_OLD_MS, el = $('sync');
+    el.textContent = old ? 'עודכן לפני ' + Math.round((Date.now() - S.snapAt) / 60000) + ' דקות · מתעדכן…' : 'מתעדכן…';
+    el.classList.remove('stale'); el.onclick = null;
+    el.classList.toggle('hidden', !on);
+  }
+  /**
+   * רענון ברקע נכשל, והמסך כבר מציג נתונים (מהמכשיר / מהביקור הקודם): בלי הודעת שגיאה אדומה.
+   * במקום "מתעדכן…" — "לא עודכן · מלפני X דק׳ · לנסות שוב" (לחיצה = retry). at = מתי הנתונים שעל המסך הגיעו מהשרת.
+   */
+  function setStale(at, retry) {
+    var m = at ? Math.round((Date.now() - at) / 60000) : null, el = $('sync');
+    el.textContent = 'לא עודכן' + (m === null ? '' : m < 1 ? ' · מלפני רגע' : ' · מלפני ' + m + ' דק׳') + ' · לנסות שוב';
+    el.classList.add('stale'); el.classList.remove('hidden');
+    el.onclick = function () { setSync(false); retry(); };
   }
   function loadHome(cb, opts) {
     opts = opts || {};
@@ -1406,7 +1421,14 @@
       if (seq !== S.navSeq || !changed) return;
       if (opts.onRefresh) return opts.onRefresh(r.home);
       var y = window.scrollY; cb(r.home); window.scrollTo(0, y);
-    }, function (m) { setSync(false); toastErr(m, reload); });
+    }, function (m) {
+      setSync(false);
+      if (seq !== S.navSeq) return;   // כבר עברו למסך אחר — שם יש טעינה משלו
+      var at = S.snapAt || S.homeAt;
+      if (fresh) return setStale(at, reload);                                                 // כבר מצויר — בלי הודעה אדומה
+      if (S.home) { S.renderSrc = 'cache'; cb(S.home); return setStale(at, reload); }   // ישן ממה שיש — עדיף על שלד
+      toastErr(m, reload);
+    });
   }
 
   /** כרטיס ראשי: תווית, מספר גדול, שורת משנה. */
@@ -2636,7 +2658,7 @@
   function ledgerLoad(cb, onErr) {
     call('getLedger', [getToken()], function (r) {
       if (!r.ok) return onErr(r.message);
-      S.ledger = r.ledger; S.lgExpected = r.expected; S.lgSince = r.ledger.since || S.lgSince; S.lgSkipSnap = false;
+      S.ledger = r.ledger; S.lgExpected = r.expected; S.lgSince = r.ledger.since || S.lgSince; S.lgSkipSnap = false; S.lgAt = Date.now();
       if (r.months) { S.lgMonths = r.months; S.lgTotal = r.totalPnl; }
       if (r.lists) S.lists = r.lists;
       lgSnapSave();
@@ -2667,7 +2689,7 @@
     S.ptErr = '';
     if (!S.ledger) {   // מהמכשיר. אחרי פעולה (S.lgSkipSnap) — רק תאריך ההתחלה, הכרטיסים מחכים לשרת
       var sn = lgSnap();
-      if (sn) { S.lgSince = S.lgSince || sn.ledger.since; if (!S.lgSkipSnap) { S.ledger = sn.ledger; S.lgExpected = sn.expected; if (sn.months && sn.total) { S.lgMonths = sn.months; S.lgTotal = sn.total; } } }
+      if (sn) { S.lgSince = S.lgSince || sn.ledger.since; if (!S.lgSkipSnap) { S.ledger = sn.ledger; S.lgExpected = sn.expected; S.lgAt = sn.at; if (sn.months && sn.total) { S.lgMonths = sn.months; S.lgTotal = sn.total; } } }
     }
     // גובה כל חלק בביקור הקודם באותו רוחב (min-height עד שהתוכן מגיע) — שלא יקפוץ
     var H = S.ptH && S.ptH.w === innerWidth ? S.ptH : {}, mh = function (k) { return H[k] ? ' style="min-height:' + H[k] + 'px"' : ''; };
@@ -2683,7 +2705,7 @@
       if (!live()) return;
       S.ptErr = m;
       if (!S.ledger) { $('pt-top').innerHTML = '<div class="msg e t-sub">' + esc(m) + '</div>'; $('pt-low').innerHTML = ''; ptFilled('top'); ptFilled('low'); }
-      else toastErr(m, reload);
+      else setStale(S.lgAt, reload);   // מוצג מהמכשיר / מהביקור הקודם — בלי הודעה אדומה
       if (ptMonthsSrc()) ptMonths(ptMonthsSrc());
     });
   }
@@ -2859,7 +2881,11 @@
       var y = snapPage ? window.scrollY : 0;
       renderMy(r.page);
       if (snapPage) window.scrollTo(0, y);
-    }, function (m) { setSync(false); toastErr(m, myPage); });
+    }, function (m) {
+      setSync(false);
+      if (snapPage) { S.mySnap = snapPage; return setStale(S.snapAt, myPage); }   // מוצג מהמכשיר — בלי הודעה אדומה; retry מצייר שוב מאותו snapshot
+      toastErr(m, myPage);
+    });
   }
   /**
    * דף העורך, לפי הסדר: מגיע לך · שורת אזהרה אחת · מה עוד לא שולם (לפי לקוח) · הכסף שלי לפי לקוח (עוגה + בורר) ·
@@ -2921,7 +2947,7 @@
     if (role === 'admin') {
       S.boot = true; $('nav').classList.remove('hidden'); setTimeout(movePill);
       if (snap && snap.data && snap.data.home) {   // ציור מיידי מה-snapshot; go('home') מרענן ברקע
-        S.home = snap.data.home; S.lists = snap.data.lists; S.homeAt = Date.now(); S.fromSnap = true; S.snapAt = snap.at;
+        S.home = snap.data.home; S.lists = snap.data.lists; S.homeAt = Date.now(); S.fromSnap = true; S.snapAt = snap.at;   // homeAt: "טרי" לציור מיידי; הגיל האמיתי = snapAt
         if (snap.data.user) applyUser(snap.data.user);
         var dot = $('alert-dot'); dot.textContent = S.home.alertsOpen; dot.classList.toggle('hidden', !S.home.alertsOpen);
       }
