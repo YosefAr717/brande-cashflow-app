@@ -930,7 +930,8 @@
     var t0 = performance.now();
     var done = function (t) { perfMark(fn, t0, t); };
     var ms = function () { return Math.round(performance.now() - t0); };
-    var ok = function (x, t) { done(t); onOk(x); perfLoaded(fn); if (fn !== 'logClientErrors') errFlush(); };
+    // כתיבה (או "רענן נתונים") → כל מה שבזיכרון כבר לא "טרי": המעבר הבא בין טאבים קורא מהשרת
+    var ok = function (x, t) { if (isWriteFn(fn) || fn === 'refreshData') S.wroteAt = Date.now(); done(t); onOk(x); perfLoaded(fn); if (fn !== 'logClientErrors') errFlush(); };
     var fail = function (m, t) {
       done(t);
       if (/FORBIDDEN/.test(m) && S.boot) { S.boot = false; setRole(null); return bootSlow(); }   // התפקיד השמור כבר לא נכון
@@ -1379,7 +1380,7 @@
     if (!pillPlaced) { void p.offsetWidth; p.style.transition = ''; pillPlaced = true; }
   }
   window.addEventListener('resize', movePill);
-  function reload() { if (S.user && S.user.role === 'admin') go(S.view || 'home', S.arg); else myPage(); }
+  function reload() { S.wroteAt = Date.now(); if (S.user && S.user.role === 'admin') go(S.view || 'home', S.arg); else myPage(); }   // "לנסות שוב" / "סיום" — תמיד מהשרת
 
   /**
    * טוען דשבורד (נתוני בית + רשימות לטפסים).
@@ -1388,6 +1389,8 @@
    */
   var HOME_TTL_MS = 120000;
   function homeFresh() { return !!S.home && Date.now() - S.homeAt < HOME_TTL_MS; }
+  /** נתונים שהגיעו מהשרת לפני פחות מ-2 דקות, ובלי כתיבה מאז (מהמכשיר הזה) → מעבר טאב בלי בקשה. at = מתי הגיעו. */
+  function noFetchNeeded(at) { return !!at && Date.now() - at < HOME_TTL_MS && at > (S.wroteAt || 0); }
   function setSync(on) {
     var old = on && S.snapAt && Date.now() - S.snapAt > SNAP_OLD_MS, el = $('sync');
     el.textContent = old ? 'עודכן לפני ' + Math.round((Date.now() - S.snapAt) / 60000) + ' דקות · מתעדכן…' : 'מתעדכן…';
@@ -1407,7 +1410,11 @@
   function loadHome(cb, opts) {
     opts = opts || {};
     var seq = S.navSeq, fresh = homeFresh();
-    if (fresh) { S.renderSrc = S.fromSnap ? 'snapshot' : 'cache'; cb(S.home); setSync(true); }
+    if (fresh) {
+      S.renderSrc = S.fromSnap ? 'snapshot' : 'cache'; cb(S.home);
+      if (!S.fromSnap && !opts.force && noFetchNeeded(S.homeAt)) return;   // טרי מהשרת, בלי כתיבה מאז — בלי רשת
+      setSync(true);
+    }
     // חודש שנבחר ב"בחר חודש" (לא החודש / הקודם) מחושב בשרת — מבקשים אותו גם ברענון
     call('getAdminHome', [getToken()].concat(MONTH_RE.test(S.period) ? [S.period] : []), function (r) {
       S.fromSnap = false; S.snapAt = null; S.renderSrc = 'שרת';
@@ -2658,7 +2665,7 @@
   function ledgerLoad(cb, onErr) {
     call('getLedger', [getToken()], function (r) {
       if (!r.ok) return onErr(r.message);
-      S.ledger = r.ledger; S.lgExpected = r.expected; S.lgSince = r.ledger.since || S.lgSince; S.lgSkipSnap = false; S.lgAt = Date.now();
+      S.ledger = r.ledger; S.lgExpected = r.expected; S.lgSince = r.ledger.since || S.lgSince; S.lgSkipSnap = false; S.lgAt = Date.now(); S.lgSnap = false;
       if (r.months) { S.lgMonths = r.months; S.lgTotal = r.totalPnl; }
       if (r.lists) S.lists = r.lists;
       lgSnapSave();
@@ -2689,12 +2696,13 @@
     S.ptErr = '';
     if (!S.ledger) {   // מהמכשיר. אחרי פעולה (S.lgSkipSnap) — רק תאריך ההתחלה, הכרטיסים מחכים לשרת
       var sn = lgSnap();
-      if (sn) { S.lgSince = S.lgSince || sn.ledger.since; if (!S.lgSkipSnap) { S.ledger = sn.ledger; S.lgExpected = sn.expected; S.lgAt = sn.at; if (sn.months && sn.total) { S.lgMonths = sn.months; S.lgTotal = sn.total; } } }
+      if (sn) { S.lgSince = S.lgSince || sn.ledger.since; if (!S.lgSkipSnap) { S.ledger = sn.ledger; S.lgExpected = sn.expected; S.lgAt = sn.at; S.lgSnap = true; if (sn.months && sn.total) { S.lgMonths = sn.months; S.lgTotal = sn.total; } } }
     }
     // גובה כל חלק בביקור הקודם באותו רוחב (min-height עד שהתוכן מגיע) — שלא יקפוץ
     var H = S.ptH && S.ptH.w === innerWidth ? S.ptH : {}, mh = function (k) { return H[k] ? ' style="min-height:' + H[k] + 'px"' : ''; };
     setMain('<div id="pt-top"' + mh('top') + '>' + ptSk('top') + '</div><div id="pt-pm"' + mh('pm') + '>' + ptSk('pm') + '</div><div id="pt-low"' + mh('low') + '>' + ptSk('low') + '</div>');
     if (S.ledger) { ptLedger(S.ledger); if (ptMonthsSrc()) ptMonths(ptMonthsSrc()); }   // מהמכשיר / מהביקור הקודם; מתרענן ברקע
+    if (S.ledger && S.lgMonths && !S.lgSnap && noFetchNeeded(S.lgAt)) return;   // טרי מהשרת (פחות מ-2 דקות, בלי כתיבה מאז) — בלי בקשה. מהמכשיר — תמיד מרעננים
     var had = S.ledger && S.lgMonths ? JSON.stringify([S.ledger, S.lgExpected, S.lgMonths]) : '';
     // בקשה אחת (getLedger): ההתחשבנות + רווח לפי חודש
     ledgerLoad(function (L) {
@@ -2923,7 +2931,8 @@
     openForm('העלאת חשבונית', fields, function (v, files) {
       if (!files.file) return formErr('לבחור קובץ');
       readFile(files.file, function (f) {
-        runAct({ title: 'העלאת חשבונית', fn: 'editorUploadInvoice', args: function (cf) { return [getToken(), paymentId, f, cf]; }, after: myPage });
+        // הקובץ נשלח רק באישור (התצוגה המקדימה צריכה רק את השם — השרת שומר ב-Drive רק אחרי אישור)
+        runAct({ title: 'העלאת חשבונית', fn: 'editorUploadInvoice', args: function (cf) { return [getToken(), paymentId, cf ? f : { name: f.name, mimeType: f.mimeType }, cf]; }, after: myPage });
       });
     });
   }
