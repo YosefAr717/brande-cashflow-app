@@ -902,10 +902,34 @@
   // OAuth Client ID לכניסה עם Google (ציבורי). ריק → אין כפתור Google. רק בדף הסטטי (בתוך Apps Script המקור לא מורשה).
   var GOOGLE_CLIENT_ID = '408183333823-cm0f4bqukgs13pdc8lg73uj3jttva4hr.apps.googleusercontent.com';
 
+  /**
+   * אבחון: שגיאת רשת (timeout / fetch / לא-JSON / קוד HTTP / google.script.run) נשמרת במכשיר — סוג, פונקציה, מסך, זמן.
+   * בלי הודעה, מייל או נתונים. נשלחת לשרת (logClientErrors → יומן ההרצות) אחרי הקריאה הבאה שהצליחה.
+   */
+  var ERRQ_KEY = 'brande_errq', ERRQ_MAX = 20;
+  function errLog(e) {
+    if (e.fn === 'logClientErrors') return;
+    var q = []; try { q = JSON.parse(lsGet(ERRQ_KEY) || '[]'); } catch (x) {}
+    q.push({ type: e.type, fn: e.fn, screen: /^[a-z]{1,20}$/.test(S.view || '') ? S.view : '', at: new Date().toISOString(), ms: e.ms, attempt: e.attempt || 1, status: e.status });
+    lsSet(ERRQ_KEY, JSON.stringify(q.slice(-ERRQ_MAX)));
+  }
+  function errFlush() {
+    var q = []; try { q = JSON.parse(lsGet(ERRQ_KEY) || '[]'); } catch (x) { lsRemove(ERRQ_KEY); }
+    if (!q.length || !getToken() || errFlush.busy || Date.now() - (errFlush.at || 0) < 30000) return;
+    errFlush.busy = true; errFlush.at = Date.now();
+    call('logClientErrors', [getToken(), q], function () {
+      errFlush.busy = false;
+      var now = []; try { now = JSON.parse(lsGet(ERRQ_KEY) || '[]'); } catch (x) {}
+      lsSet(ERRQ_KEY, JSON.stringify(now.slice(q.length)));   // מה שנוסף בינתיים נשאר
+    }, function () { errFlush.busy = false; });
+  }
+
   /** קריאה לשרת. שגיאת הרשאה → חזרה למסך כניסה. */
   function call(fn, args, onOk, onErr) {
     var t0 = performance.now();
     var done = function (t) { perfMark(fn, t0, t); };
+    var ms = function () { return Math.round(performance.now() - t0); };
+    var ok = function (x, t) { done(t); onOk(x); perfLoaded(fn); if (fn !== 'logClientErrors') errFlush(); };
     var fail = function (m, t) {
       done(t);
       if (/FORBIDDEN/.test(m) && S.boot) { S.boot = false; setRole(null); return bootSlow(); }   // התפקיד השמור כבר לא נכון
@@ -914,7 +938,11 @@
       if (onErr) onErr(m); else toastErr(m);
     };
     if (GAS) {
-      var r = google.script.run.withSuccessHandler(function (x) { done(); onOk(x); perfLoaded(fn); }).withFailureHandler(function (e) { fail((e && e.message) || String(e)); });
+      var r = google.script.run.withSuccessHandler(function (x) { ok(x); }).withFailureHandler(function (e) {
+        var m = (e && e.message) || String(e);
+        if (!/AUTH_REQUIRED|FORBIDDEN/.test(m)) errLog({ type: 'gas', fn: fn, ms: ms() });
+        fail(m);
+      });
       return r[fn].apply(r, args);
     }
     // text/plain → בלי preflight. credentials: omit → בלי עוגיות Google.
@@ -926,16 +954,17 @@
       fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, credentials: 'omit', redirect: 'follow',
         body: JSON.stringify({ fn: fn, args: args }), signal: ctrl ? ctrl.signal : undefined })
         .then(function (res) {
-          if (!res.ok) throw new Error('שגיאת שרת (' + res.status + '). לנסות שוב.');
-          return res.text().then(function (t) { try { return JSON.parse(t); } catch (e) { throw new Error('תשובה לא תקינה מהשרת. לנסות שוב.'); } });
-        }, function () { throw new Error('אין חיבור לשרת. לנסות שוב.'); })
+          if (!res.ok) { errLog({ type: 'http', fn: fn, ms: ms(), attempt: n, status: res.status }); throw new Error('שגיאת שרת (' + res.status + '). לנסות שוב.'); }
+          return res.text().then(function (t) { try { return JSON.parse(t); } catch (e) { errLog({ type: 'json', fn: fn, ms: ms(), attempt: n }); throw new Error('תשובה לא תקינה מהשרת. לנסות שוב.'); } });
+        }, function () { if (!timedOut) errLog({ type: 'fetch', fn: fn, ms: ms(), attempt: n }); throw new Error('אין חיבור לשרת. לנסות שוב.'); })
         .then(function (d) {
           clearTimeout(timer);
-          if (d && d.ok) { done(d.t); onOk(d.result); perfLoaded(fn); } else fail((d && d.error) || 'תשובה לא תקינה מהשרת', d && d.t);
+          if (d && d.ok) ok(d.result, d.t); else fail((d && d.error) || 'תשובה לא תקינה מהשרת', d && d.t);
         })
         .catch(function (e) {
           clearTimeout(timer);
           if (!timedOut) return fail((e && e.message) || 'אין חיבור לשרת');
+          errLog({ type: 'timeout', fn: fn, ms: ms(), attempt: n });
           if (write) return fail('לא ברור אם הפעולה בוצעה. לרענן ולבדוק לפני שמנסים שוב.');
           if (n < 2) return attempt(n + 1);
           fail('השרת לא עונה. לנסות שוב.');
@@ -1075,7 +1104,7 @@
   // ---------- מדידה (שלב 0 בביצועים) ----------
   /** הבקשה האחרונה: זמן הלוך-חזור בדפדפן + t מהשרת (total, load, cache). */
   function perfMark(fn, t0, t) {
-    S.timing = { fn: fn, rt: Math.round(performance.now() - t0), total: t ? t.total : null, load: t ? t.load : null, cache: t ? t.cache : '' };
+    S.timing = { fn: fn, rt: Math.round(performance.now() - t0), total: t ? t.total : null, load: t ? t.load : null, cache: t ? t.cache : '', via: t ? t.via || '' : '' };
     S.timings = [S.timing].concat(S.timings || []).slice(0, 12);   // ?debug=1: הבקשות האחרונות (למדידה)
     var el = $('perf'); if (el) el.innerHTML = perfRows();
   }
@@ -1092,7 +1121,7 @@
     var t = S.timing || {}, ms = function (v) { return v === null || v === undefined ? '—' : v + ' ms'; };
     var row = function (k, v) { return '<div class="row"><div class="main t-body">' + k + '</div><span class="t-body num">' + v + '</span></div>'; };
     return row('בקשה אחרונה', '<span class="ltr">' + esc(t.fn || '—') + '</span>') + row('שרת (סה״כ)', ms(t.total)) +
-      row('טעינת נתונים', ms(t.load) + (t.cache ? ' · ' + esc(t.cache) : '')) + row('הלוך-חזור', ms(t.rt)) + row('טעינת הדף', ms(S.pageLoad)) +
+      row('טעינת נתונים', ms(t.load) + (t.cache ? ' · ' + esc(t.cache) : '') + (t.via ? ' · ' + esc(t.via) : '')) + row('הלוך-חזור', ms(t.rt)) + row('טעינת הדף', ms(S.pageLoad)) +
       row('מקור', esc(S.loadSrc || '—')) +
       // אחרונות: שם · שרת / טעינה (cache) · הלוך-חזור
       (S.timings || []).slice(1).map(function (x) { return row('<span class="ltr">' + esc(x.fn) + '</span>', ms(x.total) + ' / ' + ms(x.load) + (x.cache ? ' ' + esc(x.cache) : '') + ' · ' + ms(x.rt)); }).join('');
@@ -1178,11 +1207,23 @@
    * act.local() = השינוי ברשימה עם "שומר…" (xpLocal) עד שהשרת עונה. כישלון → השורה חוזרת + הודעת שגיאה.
    * הצלחה → הודעה קצרה עם "ביטול" (= ביטול הפעולה האחרונה) ורענון ברקע.
    */
-  function saveNow(act) {
+  /** מזהה בקשה: 12 תווי hex אקראיים (הגנה מכפילות בשרת). */
+  function reqId() {
+    var a = new Uint8Array(6);
+    try { crypto.getRandomValues(a); } catch (e) { for (var i = 0; i < 6; i++) a[i] = Math.floor(Math.random() * 256); }
+    return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+  }
+  function saveNow(act, rq) {
+    rq = rq || (act.idem ? reqId() : '');
     var done = act.local ? act.local() : function () {}, v0 = S.view;
     closeModal();
-    var fail = function (m) { done(false); toastErr(m); };
-    call(act.fn, act.args('direct'), function (d) {
+    // act.idem: מזהה בקשה (השרת שומר שורה אחת גם אם הבקשה מגיעה פעמיים) → "לנסות שוב" שולח את אותו מזהה, בטוח
+    var fail = function (m) {
+      done(false);
+      if (!rq) return toastErr(m);
+      toastErr(/לא ברור/.test(m) ? 'לא ברור אם נשמר. "לנסות שוב" לא ישמור פעמיים.' : m, function () { saveNow(act, rq); });
+    };
+    call(act.fn, act.args('direct').concat(rq ? [rq] : []), function (d) {
       if (!d.ok) return fail(d.message);
       done(true); S.home = null;
       toast((act.ok || 'נשמר') + (d.warnings.length ? ' · ' + d.warnings[0] : ''), { undo: 1 });
@@ -1936,7 +1977,7 @@
           var f = { 'תאריך': v['תאריך'], 'לקוח': v['לקוח'], 'קטגוריה': v['קטגוריה'], 'סכום': v['סכום'], 'אסמכתא': url, 'הערות': v['הערות'] };
           if (v['פרויקט']) f['פרויקט'] = v['פרויקט'];
           if (v.who) f['שולם על ידי'] = v.who;
-          saveNow({ fn: 'actionAddExpense', args: function (cf) { return [getToken(), f, cf]; },
+          saveNow({ fn: 'actionAddExpense', idem: 1, args: function (cf) { return [getToken(), f, cf]; },
             local: function () { return xpInPeriod(f['תאריך']) ? xpLocal('items', '', Object.assign({ id: '', project: null, subscriptionId: '' }, xpFields(f))) : function () {}; } });
         });
       }, '', { next: 'שמירה', onOpen: function (fs) { if (proj) projSync(fs[1], fs[2]); } });
@@ -2130,7 +2171,7 @@
       delete v.who;
       var d = Number(v['יום חיוב']);
       if (!v['שם'] || badNum(v['סכום חודשי']) || !(d >= 1 && d <= 28 && Math.floor(d) === d) || !v['תאריך התחלה']) return formErr('שם, סכום, יום חיוב (1–28) ותאריך התחלה — חובה');
-      saveNow({ fn: 'actionAddSubscription', args: function (cf) { return [getToken(), v, cf]; },
+      saveNow({ fn: 'actionAddSubscription', idem: 1, args: function (cf) { return [getToken(), v, cf]; },
         local: function () { return xpLocal('subscriptions', '', Object.assign({ id: '', end: '', active: v['תאריך התחלה'] <= today() }, xpFields(v))); } });
     }, '', { next: 'שמירה' });
   }
@@ -2544,12 +2585,20 @@
           '<button class="row" id="b-partners" onclick="go(\'partners\')"><span class="main t-body">שותפים</span><span class="t-foot sec">מי מעביר למי</span>' + CHEV + '</button>') +
         grp('תצוגה', themeRow()) +
         grp('תחזוקה',
+          iconRow(ic('refresh'), 'רענן נתונים', '', { id: 'b-refdata' }) +
           iconRow(ic('refresh'), 'רענון עכשיו', '', { id: 'b-refresh' }) +
           iconRow(ic('x'), 'ביטול הפעולה האחרונה', 'undoLast()', { cls: 'danger red' }),
-          'רענון קורא את טבלאות התוכן. עד דקה.') +
+          '"רענן נתונים" קורא שוב את הגיליון (אחרי שינוי ידני בו; אחרת עד 30 דקות). "רענון עכשיו" קורא גם את טבלאות התוכן — עד דקה.') +
         (DEBUG ? grp('ביצועים', '<div id="perf">' + perfRows() + '</div>') : '') +
         logoutGroup() +
         '<p class="foot-link t-foot"><a href="https://cashflow.brandemedia.co.il/privacy.html" target="_blank" rel="noopener">מדיניות פרטיות</a></p>');
+      $('b-refdata').onclick = function () {
+        var b = $('b-refdata'), t = b.querySelector('.main'); b.disabled = true; t.textContent = 'מרענן…';
+        call('refreshData', [getToken()], function () {
+          S.home = null; S.ledger = null; S.lgMonths = null; S.xpPage = null;
+          loadHome(function () { b.disabled = false; t.textContent = 'רענן נתונים'; toast('הנתונים עודכנו מהגיליון'); });
+        }, function (m) { b.disabled = false; t.textContent = 'רענן נתונים'; toastErr(m); });
+      };
       $('b-refresh').onclick = function () {
         var b = $('b-refresh'), t = b.querySelector('.main'); b.disabled = true; t.textContent = 'קורא טבלאות…';
         call('refreshNow', [getToken()], function (r) {
@@ -2562,7 +2611,7 @@
   function undoLast() { runAct({ title: 'ביטול הפעולה האחרונה', fn: 'actionUndoLast', args: function (cf) { return [getToken(), cf]; } }); }
 
   function monthSheet(m) {
-    var p = S.home.partners.filter(function (x) { return x.month === m; })[0]; if (!p) return;
+    var p = (S.lgMonths || []).concat((S.home && S.home.partners) || []).filter(function (x) { return x.month === m; })[0]; if (!p) return;
     var row = function (k, v, cls) { return '<div class="row"><div class="main t-body">' + k + '</div><span class="' + (cls || 't-body') + ' num">' + money(v) + '</span></div>'; };
     openModal(sheetHtml(monthName(m, true), grp('', row('הכנסות', p.revenue) + row('עלויות', p.cost) + row('רווח', p.profit, 't-head')) +
       missMsg(p.missing, 'בלי מחיר או עלות', '', true) + grp('חלוקת שותפים', partnerRows(p)), '', 'סגור'));
@@ -2583,15 +2632,19 @@
   function smoney(n) { return n === null || n === undefined ? '—' : n < 0 ? '−' + money(-n) : money(n); }
   function settleWho(L) { return L.settlement ? adminName(L.settlement.from) + ' מעביר ל' + adminName(L.settlement.to) : ''; }
   function settleText(L) { return L.settlement ? settleWho(L) + ' ' + money(L.settlement.amount) : 'מאוזן'; }
-  /** getLedger (בלי לחכות לבית). נשמר במכשיר כדי לצייר מיד בפעם הבאה. */
+  /** getLedger — כל מסך השותפים בבקשה אחת (גם רווח לפי חודש ו-lists). נשמר במכשיר כדי לצייר מיד בפעם הבאה. */
   function ledgerLoad(cb, onErr) {
     call('getLedger', [getToken()], function (r) {
       if (!r.ok) return onErr(r.message);
       S.ledger = r.ledger; S.lgExpected = r.expected; S.lgSince = r.ledger.since || S.lgSince; S.lgSkipSnap = false;
+      if (r.months) { S.lgMonths = r.months; S.lgTotal = r.totalPnl; }
+      if (r.lists) S.lists = r.lists;
       lgSnapSave();
       cb(r.ledger);
     }, onErr);
   }
+  /** רווח לפי חודש למסך השותפים: מ-getLedger; אם עוד אין (snapshot ישן) — מהבית. */
+  function ptMonthsSrc() { return S.lgMonths && S.lgTotal ? { partners: S.lgMonths, totalPnl: S.lgTotal } : S.home; }
   /** snapshot של ההתחשבנות במכשיר (מנהל בלבד; נמחק ביציאה / משתמש אחר, כמו של הבית). */
   function lgSnapKey() { var u = lsGet(UID_KEY); return u ? SNAP_PREFIX + '_lg_' + u : null; }
   function lgSnap() {
@@ -2600,7 +2653,7 @@
     return s && s.ledger ? s : null;
   }
   function lgSnapSave() {
-    var k = lgSnapKey(), json = k && JSON.stringify({ at: Date.now(), ledger: S.ledger, expected: S.lgExpected });
+    var k = lgSnapKey(), json = k && JSON.stringify({ at: Date.now(), ledger: S.ledger, expected: S.lgExpected, months: S.lgMonths || null, total: S.lgTotal || null });
     if (json && (json.length > SNAP_MAX || !lsSet(k, json))) lsRemove(k);
   }
   /**
@@ -2614,24 +2667,24 @@
     S.ptErr = '';
     if (!S.ledger) {   // מהמכשיר. אחרי פעולה (S.lgSkipSnap) — רק תאריך ההתחלה, הכרטיסים מחכים לשרת
       var sn = lgSnap();
-      if (sn) { S.lgSince = S.lgSince || sn.ledger.since; if (!S.lgSkipSnap) { S.ledger = sn.ledger; S.lgExpected = sn.expected; } }
+      if (sn) { S.lgSince = S.lgSince || sn.ledger.since; if (!S.lgSkipSnap) { S.ledger = sn.ledger; S.lgExpected = sn.expected; if (sn.months && sn.total) { S.lgMonths = sn.months; S.lgTotal = sn.total; } } }
     }
     // גובה כל חלק בביקור הקודם באותו רוחב (min-height עד שהתוכן מגיע) — שלא יקפוץ
     var H = S.ptH && S.ptH.w === innerWidth ? S.ptH : {}, mh = function (k) { return H[k] ? ' style="min-height:' + H[k] + 'px"' : ''; };
     setMain('<div id="pt-top"' + mh('top') + '>' + ptSk('top') + '</div><div id="pt-pm"' + mh('pm') + '>' + ptSk('pm') + '</div><div id="pt-low"' + mh('low') + '>' + ptSk('low') + '</div>');
-    if (S.ledger) ptLedger(S.ledger);   // מהמכשיר / מהביקור הקודם; מתרענן ברקע
-    var had = S.ledger ? JSON.stringify([S.ledger, S.lgExpected]) : '';
-    loadHome(function (h) { if (live()) ptMonths(h); }, { onRefresh: function (h) { if (live()) ptMonths(h); } });
+    if (S.ledger) { ptLedger(S.ledger); if (ptMonthsSrc()) ptMonths(ptMonthsSrc()); }   // מהמכשיר / מהביקור הקודם; מתרענן ברקע
+    var had = S.ledger && S.lgMonths ? JSON.stringify([S.ledger, S.lgExpected, S.lgMonths]) : '';
+    // בקשה אחת (getLedger): ההתחשבנות + רווח לפי חודש
     ledgerLoad(function (L) {
-      if (!live() || had === JSON.stringify([L, S.lgExpected])) return;   // לא השתנה → בלי ציור מחדש
+      if (!live() || had === JSON.stringify([L, S.lgExpected, S.lgMonths])) return;   // לא השתנה → בלי ציור מחדש
       ptLedger(L);
-      if (S.home) ptMonths(S.home);   // תאריך ההתחלה עשוי להשתנות
+      if (ptMonthsSrc()) ptMonths(ptMonthsSrc());   // תאריך ההתחלה עשוי להשתנות
     }, function (m) {
       if (!live()) return;
       S.ptErr = m;
       if (!S.ledger) { $('pt-top').innerHTML = '<div class="msg e t-sub">' + esc(m) + '</div>'; $('pt-low').innerHTML = ''; ptFilled('top'); ptFilled('low'); }
       else toastErr(m, reload);
-      if (S.home) ptMonths(S.home);
+      if (ptMonthsSrc()) ptMonths(ptMonthsSrc());
     });
   }
   /** מקום שמור לכל חלק: אותו מבנה (שורות, כרטיסים, אריחים בדסקטופ) עם פסי טעינה במקום הטקסט — כדי שהגובה כמעט זהה. */
