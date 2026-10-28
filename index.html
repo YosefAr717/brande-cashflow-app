@@ -682,8 +682,10 @@ function homeView() { loadHome(renderHome); }
 function renderHome(h) {
 var D = h.dash;
 if (!D.periods[S.period]) S.period = 'month';
-var P0 = D.periods[S.period], cash = homeBasis() === 'cash' && !!P0.cash, P = cash ? P0.cash : P0, B = P.business, rev = homeMode() === 'revenue';
-var share = cash ? B.share : partnerShare(h, D.labels), short = esc(periodShort(D.labels)), edL = cash ? 'תשלומי עורכים' : 'עלויות עורכים';
+var P0 = D.periods[S.period];
+if (!P0.cash || !P0.expected) return setMain(skeleton('home'));
+var ex = homeBasis() === 'expected', P = ex ? P0.expected : P0.cash, B = P.business, rev = homeMode() === 'revenue';
+var share = B.share, short = esc(periodShort(D.labels)), edL = ex && P.current ? 'עורכים (שולם + מגיע)' : 'תשלומי עורכים';
 var lnk = function (id, ed, label, n) {
 return '<button type="button" class="lnk-in" id="' + id + '" onclick="homeToXp(' + (ed ? '\'ed\'' : '') + ')">' + label + ' <span class="num">' + money(n) + '</span></button>';
 };
@@ -693,28 +695,29 @@ var sub = rev ? dots([lnk('b-ed', 1, edL, B.editorCost), lnk('b-exp', 0, 'הוצ
 setMain(
 '<section class="grp hero"><div class="gbody">' +
 '<div class="hero-head"><span class="t-foot sec" id="hero-l">' + (rev ? 'הכנסות' : 'רווח העסק') + ' · ' + esc(periodName(D.labels)) +
-(cash ? ' <span class="tag t">כסף בפועל</span>' : '') + '</span>' + modeSeg(rev) + '</div>' +
+' <span class="tag t">' + basisLabel() + '</span></span>' + modeSeg(rev) + '</div>' +
 '<button class="row" id="b-profit" aria-labelledby="hero-l hero-v" onclick="go(\'partners\')"><span class="main" id="hero-v"><span class="blk"><span class="t-large num">' + money(rev ? B.revenue : B.total) + '</span></span></span>' + CHEV + '</button>' +
 '<div class="hero-sub t-foot sec">' + sub + '</div>' +
 '<div class="pad hero-seg">' + periodPicker(D.labels) + '</div></div></section>' +
 '<div class="tiles">' + tile('לגבייה מלקוחות', money(h.debtTotal.amount), xpTile(h.expected), 'clients') + tile('לתשלום לעורכים', money(h.dueTotal.amount), '', 'editors') + '</div>' +
 missingBanner(h, B) + xpList(h.expected) +
 '<div class="hgrid">' +
-homePie(P, rev, cash, D.colors, short) +
+homePie(P, rev, ex, D.colors, short) +
 '<div class="h-due">' + dueList(h) + '</div>' +
-minePie(P0.mine, D.colors, short) + '</div>' +
+minePie(ex ? P0.mine.expected : P0.mine.cash, D.colors, short, ex && P.current) + '</div>' +
 '<div class="actions mob-only"><button class="btn btn-tint full t-head" id="b-income" onclick="go(\'income\')">הכנסות' + ic('chevron-left', 'ch-in') + '</button></div>'
 );
 markPaint();
 }
-function homePie(P, rev, cash, colors, short) {
-var B = P.business, w = cash ? ' בפועל' : '';
-if (rev) return pieGrp('הכנסה' + w + ' לפי לקוח · ' + short, pieBlock(P.revenue, colors, 'הכנסה' + w + ' לפי לקוח',
-{ calc: calcP([['', 'הכנסות', B.revenue], ['− ', cash ? 'תשלומי עורכים' : 'עלויות עורכים', B.editorCost], ['− ', 'הוצאות', B.expenses], ['= ', 'רווח', B.total]]) }),
-cash ? 'לפי תאריך התשלום: תשלומי לקוחות שהתקבלו (כולל קבלות היסטוריות).' : '', 'h-p1');
-return pieGrp('רווח' + w + ' לפי לקוח · ' + short, pieBlock(B, colors, 'רווח' + w + ' לפי לקוח',
+function homePie(P, rev, ex, colors, short) {
+var B = P.business, cur = ex && P.current, edL = cur ? 'עורכים (שולם + מגיע)' : 'תשלומי עורכים';
+var foot = 'לפי תאריך התשלום: תשלומי לקוחות שהתקבלו (כולל קבלות היסטוריות).' + (cur ? ' צפוי: + חוב הלקוחות הפתוח עכשיו.' : '');
+if (rev) return pieGrp('הכנסה לפי לקוח · ' + short, pieBlock(P.revenue, colors, 'הכנסה לפי לקוח',
+{ calc: calcP([['', 'הכנסות', B.revenue], ['− ', edL, B.editorCost], ['− ', 'הוצאות', B.expenses], ['= ', 'רווח', B.total]]) }), foot, 'h-p1');
+return pieGrp('רווח לפי לקוח · ' + short, pieBlock(B, colors, 'רווח לפי לקוח',
 { sumLabel: 'רווח מלקוחות', totalLabel: 'רווח', dedName: function (x) { return x.general ? x.key : x.key + ' (הפסד)'; } }),
-cash ? 'לפי תאריך התשלום. לקוח = מה ששילם פחות תשלומי עורכים על הפריטים שלו והוצאות שלו. כללי = בונוסים, התאמות, תשלומים בלי פירוט והוצאות בלי לקוח.' : '', 'h-p1');
+'לפי תאריך התשלום. לקוח = מה ששילם פחות תשלומי עורכים על הפריטים שלו והוצאות שלו. כללי = בונוסים, התאמות, תשלומים בלי פירוט והוצאות בלי לקוח.' +
+(cur ? ' צפוי: + חוב הלקוח הפתוח פחות עלות העורך של הפריטים הפתוחים שלו.' : ''), 'h-p1');
 }
 var MONTH_RE = /^\d{4}-\d{2}$/, HM_KEY = 'brande_home_mode', HB_KEY = 'brande_home_basis';
 function xpDays(n) { return n === null || n === undefined ? '' : n === 0 ? 'היום' : nOf(n, 'יום', 'ימים'); }
@@ -733,11 +736,28 @@ return '<button class="row" onclick="go(\'client\',' + esc(JSON.stringify(x.clie
 }).join(''), 'מידע בלבד — לא נספר כהכנסה / תקבול / התחשבנות.', 'xp-list');
 }
 function homeMode() { return lsGet(HM_KEY) === 'revenue' ? 'revenue' : 'profit'; }
-function homeBasis() { return lsGet(HB_KEY) === 'cash' ? 'cash' : 'work'; }
+var BASIS = [['in', 'נכנס', 'כסף שהתקבל ושולם בתקופה, לפי תאריך התשלום.'], ['expected', 'צפוי עד סוף החודש', 'נכנס + כל מה שעדיין פתוח עכשיו: חוב הלקוחות ומה שמגיע לעורכים. בחודש שהסתיים — כמו "נכנס".']];
+function homeBasis() { return lsGet(HB_KEY) === 'expected' ? 'expected' : 'in'; }
+function basisLabel() { return homeBasis() === 'expected' ? BASIS[1][1] : BASIS[0][1]; }
 function setHomeBasis(v) { lsSet(HB_KEY, v); }
 function basisRow() {
-return '<div class="row swr"><label for="sw-cash">הצג כסף בפועל</label><input type="checkbox" class="switch" role="switch" id="sw-cash"' +
-(homeBasis() === 'cash' ? ' checked' : '') + ' onchange="setHomeBasis(this.checked ? \'cash\' : \'work\')"></div>';
+return '<button class="row" id="b-basis" onclick="basisSheet()"><span class="main t-body">מסך הבית</span><span class="t-body sec" id="basis-v">' + basisLabel() + '</span>' + CHEV + '</button>';
+}
+function basisSheet() {
+var draw = function () {
+return BASIS.map(function (x) {
+var on = homeBasis() === x[0];
+return '<button class="row" role="radio" aria-checked="' + on + '" data-bv="' + x[0] + '"><span class="main"><span class="t-body blk">' + x[1] + '</span><span class="t-foot sec blk">' + x[2] + '</span></span>' + (on ? ICON_CHECK : '') + '</button>';
+}).join('');
+};
+openModal(sheetHtml('מסך הבית', grp('', '<div role="radiogroup" aria-label="מסך הבית" id="basis-list">' + draw() + '</div>', 'הכול לפי החודש שבו הכסף נכנס או יצא, לא לפי חודש העבודה.'), '', 'סיום'));
+$('basis-list').onclick = function (e) {
+var b = e.target.closest('[data-bv]'); if (!b) return;
+setHomeBasis(b.getAttribute('data-bv'));
+$('basis-list').innerHTML = draw();
+$('basis-list').querySelector('[aria-checked="true"]').focus();
+if ($('basis-v')) $('basis-v').textContent = basisLabel();
+};
 }
 function setHomeMode(m) { lsSet(HM_KEY, m); reHome(); }
 function homeToXp(ed) {
@@ -799,13 +819,13 @@ return '<button class="row" onclick="go(\'editor\',' + esc(JSON.stringify(e.name
 return grp('מגיע לעורכים', rows || emptyRow('אין תשלומים פתוחים')) +
 '<div class="actions"><button class="btn btn-tint full t-head" id="b-all-ed" onclick="go(\'editors\')">כל העורכים' + ic('chevron-left', 'ch-in') + '</button></div>';
 }
-function minePie(M, colors, short) {
+function minePie(M, colors, short, cur) {
 var lab = function (x) { return x.share ? Object.assign({}, x, { key: '__biz', label: 'חלקי ברווח העסק' + (M.sharePct === null ? '' : ' (' + M.sharePct + '%)') }) : x; };
 var pie = { total: M.total, sliceSum: M.sliceSum, deductions: M.deductions.map(lab), slices: M.slices.map(lab) };
 var foot = (M.partnerError ? 'אין חלק ברווח: ' + esc(M.partnerError) : M.sharePct === null ? 'אין אחוז שותפות בטאב הרשאות' : 'חלק ' + M.sharePct + '% מרווח העסק') +
-(M.editor ? ' + העריכות שלך (' + esc(M.editor) + ') לפי עלות עורך, כולל מה שכבר שולם' : ' · החשבון לא מקושר לעורך');
+(M.editor ? ' + שכר העריכה שהגיע אליך (' + esc(M.editor) + ') בתקופה' + (cur ? ' + מה שעוד מגיע לך עכשיו' : '') : ' · החשבון לא מקושר לעורך');
 return pieGrp('הכסף שלי · ' + short, pieBlock(pie, colors, 'הכסף שלי',
-{ sumLabel: 'העריכות שלי', totalLabel: 'שלי', dedName: function () { return 'חלקי בהפסד העסק'; } }), foot, 'h-p2');
+{ sumLabel: 'שכר העריכה שלי', totalLabel: 'שלי', dedName: function () { return 'חלקי בהפסד העסק'; } }), foot, 'h-p2');
 }
 function dots(parts) { return '<span class="dots"><span>' + parts.map(function (x) { return '<span>' + x + '</span>'; }).join('') + '</span></span>'; }
 function partnerShare(h, labels) {
@@ -1384,18 +1404,17 @@ S.xp = v; expensesView();
 }
 function expFilter(f) { S.xf = f; var y = window.scrollY; renderExpenses(S.xpPage); window.scrollTo(0, y); }
 function renderExpenses(pg) {
-var f = S.xf, by = {}, cashOn = homeBasis() === 'cash', t = today();
-var counts = function (x) { return !cashOn || (x.pending || x.cash === undefined ? !x.isBonus && String(x.date || '').slice(0, 10) <= t : x.cash); };
+var f = S.xf, by = {}, ex = homeBasis() === 'expected' && !!pg.current, t = today();
+var counts = function (x) { return x.pending || x.cash === undefined ? !x.isBonus && String(x.date || '').slice(0, 10) <= t : x.cash; };
 var items = pg.items.filter(function (x) { return f === 'all' || (f === 'sub' ? !!x.subscriptionId : f === 'proj' ? !!x.project : !x.subscriptionId && !x.project); });
 items.forEach(function (x) { (by[x.category] = by[x.category] || []).push(x); });
 var r2 = function (n) { return Math.round(n * 100) / 100; };
 var sum = function (l) { return r2(l.reduce(function (a, x) { return a + (counts(x) ? x.amount || 0 : 0); }, 0)); };
 var cats = Object.keys(by).map(function (c) { return { c: c, s: sum(by[c]), items: by[c] }; }).sort(function (a, b) { return b.s - a.s || (a.c < b.c ? -1 : 1); });
-var sup = cashOn ? [] : pg.supplierProjects || [], supSum = r2(sup.reduce(function (a, x) { return a + (x.cost || 0); }, 0));
 var pays = pg.editorPays || [], paySum = r2(pays.reduce(function (a, x) { return a + (x.cash ? x.amount || 0 : 0); }, 0));
-var Y = r2(sum(pg.items) + supSum), X = cashOn ? paySum : pg.work.editors;
-var edL = cashOn ? 'תשלומי עורכים' : 'עלויות עורכים';
-var head = tile('סה״כ עלויות' + (cashOn ? ' <span class="tag t">כסף בפועל</span>' : ''), money(r2(X + Y)),
+var due = ex ? (pg.dues || {}).amount || 0 : 0, Y = sum(pg.items), X = r2(paySum + due);
+var edL = ex ? 'עורכים (שולם + מגיע)' : 'תשלומי עורכים';
+var head = tile('סה״כ עלויות <span class="tag t">' + basisLabel() + '</span>', money(r2(X + Y)),
 '<div class="t-foot sec xp-tsub">' + dots(['הוצאות <span class="num">' + money(Y) + '</span>',
 '<button type="button" class="lnk-in" id="b-xp-ed" onclick="xpToEd()">' + edL + ' <span class="num">' + money(X) + '</span></button>']) + '</div>');
 var payRow = function (x) {
@@ -1404,13 +1423,9 @@ return '<div class="row"><span class="main"><span class="t-body blk">' + esc(x.e
 '<span class="t-foot sec blk">' + sub.join(' · ') + '</span></span>' + amt(x.amount, x.amount === null ? 1 : 0) + '</div>';
 };
 var edSec = grp('תשלומי עורכים · <span class="num">' + money(paySum) + '</span>', pays.map(payRow).join('') || emptyRow('אין תשלומי עורכים בתקופה'),
-cashOn ? 'לפי תאריך התשלום. הסכום כולל בונוס — לכן שורות "בונוס עורכים" בהוצאות לא נספרות שוב.'
-: 'לפי תאריך התשלום (מידע). בראש הדף, לפי עבודה: עלויות עורכים = העבודה שבוצעה בתקופה × עלות עורך (' + money(pg.work.editors) + '), גם אם עוד לא שולמה.')
+'לפי תאריך התשלום. הסכום כולל בונוס — לכן שורות "בונוס עורכים" בהוצאות לא נספרות שוב.' +
+(ex ? ' בראש הדף, צפוי: + מה שמגיע לעורכים עכשיו (' + money(due) + ').' : ''))
 .replace('<section ', '<section id="xp-ed" ');
-var supRow = function (x) {
-return '<div class="row"><span class="main"><span class="t-body blk">' + esc(x.name) + '</span><span class="t-foot sec blk">' + date(x.date) + ' · ' + esc(x.client) + '</span></span>' +
-amt(x.cost, x.cost === null ? 1 : 0) + '</div>';
-};
 setMain(
 '<section class="grp hero"><div class="gbody pad">' + periodPicker(pg.labels, S.xp, 'expPick') + '</div></section>' +
 '<div class="tiles one">' + head + '</div>' +
@@ -1420,7 +1435,6 @@ return '<button type="button" aria-pressed="' + (x[0] === f) + '"' + (x[0] === f
 }).join('') + '</div>' +
 (cats.length ? cats.map(function (g) { return grp(esc(g.c) + ' · <span class="num">' + money(g.s) + '</span>', g.items.map(function (x) { return expRow(x, counts(x)); }).join('')); }).join('')
 : grp('', emptyRow('אין הוצאות בתקופה'))) +
-(sup.length && (f === 'all' || f === 'proj') ? grp('עלות פרויקטים לספק · <span class="num">' + money(supSum) + '</span>', sup.map(supRow).join('')) : '') +
 (f === 'all' ? edSec : '') +
 subsBlock(pg)
 );
@@ -1858,7 +1872,7 @@ grp('חשבון', '<div class="row"><span class="av t-head" aria-hidden="true">'
 '<div class="main"><div class="t-body em">' + esc(u.email) + '</div><div class="t-foot sec">' + (u.role === 'admin' ? 'מנהל' : 'עורך') + '</div></div></div>') +
 grp('כספים', '<button class="row" id="b-expenses" onclick="go(\'expenses\')"><span class="main t-body">הוצאות</span><span class="t-foot sec">מנויים וחד-פעמי</span>' + CHEV + '</button>' +
 '<button class="row" id="b-partners" onclick="go(\'partners\')"><span class="main t-body">שותפים</span><span class="t-foot sec">מי מעביר למי</span>' + CHEV + '</button>') +
-grp('תצוגה', themeRow() + basisRow(), 'כסף בפועל: מסך הבית לפי תאריך התשלום (תשלומי לקוחות, תשלומי עורכים, הוצאות). כבוי: לפי תאריך העבודה.') +
+grp('תצוגה', themeRow() + basisRow(), 'מסך הבית: "נכנס" = כסף שהתקבל ושולם בתקופה · "צפוי עד סוף החודש" = נכנס + מה שעדיין פתוח עכשיו.') +
 grp('תחזוקה',
 iconRow(ic('refresh'), 'רענן נתונים', '', { id: 'b-refdata' }) +
 iconRow(ic('refresh'), 'רענון עכשיו', '', { id: 'b-refresh' }) +
