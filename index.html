@@ -882,24 +882,39 @@ sect('היסטוריה', '<div class="pad">' + histSeg() + '</div><div id="hist"
 drawHist();
 $('b-paid').onclick = function () { clientPaidForm(c); };
 $('b-request').onclick = function () { requestForm(c); };
-if ($('b-cancel-req')) $('b-cancel-req').onclick = function () {
-runAct({ title: 'ביטול בקשת תשלום', fn: 'actionCancelPaymentRequest', args: function (cf) { return [getToken(), c.expected.open.id, cf]; } });
-};
+if ($('b-cancel-req')) $('b-cancel-req').onclick = function () { cancelRequest(c); };
 if (S.afterClient === c.name) { S.afterClient = null; clientSettingsForm(c); }
 }, function (m) { setMain('<div class="msg e">' + esc(m) + '</div>'); });
 }
 function xpClient(X) {
 if (!X || !X.ready) return '';
-var o = X.open, row = function (k, sub, v) { return '<div class="row"><div class="main"><div class="t-body">' + k + '</div>' + (sub ? '<div class="t-foot sec">' + sub + '</div>' : '') + '</div><span class="t-body num">' + money(v) + '</span></div>'; };
-return grp('', row('צפוי להיכנס', o ? ['מ-' + date(o.date), xpDays(o.days), o.receivedByName ? 'אצל ' + esc(o.receivedByName) : ''].filter(Boolean).join(' · ') : 'אין בקשה פתוחה', X.requested) +
-row('עוד לא ביקשתי', '', X.notRequested), X.dups ? 'יש עוד ' + X.dups + ' בקשות פתוחות — לבדוק בטאב "גבייה צפויה".' : 'מידע בלבד — לא נספר כהכנסה / תקבול.', 'xp-client');
+var o = X.open, R = X.requests || [], row = function (k, sub, v, cls) {
+return '<div class="row' + (cls ? ' ' + cls : '') + '"><div class="main"><div class="t-body">' + k + '</div>' + (sub ? '<div class="t-foot sec">' + sub + '</div>' : '') + '</div><span class="t-body num">' + money(v) + '</span></div>';
+};
+var when = function (q) { return ['מ-' + date(q.date), xpDays(q.days), q.receivedByName ? 'אצל ' + esc(q.receivedByName) : ''].filter(Boolean).join(' · '); };
+var reqRows = R.length > 1 ? R.map(function (q) {
+return row('בקשה מ-' + date(q.date), [q.items ? nOf(q.items.length, 'פריט', 'פריטים') : 'בלי רשימת פריטים', xpDays(q.days), q.receivedByName ? 'אצל ' + esc(q.receivedByName) : ''].filter(Boolean).join(' · '), q.amount, 'xp-req');
+}).join('') : '';
+return grp('', row('צפוי להיכנס', R.length > 1 ? nOf(R.length, 'בקשה פתוחה', 'בקשות פתוחות') : o ? when(o) : 'אין בקשה פתוחה', X.requested) + reqRows +
+row('עוד לא ביקשתי', '', X.notRequested), X.dups ? 'יש עוד ' + X.dups + ' בקשות פתוחות בלי רשימת פריטים — לבדוק בטאב "גבייה צפויה".' : 'מידע בלבד — לא נספר כהכנסה / תקבול.', 'xp-client');
+}
+function cancelRequest(c) {
+var R = c.expected.requests || [], go1 = function (id) {
+runAct({ title: 'ביטול בקשת תשלום', fn: 'actionCancelPaymentRequest', args: function (cf) { return [getToken(), id, cf]; } });
+};
+if (R.length < 2) return go1(c.expected.open.id);
+openModal(sheetHtml('איזו בקשה לבטל?', grp('', R.map(function (q) {
+return '<button class="row" data-req="' + esc(q.id) + '"><span class="main"><span class="t-body blk">בקשה מ-' + date(q.date) + '</span><span class="t-foot sec blk">' +
+(q.items ? nOf(q.items.length, 'פריט', 'פריטים') : 'בלי רשימת פריטים') + (q.receivedByName ? ' · אצל ' + esc(q.receivedByName) : '') + '</span></span><span class="t-body num">' + money(q.amount) + '</span>' + CHEV + '</button>';
+}).join('')), '', 'סגור'));
+Array.prototype.forEach.call(document.querySelectorAll('#sheet [data-req]'), function (b) { b.onclick = function () { go1(b.getAttribute('data-req')); }; });
 }
 function requestForm(c) {
 var X = c.expected.open, fields = whoField('אמור לקבל', X ? X.receivedBy : undefined);
 openForm('סגרתי תשלום — ' + c.name, fields, function (v) {
 runAct({ title: 'סגרתי תשלום', fn: 'actionRequestPayment', args: function (cf) { return [getToken(), { client: c.name, receivedBy: v.who || undefined }, cf]; } });
-}, '<p class="note t-foot">הסכום = החוב הפתוח עכשיו (' + money(c.debt ? c.debt.total : 0) + '), מחושב בשרת.' +
-(X ? ' יש בקשה פתוחה על ' + money(X.amount) + ' מ-' + date(X.date) + ' — היא תתעדכן.' : '') + ' מידע בלבד: לא נספר כתקבול.</p>');
+}, '<p class="note t-foot">הבקשה = הפריטים הפתוחים עכשיו והסכום שלהם (' + money(c.debt ? c.debt.total : 0) + '), מחושב בשרת.' +
+(X ? ' יש בקשה פתוחה על ' + money(X.amount) + ' מ-' + date(X.date) + ' — היא לא משתנה; הבקשה החדשה רק לפריטים שעוד לא בבקשה.' : '') + ' מידע בלבד: לא נספר כתקבול.</p>');
 }
 function projRow(p) {
 return '<button class="row" onclick="editProject(' + esc(JSON.stringify(p.id)) + ')"><span class="main"><span class="t-head blk">' + esc(p.name) + '</span>' +
@@ -1104,38 +1119,65 @@ function clientPaidForm(c) {
 openModal(sheetHtml('לקוח שילם — ' + c.name, '<div class="center t-sub"><span class="spin" aria-hidden="true"></span>קורא את טבלת התוכן…</div>'));
 call('getClientContentInfo', [getToken(), c.name], function (r) {
 if (!r.ok) return openModal(sheetHtml('לקוח שילם', linesHtml([r.message], 'e'), '', 'סגור'));
-var info = r.info, o = c.open, X = c.expected && c.expected.open;
-var nums = info.belowNums.slice().reverse();
-var fields = [
-{ k: 'amount', label: 'סכום ששולם (₪)', type: 'number', value: X && X.requested > 0 ? X.requested : c.debt ? c.debt.total : '' },
+var info = r.info, o = c.open, R = (c.expected && c.expected.requests) || [], q0 = R[0] || null;
+var items = o.retainers.map(function (x) { return { id: 'r:' + x.key, t: 'ריטיינר ' + monthName(x.month, true), price: x.amount }; })
+.concat(o.projects.map(function (p) { return { id: 'p:' + p.id, t: 'פרויקט: ' + p.name, price: p.price }; }))
+.concat(o.videos.map(function (v) { return { id: 'v:' + v.key, t: '#' + v.num + (v.date ? ' · ' + v.date : ''), price: v.price }; }));
+var sumOf = function (on) { return Math.round(items.reduce(function (a, it) { return a + (on(it) && it.price ? it.price : 0); }, 0) * 100) / 100; };
+var idsOf = function (q) { return q ? q.items || q.prefill || [] : null; }, ids0 = idsOf(q0);
+var fields = R.length ? [{ k: 'req', label: 'על איזו בקשה', type: 'select', value: q0.id, options: R.map(function (q) {
+return { v: q.id, t: date(q.date) + ' · ' + money(q.amount) + (q.items ? '' : ' · בלי רשימה') };
+}).concat([{ v: '', t: 'בלי בקשה' }]) }] : [];
+fields = fields.concat([
+{ k: 'amount', label: 'סכום ששולם (₪)', type: 'number', value: q0 ? q0.amount : c.debt ? c.debt.total : '' },
 { k: 'date', label: 'תאריך', type: 'date', value: today() },
 { k: 'method', label: 'אמצעי', type: 'select', options: S.lists.payMethods, value: S.lists.payMethods[0] },
 { k: 'ref', label: 'אסמכתא (מס׳ / הערה)', type: 'text', value: '' },
-{ k: 'upToVideo', label: 'שילם עד סרטון', type: 'select', options: nums.map(function (n) { return { v: n, t: '#' + n }; }), value: nums[0],
-hint: 'קו החלוקה ייכנס מתחת לסרטון הזה' },
 { k: 'label', label: 'תווית קו החלוקה', type: 'text', value: info.defaultLabel }
-];
+]);
 if (!info.lastDivider) {
 fields.push({ k: 'labelCol', label: 'באיזו עמודה לכתוב את התווית (אין קו קודם בטבלה)', type: 'select', blank: true,
 options: info.columns.map(function (x) { return { v: x.col, t: x.letter + (x.name ? ' — ' + x.name : '') }; }), value: '' });
 }
-o.projects.forEach(function (p) { fields.push({ k: 'p:' + p.id, label: 'פרויקט: ' + p.name + ' · ' + money(p.price), type: 'check', value: true }); });
-o.retainers.forEach(function (x) { fields.push({ k: 'r:' + x.key, label: 'ריטיינר ' + monthName(x.month, true) + ' · ' + money(x.amount), type: 'check', value: true }); });
+items.forEach(function (it) {
+fields.push({ k: 'i:' + it.id, label: it.t + ' · ' + (it.price === null ? '—' : money(it.price)), type: 'check', g: 'מה שולם', value: ids0 ? ids0.indexOf(it.id) !== -1 : true });
+});
 fields.push({ k: 'manualDivider', label: info.allowed ? 'אני אוסיף את הקו ידנית (לא לכתוב בטבלה)' : 'הקו יתווסף ידנית (הטבלה הזו לא ברשימת ההיתר)',
 type: 'check', value: !info.allowed, disabled: !info.allowed });
-if (!X) fields = fields.concat(whoField('התקבל אצל'));
-var extra = info.lastDivider ? '<p class="note t-foot">קו אחרון בטבלה: "' + esc(info.lastDivider.label) + '" (עמודה ' + esc(info.lastDivider.colLetter) + ')</p>' : '';
-if (X) extra += '<p class="note t-foot">בקשת תשלום פתוחה על ' + money(X.amount) + (X.receivedByName ? ' — התשלום יירשם אצל ' + esc(X.receivedByName) : '') + ' והבקשה תיסגר.</p>';
-if (!nums.length) extra += '<div class="msg w">אין סרטונים מתחת לקו האחרון בטבלה</div>';
+fields = fields.concat(whoField('התקבל אצל'));
+var extra = (info.lastDivider ? '<p class="note t-foot">קו אחרון בטבלה: "' + esc(info.lastDivider.label) + '" (עמודה ' + esc(info.lastDivider.colLetter) + ')</p>' : '') +
+'<p class="note t-foot" id="cp-note"></p>';
+var reqOf = function (id) { return R.filter(function (q) { return q.id === id; })[0] || null; };
 openForm('לקוח שילם — ' + c.name, fields, function (v) {
-var params = { client: c.name, amount: v.amount, date: v.date, method: v.method, ref: v.ref, upToVideo: v.upToVideo, label: v.label,
-manualDivider: !info.allowed || v.manualDivider,
-projectIds: o.projects.filter(function (p) { return v['p:' + p.id]; }).map(function (p) { return p.id; }),
-retainerKeys: o.retainers.filter(function (x) { return v['r:' + x.key]; }).map(function (x) { return x.key; }) };
-if (!info.lastDivider) { if (v.labelCol === '') return formErr('לבחור עמודה לתווית'); params.labelCol = v.labelCol; }
-if (v.who) params.receivedBy = v.who;
+var q = reqOf(v.req), ids = items.filter(function (it) { return v['i:' + it.id]; }).map(function (it) { return it.id; });
+if (!(q && q.items) && !ids.length) return formErr('לסמן לפחות פריט אחד');
+var params = { client: c.name, amount: v.amount, date: v.date, method: v.method, ref: v.ref, label: v.label, manualDivider: !info.allowed || v.manualDivider };
+if (q) params.requestId = q.id;
+if (!(q && q.items)) params.items = ids;
+var vids = q && q.items ? q.items : ids;
+if (!info.lastDivider && vids.some(function (id) { return id.indexOf('v:') === 0; })) { if (v.labelCol === '') return formErr('לבחור עמודה לתווית'); params.labelCol = v.labelCol; }
+if (!q && v.who) params.receivedBy = v.who;
 runAct({ title: 'לקוח שילם', fn: 'actionClientPaid', args: function (cf) { return [getToken(), params, cf]; } });
-}, extra);
+}, extra, { onOpen: function (F) {
+var el = function (k) { var f = F.filter(function (x) { return x.k === k; })[0]; return f ? $(f._id) : null; };
+var sel = el('req'), amt = el('amount'), who = el('who'), checks = items.map(function (it) { return { it: it, el: el('i:' + it.id) }; }), touched = false;
+var picked = function () { return sumOf(function (it) { return checks.filter(function (x) { return x.it === it; })[0].el.checked; }); };
+var state = function (reset) {
+var q = sel ? reqOf(sel.value) : null, ids = idsOf(q);
+checks.forEach(function (x) { if (reset) x.el.checked = ids ? ids.indexOf(x.it.id) !== -1 : true; x.el.disabled = !!(q && q.items); });
+if (reset) { amt.value = q ? q.amount : picked(); touched = false; }
+if (who) who.closest('.fld').style.display = q ? 'none' : '';
+$('cp-note').innerHTML = !q ? 'בלי בקשה: הכול מסומן — אפשר להוריד. הקו ייכתב אחרי הסרטון האחרון שסומן.'
+: q.items ? 'רק הפריטים של הבקשה מ-' + date(q.date) + ' (לא ניתן לשנות). הקו ייכתב אחרי הסרטון האחרון שבה; מה שבוצע אחריה נשאר מתחת לקו.' +
+(q.receivedByName ? ' התשלום יירשם אצל ' + esc(q.receivedByName) + ' והבקשה תיסגר.' : ' הבקשה תיסגר.')
+: q.prefill ? 'בקשה ישנה בלי רשימת פריטים: סומנו הפריטים הישנים ביותר שסכומם ' + money(q.amount) + '. לבדוק ולשנות אם צריך.'
+: 'בקשה ישנה בלי רשימת פריטים, ואין פריטים ישנים שסכומם בדיוק ' + money(q.amount) + ' — לסמן ידנית מה שולם.';
+};
+amt.oninput = function () { touched = true; };
+checks.forEach(function (x) { x.el.onchange = function () { if (!touched && !(sel && reqOf(sel.value))) amt.value = picked(); }; });
+if (sel) sel.onchange = function () { state(true); };
+state(false);
+} });
 });
 }
 function projectForm(p, clientName) {
