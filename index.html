@@ -1142,7 +1142,7 @@ options: info.columns.map(function (x) { return { v: x.col, t: x.letter + (x.nam
 items.forEach(function (it) {
 fields.push({ k: 'i:' + it.id, label: it.t + ' · ' + (it.price === null ? '—' : money(it.price)), type: 'check', g: 'מה שולם', value: ids0 ? ids0.indexOf(it.id) !== -1 : true });
 });
-fields.push({ k: 'manualDivider', label: info.allowed ? 'אני אוסיף את הקו ידנית (לא לכתוב בטבלה)' : 'הקו יתווסף ידנית (הטבלה הזו לא ברשימת ההיתר)',
+fields.push({ k: 'manualDivider', label: info.allowed ? 'אני אוסיף את הקו ידנית (לא לכתוב בטבלה)' : 'הקו יתווסף ידנית (' + (info.manualReason || 'אין היתר לטבלה הזו') + ')',
 type: 'check', value: !info.allowed, disabled: !info.allowed });
 fields = fields.concat(whoField('התקבל אצל'));
 var extra = (info.lastDivider ? '<p class="note t-foot">קו אחרון בטבלה: "' + esc(info.lastDivider.label) + '" (עמודה ' + esc(info.lastDivider.colLetter) + ')</p>' : '') +
