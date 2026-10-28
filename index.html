@@ -1578,9 +1578,9 @@ sect('היסטוריית תשלומים', e.payments.map(function (p, i) {
 var off = (p.items || []).some(function (x) { return x.note; });
 return '<div class="row al ph"><button type="button" class="al-go" data-pay="' + i + '"><span class="main"><span class="t-body blk">' + date(p.date) + ' · ' + nOf(p.count, 'פריט', 'פריטים') + '</span>' +
 (p.notes ? '<span class="t-foot sec blk">' + esc(p.notes) + '</span>' : '') +
-'<span class="t-foot sec blk">' + morningTag(p) + (p.invoice ? ' · <span class="ia">' + ic('doc') + 'חשבונית</span>' : '') + ' · <span class="ltr">' + esc(p.id) + '</span>' +
+'<span class="t-foot sec blk">' + (p.kept ? KEPT_TXT : morningTag(p) + (p.invoice ? ' · <span class="ia">' + ic('doc') + 'חשבונית</span>' : '')) + ' · <span class="ltr">' + esc(p.id) + '</span>' +
 (off ? ' · <span class="warn nw">⚠︎ לא מסונכרן</span>' : '') + '</span></span>' + paidVal(p.amount, p.bonus) + CHEV + '</button>' +
-(e.morningReady && !p.morning ? '<button type="button" class="btn-plain t-sub" data-mo="' + i + '">סימנתי שהועלה</button>' : '') + '</div>';
+(e.morningReady && !p.morning && !p.kept ? '<button type="button" class="btn-plain t-sub" data-mo="' + i + '">סימנתי שהועלה</button>' : '') + '</div>';
 }).join(''))
 );
 $('b-pay').onclick = function () { paySheet(e, items); };
@@ -1726,10 +1726,10 @@ var body = function () {
 return grp('', '<div class="row"><span class="main"><span class="t-body blk">' + date(p.date) + '</span><span class="t-foot sec blk ltr">' + esc(p.id) + '</span></span>' + paidVal(p.amount, p.bonus) + '</div>' +
 (p.notes ? '<div class="row"><span class="main t-sub sec">' + esc(p.notes) + '</span></div>' : '') +
 (p.invoice ? '<a class="row" href="' + esc(p.invoice) + '" target="_blank" rel="noopener"><span class="main t-body ia">' + ic('doc') + 'פתיחת החשבונית</span>' + CHEV + '</a>' : '') +
-'<div class="row"><span class="main t-body">' + morningTag(p) + '</span></div>' +
+'<div class="row"><span class="main t-body">' + (p.kept ? KEPT_TXT : morningTag(p)) + '</span></div>' +
 (isOpeningPay(p.id) ? '' : '<button type="button" class="row" id="b-receipt"><span class="main t-body ia">' + ic('receipt') + 'אסמכתא (תמונה לשליחה)</span>' + CHEV + '</button>') +
-(e.morningReady ? '<button type="button" class="row' + (p.morning ? ' danger' : '') + '" id="b-morning"><span class="main t-body">' + (p.morning ? 'ביטול הסימון "הועלה ל-Morning"' : 'סימנתי שהועלה') + '</span>' + CHEV + '</button>' : '')) +
-(e.morningReady ? '' : '<p class="note t-foot">"סימנתי שהועלה" — אחרי הרצת setupSchema (מוסיף את העמודה "הועלה ל-Morning").</p>') +
+(e.morningReady && !p.kept ? '<button type="button" class="row' + (p.morning ? ' danger' : '') + '" id="b-morning"><span class="main t-body">' + (p.morning ? 'ביטול הסימון "הועלה ל-Morning"' : 'סימנתי שהועלה') + '</span>' + CHEV + '</button>' : '')) +
+(e.morningReady || p.kept ? '' : '<p class="note t-foot">"סימנתי שהועלה" — אחרי הרצת setupSchema (מוסיף את העמודה "הועלה ל-Morning").</p>') +
 (p.amount > 0 ? '<p class="note t-foot">הכסף ששולם (' + money(p.amount) + ') נשאר בכסף שיצא. מבוטל רק הסימון — הפריטים שתבחר יחזרו ל"מגיע לעורך".</p>' : '') +
 '<div id="um-list">' + grp('פריטים (' + items.length + ')', (ok.length > 1 ? '<button type="button" class="row pk" role="checkbox" aria-checked="false" id="um-all">' + box + '<span class="main t-body">בחר הכול</span></button>' : '') +
 (items.map(row).join('') || emptyRow('אין פריטים בתשלום'))) + '</div>';
@@ -1760,6 +1760,7 @@ paint();
 }
 });
 }
+var KEPT_TXT = '<bdi class="sec nw">שכר שנשאר אצל השותף — אין קבלה</bdi>';
 function morningTag(p) { return p.morning ? '<bdi class="ok nw">✓ הועלה ל-Morning</bdi>' : '<bdi class="warn nw">⚠︎ לא הועלה ל-Morning</bdi>'; }
 function setMorning(p, value) {
 runAct({ title: (value ? 'הועלה ל-Morning · ' : 'ביטול "הועלה ל-Morning" · ') + p.id, fn: 'actionSetMorning', args: function (cf) { return [getToken(), p.id, value, cf]; } });
@@ -2226,8 +2227,8 @@ pieBlock({ slices: X.slices, deductions: [], total: X.amount }, colors, 'הכס�
 'כולל מה שכבר שולם') +
 sect('היסטוריית תשלומים', p.payments.map(function (x) {
 return '<div class="row"><div class="main"><div class="t-body">' + date(x.date) + ' · ' + nOf(x.count, 'פריט', 'פריטים') + '</div><div class="t-foot">' +
-(x.hasInvoice ? '<span class="ok">חשבונית ✓</span>' : '<span class="warn">⚠︎ אין חשבונית</span>') + '</div>' +
-(x.hasInvoice ? '' : '<button class="btn-plain t-sub inl ia" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">' + ic('doc') + 'העלאת חשבונית</button>') +
+(x.kept ? KEPT_TXT : x.hasInvoice ? '<span class="ok">חשבונית ✓</span>' : '<span class="warn">⚠︎ אין חשבונית</span>') + '</div>' +
+(x.hasInvoice || x.kept ? '' : '<button class="btn-plain t-sub inl ia" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">' + ic('doc') + 'העלאת חשבונית</button>') +
 (isOpeningPay(x.id) ? '' : '<button class="btn-plain t-sub inl ia" data-rc="' + esc(x.id) + '">' + ic('receipt') + 'אסמכתא</button>') + '</div>' + paidVal(x.amount, x.bonus) + '</div>';
 }).join(''), true) +
 grp('תצוגה', themeRow()) +
