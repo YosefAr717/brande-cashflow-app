@@ -892,9 +892,9 @@ hero('חוב פתוח', money(d.total), sub.join(' · ') || 'אין פריטים
 missMsg(d.missing) +
 xpClient(c.expected) +
 '<div class="actions"><button class="btn btn-fill full t-head" id="b-paid"' + (openCount ? '' : ' disabled') + '>לקוח שילם</button>' +
-'<button class="btn btn-tint t-head" id="b-request"' + (c.expected.ready && d.total > 0 ? '' : ' disabled') + '>סגרתי תשלום</button>' +
+'<button class="btn btn-tint t-head" id="b-request"' + (c.expected.ready && d.total > 0 ? '' : ' disabled') + '>בקשת תשלום</button>' +
 (c.expected.open ? '<button class="btn btn-tint t-head" id="b-cancel-req">בטל בקשה</button>' : '') + '</div>' +
-(c.expected.ready ? '' : '<div class="msg w t-sub">"סגרתי תשלום" — צריך להריץ setupSchema (מוסיף את הטאב "גבייה צפויה").</div>') +
+(c.expected.ready ? '' : '<div class="msg w t-sub">"בקשת תשלום" — צריך להריץ setupSchema (מוסיף את הטאב "גבייה צפויה").</div>') +
 sect('פתוח (' + openCount + ')', o.videos.map(function (v) {
 return '<div class="row"><div class="main"><div class="t-body">#' + esc(v.num) + '</div><div class="t-foot sec">' + esc(v.type || 'בלי סוג') + (v.date ? ' · ' + esc(v.date) : '') + '</div></div>' +
 (v.price === null ? wg(1) + '<span class="t-body sec">—</span>' : '<span class="t-body num">' + money(v.price) + '</span>') + '</div>';
@@ -936,8 +936,8 @@ Array.prototype.forEach.call(document.querySelectorAll('#sheet [data-req]'), fun
 }
 function requestForm(c) {
 var X = c.expected.open, fields = whoField('אמור לקבל', X ? X.receivedBy : undefined);
-openForm('סגרתי תשלום — ' + c.name, fields, function (v) {
-runAct({ title: 'סגרתי תשלום', fn: 'actionRequestPayment', args: function (cf) { return [getToken(), { client: c.name, receivedBy: v.who || undefined }, cf]; } });
+openForm('בקשת תשלום — ' + c.name, fields, function (v) {
+runAct({ title: 'בקשת תשלום', fn: 'actionRequestPayment', args: function (cf) { return [getToken(), { client: c.name, receivedBy: v.who || undefined }, cf]; } });
 }, '<p class="note t-foot">הבקשה = הפריטים הפתוחים עכשיו והסכום שלהם (' + money(c.debt ? c.debt.total : 0) + '), מחושב בשרת.' +
 (X ? ' יש בקשה פתוחה על ' + money(X.amount) + ' מ-' + date(X.date) + ' — היא לא משתנה; הבקשה החדשה רק לפריטים שעוד לא בבקשה.' : '') + ' מידע בלבד: לא נספר כתקבול.</p>');
 }
