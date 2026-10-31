@@ -936,7 +936,7 @@ var when = function (q) { return ['מ-' + date(q.date), xpDays(q.days), q.receiv
 var btn = function (q, k, sub, v) {
 return '<button class="row xp-req" data-xq="' + esc(q.id) + '"><span class="main"><span class="t-body blk">' + k + '</span>' + (sub ? '<span class="t-foot sec blk">' + sub + '</span>' : '') + '</span><span class="t-body num">' + money(v) + '</span>' + CHEV + '</button>';
 };
-var adjTag = function (q) { return q.adjust ? ' · התאמה ' + smoney(q.adjust) : ''; };
+var adjTag = function (q) { return (q.adjust ? ' · התאמה ' + smoney(q.adjust) : '') + (q.needsDivider ? ' · <span class="warn nw">בלי קו</span>' : ''); };
 var reqRows = R.length > 1 ? R.map(function (q) {
 return btn(q, 'בקשה מ-' + date(q.date), [q.items ? nOf(q.items.length, 'פריט', 'פריטים') : 'בלי רשימת פריטים', xpDays(q.days), q.receivedByName ? 'אצל ' + esc(q.receivedByName) : ''].filter(Boolean).join(' · ') + adjTag(q), q.amount);
 }).join('') : '';
@@ -959,13 +959,55 @@ return '<button class="row" data-req="' + esc(q.id) + '"><span class="main"><spa
 Array.prototype.forEach.call(document.querySelectorAll('#sheet [data-req]'), function (b) { b.onclick = function () { go1(b.getAttribute('data-req')); }; });
 }
 function requestForm(c) {
+var vids = (c.open && c.open.videos || []).length;
+var go1 = function (info) {
 var X = c.expected.open, fields = whoField('אמור לקבל', X ? X.receivedBy : undefined);
 if (c.expected.adjustReady) fields = fields.concat([{ k: 'adjust', label: 'התאמה (₪, למשל −550)', type: 'number', value: '' }, { k: 'reason', label: 'הסבר (חובה כשיש התאמה)', value: '' }]);
+fields = fields.concat(lineFields(info));
 openForm('בקשת תשלום — ' + c.name, fields, function (v) {
 if (String(v.adjust || '').trim() && Number(v.adjust) !== 0 && !String(v.reason || '').trim()) return formErr('התאמה בלי הסבר — להוסיף הסבר');
-runAct({ title: 'בקשת תשלום', fn: 'actionRequestPayment', args: function (cf) { return [getToken(), { client: c.name, receivedBy: v.who || undefined, adjust: v.adjust || undefined, reason: v.reason || undefined }, cf]; } });
+var params = { client: c.name, receivedBy: v.who || undefined, adjust: v.adjust || undefined, reason: v.reason || undefined };
+if (info) {
+params.label = v.label; params.manualDivider = !info.allowed || !!v.manualDivider;
+if (!info.lastDivider) { if (v.labelCol === '') return formErr('לבחור עמודה לתווית'); params.labelCol = v.labelCol; }
+}
+runAct({ title: 'בקשת תשלום', fn: 'actionRequestPayment', args: function (cf) { return [getToken(), params, cf]; } });
 }, '<p class="note t-foot">הבקשה = הפריטים הפתוחים עכשיו והסכום שלהם (' + money(c.debt ? (c.debt.priceList !== undefined ? c.debt.priceList : c.debt.total) : 0) + '), מחושב בשרת.' +
-(X ? ' יש בקשה פתוחה על ' + money(X.amount) + ' מ-' + date(X.date) + ' — היא לא משתנה; הבקשה החדשה רק לפריטים שעוד לא בבקשה.' : '') + ' מידע בלבד: לא נספר כתקבול.</p>');
+(X ? ' יש בקשה פתוחה על ' + money(X.amount) + ' מ-' + date(X.date) + ' — היא לא משתנה; הבקשה החדשה רק לפריטים שעוד לא בבקשה.' : '') +
+(info ? ' קו חלוקה ייכתב אחרי הסרטון האחרון בבקשה ("סגרתי חשבון"); הסרטונים נשארים בחוב עד "לקוח שילם".' + (info.lastDivider ? ' קו אחרון בטבלה: "' + esc(info.lastDivider.label) + '".' : '') : '') +
+' מידע בלבד: לא נספר כתקבול.</p>');
+};
+if (!vids) return go1(null);
+openModal(sheetHtml('בקשת תשלום — ' + c.name, '<div class="center t-sub"><span class="spin" aria-hidden="true"></span>קורא את טבלת התוכן…</div>'));
+call('getClientContentInfo', [getToken(), c.name], function (r) {
+if (!r.ok) return openModal(sheetHtml('בקשת תשלום', linesHtml([r.message], 'e'), '', 'סגור'));
+go1(r.info);
+}, function (m) { openModal(sheetHtml('בקשת תשלום', linesHtml([m], 'e'), '', 'סגור')); });
+}
+function lineFields(info, noManual) {
+if (!info) return [];
+var f = [{ k: 'label', label: 'תווית קו החלוקה', type: 'text', value: info.defaultLabel }];
+if (!info.lastDivider) {
+f.push({ k: 'labelCol', label: 'באיזו עמודה לכתוב את התווית (אין קו קודם בטבלה)', type: 'select', blank: true,
+options: info.columns.map(function (x) { return { v: x.col, t: x.letter + (x.name ? ' — ' + x.name : '') }; }), value: '' });
+}
+if (!noManual) f.push({ k: 'manualDivider', label: info.allowed ? 'אני אוסיף את הקו ידנית (לא לכתוב בטבלה)' : 'הקו יתווסף ידנית (' + (info.manualReason || 'אין היתר לטבלה הזו') + ')',
+type: 'check', value: !info.allowed, disabled: !info.allowed });
+return f;
+}
+function addRequestLine(c, q) {
+openModal(sheetHtml('קו לבקשה — ' + c.name, '<div class="center t-sub"><span class="spin" aria-hidden="true"></span>קורא את טבלת התוכן…</div>'));
+call('getClientContentInfo', [getToken(), c.name], function (r) {
+if (!r.ok) return openModal(sheetHtml('קו לבקשה', linesHtml([r.message], 'e'), '', 'סגור'));
+var info = r.info;
+if (!info.allowed) return openModal(sheetHtml('קו לבקשה', linesHtml(['הקו לא ייכתב אוטומטית (' + (info.manualReason || 'אין היתר לטבלה הזו') + ') — להוסיף ידנית בטבלה.'], 'e'), '', 'סגור'));
+openForm('קו לבקשה מ-' + date(q.date) + ' — ' + c.name, lineFields(info, true), function (v) {
+var params = { id: q.id, label: v.label };
+if (!info.lastDivider) { if (v.labelCol === '') return formErr('לבחור עמודה לתווית'); params.labelCol = v.labelCol; }
+runAct({ title: 'קו לבקשה', fn: 'actionAddRequestDivider', args: function (cf) { return [getToken(), params, cf]; } });
+}, '<p class="note t-foot">קו חלוקה אחרי הסרטון האחרון בבקשה ("סגרתי חשבון"). הסרטונים נשארים בחוב עד "לקוח שילם" על הבקשה.' +
+(info.lastDivider ? ' קו אחרון בטבלה: "' + esc(info.lastDivider.label) + '".' : '') + '</p>');
+}, function (m) { openModal(sheetHtml('קו לבקשה', linesHtml([m], 'e'), '', 'סגור')); });
 }
 function requestSheet(c, q) {
 var L = q.lines || [], adj = q.adjust || 0;
@@ -984,8 +1026,12 @@ else tItems.push({ kind: /^ריטיינר/.test(l.label) ? 'r' : 'p', amount: l.
 openModal(sheetHtml('בקשה מ-' + date(q.date) + ' · ' + c.name,
 typeTiles(tItems) +
 grp('', rows + adjRow + '<div class="row"><span class="main t-body"><strong>סה״כ</strong></span><span class="t-body num">' + money(q.amount) + '</span></div>', q.receivedByName ? 'אמור לקבל: ' + esc(q.receivedByName) + ' · מידע בלבד, לא נספר כתקבול.' : 'מידע בלבד, לא נספר כתקבול.') +
-'<div class="actions"><button type="button" class="btn btn-tint full t-head" id="b-copy-req">העתק</button></div>', '', 'סגור'));
+(q.divider ? '<p class="note t-foot" id="req-line">קו חלוקה: "' + esc(q.divider.label) + '" אחרי #' + esc(q.divider.after) + ' — הסרטונים מעליו בחוב עד "לקוח שילם".</p>'
+: q.needsDivider ? '<p class="note t-foot warn" id="req-line">לבקשה אין קו חלוקה — הסרטונים שלה עוד מתחת לקו.</p>' : '') +
+'<div class="actions">' + (q.needsDivider ? '<button type="button" class="btn btn-tint full t-head" id="b-req-line">הוסף קו לבקשה</button>' : '') +
+'<button type="button" class="btn btn-tint full t-head" id="b-copy-req">העתק</button></div>', '', 'סגור'));
 $('b-copy-req').onclick = function () { copyText(text, function (ok) { toast(ok ? 'הועתק' : 'ההעתקה נכשלה — לבחור ולהעתיק ידנית'); }); };
+if ($('b-req-line')) $('b-req-line').onclick = function () { addRequestLine(c, q); };
 }
 function copyText(text, cb) {
 if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(function () { cb(true); }, function () { cb(false); });
@@ -1258,7 +1304,10 @@ checks.forEach(function (x) { if (reset) x.el.checked = ids ? ids.indexOf(x.it.i
 if (reset) { amt.value = q ? q.amount : picked(); touched = false; }
 tiles();
 if (who) who.closest('.fld').style.display = q ? 'none' : '';
+['label', 'labelCol', 'manualDivider'].forEach(function (k) { var x = el(k); if (x) x.closest('.fld').style.display = q && q.divider ? 'none' : ''; });
 $('cp-note').innerHTML = !q ? 'בלי בקשה: הכול מסומן — אפשר להוריד. הקו ייכתב אחרי הסרטון האחרון שסומן.'
+: q.items && q.divider ? 'רק הפריטים של הבקשה מ-' + date(q.date) + ' (לא ניתן לשנות). לבקשה כבר יש קו ("' + esc(q.divider.label) + '") — לא ייכתב קו נוסף.' +
+(q.receivedByName ? ' התשלום יירשם אצל ' + esc(q.receivedByName) + ' והבקשה תיסגר.' : ' הבקשה תיסגר.')
 : q.items ? 'רק הפריטים של הבקשה מ-' + date(q.date) + ' (לא ניתן לשנות). הקו ייכתב אחרי הסרטון האחרון שבה; מה שבוצע אחריה נשאר מתחת לקו.' +
 (q.receivedByName ? ' התשלום יירשם אצל ' + esc(q.receivedByName) + ' והבקשה תיסגר.' : ' הבקשה תיסגר.')
 : q.prefill ? 'בקשה ישנה בלי רשימת פריטים: סומנו הפריטים הישנים ביותר שסכומם ' + money(q.amount) + '. לבדוק ולשנות אם צריך.'
