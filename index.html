@@ -2285,7 +2285,7 @@ function renderMy(p) {
 var items = p.videos.map(function (v) { return { kind: 'v', client: v.client, type: v.type || 'בלי סוג', num: v.num, date: '', amount: v.amount }; })
 .concat(p.projects.map(function (x) { return { kind: 'p', client: x.client, pname: x.name, amount: x.amount }; }));
 var E = p.earnings, X = E.periods[S.period], colors = {};
-var keys = {}; Object.keys(E.periods).forEach(function (k) { E.periods[k].slices.forEach(function (x) { keys[x.key] = 1; }); });
+var keys = {}; Object.keys(E.periods).forEach(function (k) { E.periods[k].slices.concat(E.periods[k].deductions || []).forEach(function (x) { keys[x.key] = 1; }); });
 Object.keys(keys).sort().forEach(function (k, i) { colors[k] = i; });
 S.screen = { t: 'שלום ' + p.name, large: 1 };
 setMain(
@@ -2294,9 +2294,9 @@ hero('מגיע לך עכשיו', money(p.due.amount), nOf(p.due.count, 'פריט
 openList(items) +
 pieGrp('הכסף שלי לפי לקוח · ' + esc(periodShort(E.labels)),
 periodSeg(E.labels, function () { renderMy(p); }) + '<div class="pie-gap"></div>' +
-pieBlock({ slices: X.slices, deductions: [], total: X.amount }, colors, 'הכסף שלי לפי לקוח, ' + periodName(E.labels)) +
-(X.pending.length ? '<p class="calc t-foot sec">עוד בלי מחיר (לא בעוגה): ' + X.pending.map(function (x) { return '<span class="nw">' + esc(x.key) + ' · ' + counts(x) + '</span>'; }).join(', ') + '</p>' : ''),
-'כולל מה שכבר שולם') +
+pieBlock({ slices: X.slices, deductions: X.deductions, total: X.amount }, colors, 'הכסף שלי לפי לקוח, ' + periodName(E.labels), { totalLabel: 'שולם לך' }) +
+(X.missing ? '<p class="calc t-foot sec">' + nOf(X.missing, 'תשלום', 'תשלומים') + ' בלי סכום תקין (לא בעוגה)</p>' : ''),
+'לפי מה ששולם לך בתקופה') +
 sect('היסטוריית תשלומים', p.payments.map(function (x) {
 return '<div class="row"><div class="main"><div class="t-body">' + date(x.date) + ' · ' + nOf(x.count, 'פריט', 'פריטים') + '</div><div class="t-foot">' +
 (x.kept ? KEPT_TXT : x.hasInvoice ? '<span class="ok">חשבונית ✓</span>' : '<span class="warn">⚠︎ אין חשבונית</span>') + '</div>' +
