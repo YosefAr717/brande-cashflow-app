@@ -1187,6 +1187,17 @@ function periodName(labels) {
 if (MONTH_RE.test(S.period)) return monthName(S.period, true);
 return { month: 'החודש (' + monthName(labels.month) + ')', prev: 'חודש קודם (' + prevName(labels) + ')', year: 'השנה (' + labels.year + ')', all: 'כל הזמן' }[S.period];
 }
+function earnGrp(E, title, label, foot, totalLabel, onPick) {
+if (!E.periods[S.period]) S.period = 'month';
+var X = E.periods[S.period], colors = {}, keys = {};
+Object.keys(E.periods).forEach(function (k) { E.periods[k].slices.concat(E.periods[k].deductions || []).forEach(function (x) { keys[x.key] = 1; }); });
+Object.keys(keys).sort().forEach(function (k, i) { colors[k] = i; });
+return pieGrp(title + ' · ' + esc(periodShort(E.labels)),
+periodSeg(E.labels, onPick) + '<div class="pie-gap"></div>' +
+pieBlock({ slices: X.slices, deductions: X.deductions, total: X.amount }, colors, label + ', ' + periodName(E.labels), { totalLabel: totalLabel }) +
+(X.missing ? '<p class="calc t-foot sec">' + nOf(X.missing, 'תשלום', 'תשלומים') + ' בלי סכום תקין (לא בעוגה)</p>' : ''),
+foot);
+}
 function sect(title, body, open) {
 return '<details class="grp"' + (open ? ' open' : '') + '><summary class="gbody row t-head"><span class="main">' + title + '</span>' + CHEV + '</summary><div class="in">' + (body || emptyRow()) + '</div></details>';
 }
@@ -1634,27 +1645,27 @@ name: esc(v.client) + ' <span class="num">#' + esc(num) + '</span>', sub: esc(v.
 paid: p.clientPaid === true, unclear: p.unclear || '',
 name: 'פרויקט: ' + esc(p.client) + ' — ' + esc(p.name), sub: '' }; }));
 S.editorPage = e;
-var D = S.home && S.home.dash, ed = D && D.periods.month.editors.filter(function (x) { return x.name === e.name; })[0];
-var mn = D ? monthName(D.labels.month) : '';
+var draw = function () {
 setMain(
 hero('מגיע עכשיו', money(total), nOf(items.length, 'פריט פתוח', 'פריטים פתוחים')) +
 missMsg(miss, 'בלי עלות') +
 '<div class="actions"><button class="btn btn-fill full t-head" id="b-pay"' + (items.length ? '' : ' disabled') + '>שילמתי לעורך</button></div>' +
 openList(items) +
-(D ? (ed ? pieGrp('עבד ב' + mn, pieBlock(ed.pie, D.colors, 'מה ' + e.name + ' עשה ב' + mn), 'לפי עלות עורך, כולל מה שכבר שולם') :
-grp('עבד ב' + mn, '<div class="empty t-sub">לא עבד ב' + mn + '</div>')) : '') +
+(e.earnings ? earnGrp(e.earnings, 'שולם ל' + esc(e.name), 'מה ששולם ל' + e.name, 'לפי מה ששולם ל' + esc(e.name) + ' בתקופה', 'שולם', draw) : '') +
 sect('היסטוריית תשלומים', e.payments.map(function (p, i) {
-var off = (p.items || []).some(function (x) { return x.note; });
-return '<div class="row al ph"><button type="button" class="al-go" data-pay="' + i + '"><span class="main"><span class="t-body blk">' + date(p.date) + ' · ' + nOf(p.count, 'פריט', 'פריטים') + '</span>' +
+var off = (p.items || []).some(function (x) { return x.note; }), op = isOpeningPay(p.id);
+return '<div class="row al ph"><button type="button" class="al-go" data-pay="' + i + '"><span class="main"><span class="t-body blk">' + (op ? OPENING_TXT + ' · ' + nOf(p.count, 'פריט', 'פריטים') : date(p.date) + ' · ' + nOf(p.count, 'פריט', 'פריטים')) + '</span>' +
 (p.notes ? '<span class="t-foot sec blk">' + esc(p.notes) + '</span>' : '') +
-'<span class="t-foot sec blk">' + (p.kept ? KEPT_TXT : morningTag(p) + (p.invoice ? ' · <span class="ia">' + ic('doc') + 'חשבונית</span>' : '')) + ' · <span class="ltr">' + esc(p.id) + '</span>' +
-(off ? ' · <span class="warn nw">⚠︎ לא מסונכרן</span>' : '') + '</span></span>' + paidVal(p.amount, p.bonus) + CHEV + '</button>' +
-(e.morningReady && !p.morning && !p.kept ? '<button type="button" class="btn-plain t-sub" data-mo="' + i + '">סימנתי שהועלה</button>' : '') + '</div>';
+'<span class="t-foot sec blk">' + (op ? '' : (p.kept ? KEPT_TXT : morningTag(p) + (p.invoice ? ' · <span class="ia">' + ic('doc') + 'חשבונית</span>' : '')) + ' · ') + '<span class="ltr">' + esc(p.id) + '</span>' +
+(off ? ' · <span class="warn nw">⚠︎ לא מסונכרן</span>' : '') + '</span></span>' + (op ? '' : paidVal(p.amount, p.bonus)) + CHEV + '</button>' +
+(e.morningReady && !p.morning && !p.kept && !op ? '<button type="button" class="btn-plain t-sub" data-mo="' + i + '">סימנתי שהועלה</button>' : '') + '</div>';
 }).join(''))
 );
 $('b-pay').onclick = function () { paySheet(e, items); };
 Array.prototype.forEach.call(document.querySelectorAll('[data-pay]'), function (b) { b.onclick = function () { unmarkSheet(e, e.payments[Number(b.getAttribute('data-pay'))]); }; });
 Array.prototype.forEach.call(document.querySelectorAll('[data-mo]'), function (b) { b.onclick = function () { setMorning(e.payments[Number(b.getAttribute('data-mo'))], true); }; });
+};
+draw();
 }, function (m) { setMain('<div class="msg e">' + esc(m) + '</div>'); });
 }
 function openList(items) {
@@ -1795,13 +1806,14 @@ var body = '<span class="main"><span class="t-body blk">' + esc(x.label) + '</sp
 return x.can ? '<button type="button" class="row pk" role="checkbox" aria-checked="false" data-uk="' + esc(x.key) + '">' + box + body + '</button>' : '<div class="row">' + body + '</div>';
 };
 var body = function () {
-return grp('', '<div class="row"><span class="main"><span class="t-body blk">' + date(p.date) + '</span><span class="t-foot sec blk ltr">' + esc(p.id) + '</span></span>' + paidVal(p.amount, p.bonus) + '</div>' +
+var op = isOpeningPay(p.id);
+return grp('', '<div class="row"><span class="main"><span class="t-body blk">' + (op ? OPENING_TXT : date(p.date)) + '</span><span class="t-foot sec blk ltr">' + esc(p.id) + '</span></span>' + (op ? '' : paidVal(p.amount, p.bonus)) + '</div>' +
 (p.notes ? '<div class="row"><span class="main t-sub sec">' + esc(p.notes) + '</span></div>' : '') +
 (p.invoice ? '<a class="row" href="' + esc(p.invoice) + '" target="_blank" rel="noopener"><span class="main t-body ia">' + ic('doc') + 'פתיחת החשבונית</span>' + CHEV + '</a>' : '') +
-'<div class="row"><span class="main t-body">' + (p.kept ? KEPT_TXT : morningTag(p)) + '</span></div>' +
-(isOpeningPay(p.id) ? '' : '<button type="button" class="row" id="b-receipt"><span class="main t-body ia">' + ic('receipt') + 'אסמכתא (תמונה לשליחה)</span>' + CHEV + '</button>') +
-(e.morningReady && !p.kept ? '<button type="button" class="row' + (p.morning ? ' danger' : '') + '" id="b-morning"><span class="main t-body">' + (p.morning ? 'ביטול הסימון "הועלה ל-Morning"' : 'סימנתי שהועלה') + '</span>' + CHEV + '</button>' : '')) +
-(e.morningReady || p.kept ? '' : '<p class="note t-foot">"סימנתי שהועלה" — אחרי הרצת setupSchema (מוסיף את העמודה "הועלה ל-Morning").</p>') +
+(op ? '' : '<div class="row"><span class="main t-body">' + (p.kept ? KEPT_TXT : morningTag(p)) + '</span></div>' +
+'<button type="button" class="row" id="b-receipt"><span class="main t-body ia">' + ic('receipt') + 'אסמכתא (תמונה לשליחה)</span>' + CHEV + '</button>') +
+(e.morningReady && !p.kept && !op ? '<button type="button" class="row' + (p.morning ? ' danger' : '') + '" id="b-morning"><span class="main t-body">' + (p.morning ? 'ביטול הסימון "הועלה ל-Morning"' : 'סימנתי שהועלה') + '</span>' + CHEV + '</button>' : '')) +
+(e.morningReady || p.kept || op ? '' : '<p class="note t-foot">"סימנתי שהועלה" — אחרי הרצת setupSchema (מוסיף את העמודה "הועלה ל-Morning").</p>') +
 (p.amount > 0 ? '<p class="note t-foot">הכסף ששולם (' + money(p.amount) + ') נשאר בכסף שיצא. מבוטל רק הסימון — הפריטים שתבחר יחזרו ל"מגיע לעורך".</p>' : '') +
 '<div id="um-list">' + grp('פריטים (' + items.length + ')', (ok.length > 1 ? '<button type="button" class="row pk" role="checkbox" aria-checked="false" id="um-all">' + box + '<span class="main t-body">בחר הכול</span></button>' : '') +
 (items.map(row).join('') || emptyRow('אין פריטים בתשלום'))) + '</div>';
@@ -2167,6 +2179,7 @@ runAct({ title: 'תיוג · ' + u.desc, fn: 'actionTagMovement', args: function
 };
 }
 function isOpeningPay(id) { return /^פתיחה-/.test(String(id || '')); }
+var OPENING_TXT = 'סימון ראשוני (לפני המערכת)';
 function receiptName(r) { return ('אסמכתא-' + r.id + '-' + r.editor + '.png').replace(/[\\/:*?"<>|\s]+/g, '-'); }
 function receiptOpen(id) {
 var seq = S.modalSeq = (S.modalSeq || 0) + 1, live = function () { return S.modalSeq === seq; };
@@ -2284,24 +2297,18 @@ toastErr(m, myPage);
 function renderMy(p) {
 var items = p.videos.map(function (v) { return { kind: 'v', client: v.client, type: v.type || 'בלי סוג', num: v.num, date: '', amount: v.amount }; })
 .concat(p.projects.map(function (x) { return { kind: 'p', client: x.client, pname: x.name, amount: x.amount }; }));
-var E = p.earnings, X = E.periods[S.period], colors = {};
-var keys = {}; Object.keys(E.periods).forEach(function (k) { E.periods[k].slices.concat(E.periods[k].deductions || []).forEach(function (x) { keys[x.key] = 1; }); });
-Object.keys(keys).sort().forEach(function (k, i) { colors[k] = i; });
 S.screen = { t: 'שלום ' + p.name, large: 1 };
 setMain(
 hero('מגיע לך עכשיו', money(p.due.amount), nOf(p.due.count, 'פריט', 'פריטים') + ' מאז התשלום האחרון') +
 (p.due.missing ? '<div class="msg w t-sub">' + nOf(p.due.missing, 'פריט', 'פריטים') + ' עוד בלי מחיר. הסכום יתעדכן כשיוסף ישלים.</div>' : '') +
 openList(items) +
-pieGrp('הכסף שלי לפי לקוח · ' + esc(periodShort(E.labels)),
-periodSeg(E.labels, function () { renderMy(p); }) + '<div class="pie-gap"></div>' +
-pieBlock({ slices: X.slices, deductions: X.deductions, total: X.amount }, colors, 'הכסף שלי לפי לקוח, ' + periodName(E.labels), { totalLabel: 'שולם לך' }) +
-(X.missing ? '<p class="calc t-foot sec">' + nOf(X.missing, 'תשלום', 'תשלומים') + ' בלי סכום תקין (לא בעוגה)</p>' : ''),
-'לפי מה ששולם לך בתקופה') +
+earnGrp(p.earnings, 'הכסף שלי לפי לקוח', 'הכסף שלי לפי לקוח', 'לפי מה ששולם לך בתקופה', 'שולם לך', function () { renderMy(p); }) +
 sect('היסטוריית תשלומים', p.payments.map(function (x) {
+if (isOpeningPay(x.id)) return '<div class="row"><div class="main"><div class="t-body">' + OPENING_TXT + ' · ' + nOf(x.count, 'פריט', 'פריטים') + '</div></div></div>';
 return '<div class="row"><div class="main"><div class="t-body">' + date(x.date) + ' · ' + nOf(x.count, 'פריט', 'פריטים') + '</div><div class="t-foot">' +
 (x.kept ? KEPT_TXT : x.hasInvoice ? '<span class="ok">חשבונית ✓</span>' : '<span class="warn">⚠︎ אין חשבונית</span>') + '</div>' +
 (x.hasInvoice || x.kept ? '' : '<button class="btn-plain t-sub inl ia" onclick="myInvoice(' + esc(JSON.stringify(x.id)) + ')">' + ic('doc') + 'העלאת חשבונית</button>') +
-(isOpeningPay(x.id) ? '' : '<button class="btn-plain t-sub inl ia" data-rc="' + esc(x.id) + '">' + ic('receipt') + 'אסמכתא</button>') + '</div>' + paidVal(x.amount, x.bonus) + '</div>';
+'<button class="btn-plain t-sub inl ia" data-rc="' + esc(x.id) + '">' + ic('receipt') + 'אסמכתא</button></div>' + paidVal(x.amount, x.bonus) + '</div>';
 }).join(''), true) +
 grp('תצוגה', themeRow()) +
 logoutGroup()
