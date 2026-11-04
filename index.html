@@ -733,10 +733,10 @@ var B = P.business, cur = ex && P.current, edL = cur ? 'עורכים (שולם +
 var foot = 'לפי תאריך התשלום: תשלומי לקוחות שהתקבלו (כולל קבלות היסטוריות).' + (cur ? ' צפוי: + חוב הלקוחות הפתוח עכשיו.' : '');
 if (rev) return pieGrp('הכנסה לפי לקוח · ' + short, pieBlock(P.revenue, colors, 'הכנסה לפי לקוח',
 { calc: calcP([['', 'הכנסות', B.revenue], ['− ', edL, B.editorCost], ['− ', 'הוצאות', B.expenses], ['= ', 'רווח', B.total]]) }), foot, 'h-p1');
-return pieGrp('רווח לפי לקוח · ' + short, pieBlock(B, colors, 'רווח לפי לקוח',
-{ sumLabel: 'רווח מלקוחות', totalLabel: 'רווח', dedName: function (x) { return x.general ? x.key : x.key + ' (הפסד)'; } }),
-'לפי תאריך התשלום. לקוח = מה ששילם פחות תשלומי עורכים על הפריטים שלו והוצאות שלו. כללי = בונוסים, התאמות, תשלומים בלי פירוט והוצאות בלי לקוח.' +
-(cur ? ' צפוי: + חוב הלקוח הפתוח פחות עלות העורך של הפריטים הפתוחים שלו.' : ''), 'h-p1');
+return pieGrp('רווח לפי לקוח · ' + short, pieBlock(B.pie || B, colors, 'רווח לפי לקוח',
+{ sumLabel: 'רווח מלקוחות', totalLabel: 'רווח מהתשלומים', dedName: function (x) { return x.general ? x.key : x.key + ' (הפסד)'; } }),
+'כל תשלום פחות עלות העורכים של מה שהוא כיסה. לפי תאריך התשלום; לקוח = התשלומים שלו פחות עלות העורכים של מה שכיסו ופחות הוצאות שלו. ⚠︎ = חלקי: לא ידוע מה כוסה. כללי = בונוסים והוצאות בלי לקוח.' +
+(cur ? ' צפוי: + הצפוי מהלקוח פחות עלות העורך של הפריטים הפתוחים שלו.' : ''), 'h-p1');
 }
 var MONTH_RE = /^\d{4}-\d{2}$/, HM_KEY = 'brande_home_mode', HB_KEY = 'brande_home_basis';
 function xpDays(n) { return n === null || n === undefined ? '' : n === 0 ? 'היום' : nOf(n, 'יום', 'ימים'); }
