@@ -1688,8 +1688,8 @@ setMain(grp('', on.map(editorRow).join('') || emptyRow()) + (off.length ? sect('
 function editorView(name) {
 call('getEditorPage', [getToken(), name], function (r) {
 if (!r.ok) return setMain('<div class="msg e">' + esc(r.message) + '</div>');
-var e = r.page, o = e.open;
-var total = o.totals.videos.amount + o.totals.projects.amount, miss = o.totals.videos.missing + o.totals.projects.missing;
+var e = r.page, o = e.open, bon = e.bonuses || [], bonSum = Math.round(bon.reduce(function (a, b) { return a + (b.amount || 0); }, 0) * 100) / 100;
+var total = o.totals.videos.amount + o.totals.projects.amount + bonSum, miss = o.totals.videos.missing + o.totals.projects.missing + bon.filter(function (b) { return b.amount === null; }).length;
 var items = o.videos.map(function (v) { var num = String(v.key).split('#').slice(1).join('#');
 return { k: 'v:' + v.key, kind: 'v', client: v.client, type: v.type || 'בלי סוג', num: num, date: v.date || '', amount: v.cost,
 paid: v.clientPaid === true, unclear: v.unclear || '',
@@ -1760,10 +1760,10 @@ if (on) (pop.querySelector('[data-ef].on') || pop.querySelector('button')).focus
 };
 var draw = function () {
 setMain(
-hero('מגיע עכשיו', money(total), nOf(items.length, 'פריט פתוח', 'פריטים פתוחים'), shownLine()) +
+hero('מגיע עכשיו', money(total), nOf(items.length, 'פריט פתוח', 'פריטים פתוחים') + (bon.length ? ' · ' + nOf(bon.length, 'בונוס', 'בונוסים') : ''), shownLine()) +
 missMsg(miss, 'בלי עלות') +
-'<div class="actions"><button class="btn btn-fill full t-head" id="b-pay"' + (items.length ? '' : ' disabled') + '>שילמתי לעורך</button></div>' +
-filterHtml() + openHtml() +
+'<div class="actions"><button class="btn btn-fill full t-head" id="b-pay"' + (items.length || bon.length ? '' : ' disabled') + '>שילמתי לעורך</button></div>' +
+filterHtml() + openHtml() + bonusGrp(e, bon, bonSum) +
 (e.earnings ? earnGrp(e.earnings, 'שולם ל' + esc(e.name), 'מה ששולם ל' + e.name, 'לפי מה ששולם ל' + esc(e.name) + ' בתקופה', 'שולם', draw) : '') +
 sect('היסטוריית תשלומים', e.payments.map(function (p, i) {
 var off = (p.items || []).some(function (x) { return x.note; }), op = isOpeningPay(p.id);
@@ -1775,6 +1775,10 @@ return '<div class="row al ph"><button type="button" class="al-go" data-pay="' +
 }).join(''))
 );
 $('b-pay').onclick = function () { paySheet(e, items); };
+if ($('b-bonus')) $('b-bonus').onclick = function () { bonusForm(e); };
+Array.prototype.forEach.call(document.querySelectorAll('[data-eb]'), function (b) {
+b.onclick = function () { var id = b.getAttribute('data-eb'); runAct({ title: 'מחיקת בונוס · ' + e.name, fn: 'actionDeleteEditorBonus', args: function (cf) { return [getToken(), id, cf]; } }); };
+});
 if ($('ef-btn')) {
 $('ef-btn').onclick = function () { popOpen($('ef-pop').classList.contains('hidden')); };
 $('ef-scrim').onclick = function () { popOpen(false); };
@@ -1831,8 +1835,32 @@ function coin(small, blank) {
 return blank ? '<span class="coin none' + (small ? ' s' : '') + '" aria-hidden="true"></span>' : '<span class="coin' + (small ? ' s' : '') + '" role="img" aria-label="הלקוח שילם">' + ic('shekel') + '</span>';
 }
 function disc(b) { var on = b.getAttribute('aria-expanded') !== 'true'; b.setAttribute('aria-expanded', on ? 'true' : 'false'); $(b.getAttribute('aria-controls')).classList.toggle('hidden', !on); }
+function bonusRow(b, del) {
+var what = 'בונוס ' + money(b.amount) + ' · ' + b.reason;
+return '<div class="row"><span class="main"><span class="t-body blk">בונוס <span class="num">' + money(b.amount) + '</span> · <bdi>' + esc(b.reason) + '</bdi></span>' +
+(b.date ? '<span class="t-foot sec blk">' + date(b.date) + '</span>' : '') + '</span>' +
+(del ? '<button type="button" class="btn-plain t-sub danger" data-eb="' + esc(b.id) + '" aria-label="' + esc('מחיקת ' + what) + '">מחיקה</button>' : '') + '</div>';
+}
+function bonusGrp(e, bon, sum) {
+if (!bon.length && e.bonusReady === false) return '';
+return grp('בונוסים מראש' + (bon.length ? ' · <span class="num">' + money(sum) + '</span>' : ''),
+bon.map(function (b) { return bonusRow(b, true); }).join('') +
+(e.bonusReady === false ? '' : '<button type="button" class="row" id="b-bonus"><span class="main t-body ia">' + ic('plus') + 'הוספת בונוס</span>' + CHEV + '</button>'),
+'נכנס ל"מגיע עכשיו" עד ש"שילמתי לעורך" משלם אותו. הוצאה כללית — לא של לקוח. העורך רואה את הסכום ואת הסיבה.');
+}
+function bonusForm(e) {
+var rid = reqId();
+openForm('בונוס ל' + e.name, [{ k: 'amount', label: 'סכום (₪)', type: 'number', value: '', placeholder: '200' }, { k: 'reason', label: 'סיבה (העורך רואה אותה)', type: 'text', value: '' }], function (v) {
+var a = Number(String(v.amount).replace(/,/g, '').trim());
+if (!(a > 0)) return formErr('סכום לא תקין (יותר מ-0)');
+if (!String(v.reason || '').trim()) return formErr('חסרה סיבה');
+runAct({ title: 'בונוס לעורך', fn: 'actionAddEditorBonus', args: function (cf) { return [getToken(), { editor: e.name, amount: a, reason: String(v.reason).trim() }, cf, rid]; } });
+});
+}
 function paySheet(e, items) {
-var sel = {}, bonusTxt = '', open = {};
+var sel = {}, bonusTxt = '', open = {}, pend = (e.bonuses || []).filter(function (b) { return b.amount !== null; }), bsel = {};
+pend.forEach(function (b) { bsel[b.id] = true; });
+var pendSum = function () { return Math.round(pend.reduce(function (a, b) { return a + (bsel[b.id] ? b.amount : 0); }, 0) * 100) / 100; };
 items.forEach(function (i) { if (i.amount !== null && i.paid) sel[i.k] = true; });
 var zones = [{ title: 'הלקוח כבר שילם', paid: true }, { title: 'הלקוח עוד לא שילם', paid: false }].map(function (z) {
 var its = items.filter(function (i) { return i.paid === z.paid; });
@@ -1849,7 +1877,7 @@ var bonusNum = function () { var t = String(bonusTxt).replace(/,/g, '').trim(); 
 var amountField = function () { var el = $(fields[1]._id), t = el ? el.value.replace(/,/g, '').trim() : ''; return t === '' ? null : Number(t); };
 var sumHtml = function () {
 var x = sum(), items$ = amountField(), b = bonusNum(), ok = !isNaN(b) && b >= 0 && (items$ === null || !isNaN(items$));
-var total = ok ? Math.round(((items$ === null ? x.s : items$) + b) * 100) / 100 : null;
+var total = ok ? Math.round(((items$ === null ? x.s : items$) + b + pendSum()) * 100) / 100 : null;
 var pre = items.some(function (i) { return sel[i.k] && !i.paid; });
 return '<span class="main"><span class="t-sub blk ps-n">נבחר: ' + nOf(x.n, 'פריט', 'פריטים') + ' · <span class="num">' + money(x.s) + '</span></span>' +
 (pre ? '<span class="t-foot warn blk" id="prepay">⚠︎ שולם מראש, הלקוח עוד לא שילם</span>' : '') +
@@ -1889,6 +1917,10 @@ var body = '<span class="main"><span class="t-body blk"><bdi>' + esc(i.client) +
 return i.amount === null ? '<div class="row">' + body + wg(1, 'בלי עלות') + '<span class="t-body sec">—</span></div>' : pick(i.k, body + '<span class="t-body num">' + money(i.amount) + '</span>');
 }).join('')) : '') + '</section>';
 }).join('') + '</div>' +
+(pend.length ? '<div id="pb-list">' + grp('בונוסים מראש', pend.map(function (b) {
+return '<button class="row pk" type="button" role="checkbox" aria-checked="true" data-pb="' + esc(b.id) + '"><span class="ckc" aria-hidden="true">' + ICON_CHECK + '</span>' +
+'<span class="main"><span class="t-body blk">בונוס · <bdi>' + esc(b.reason) + '</bdi></span>' + (b.date ? '<span class="t-foot sec blk">' + date(b.date) + '</span>' : '') + '</span><span class="t-body num">' + money(b.amount) + '</span></button>';
+}).join(''), 'מסומן = משולם עכשיו (יסומן "שולם"). לא מסומן = נשאר פתוח.') + '</div>' : '') +
 grp('בונוס', '<div class="row"><span class="main t-body">סה״כ הפריטים שנבחרו</span><span class="t-body num" id="bn-base">' + money(sum().s) + '</span></div>' +
 '<div class="chips" id="bn-chips">' + chipsHtml() + '</div>' +
 '<div class="fld"><label for="bn-in">בונוס (₪)</label><input id="bn-in" type="text" inputmode="numeric" class="ltr" placeholder="0" value="' + esc(bonusTxt) + '"></div>',
@@ -1901,11 +1933,11 @@ var fields = [
 { k: 'notes', label: 'הערות', type: 'text', value: '' }
 ].concat(whoField('שולם על ידי'));
 openForm('שילמתי ל' + e.name, fields, function (v, files) {
-var ks = items.filter(function (i) { return sel[i.k]; }).map(function (i) { return i.k; });
-if (!ks.length) return formErr('לא נבחר כלום');
+var ks = items.filter(function (i) { return sel[i.k]; }).map(function (i) { return i.k; }), bids = pend.filter(function (b) { return bsel[b.id]; }).map(function (b) { return b.id; });
+if (!ks.length && !bids.length) return formErr('לא נבחר כלום');
 var bonus = String(bonusTxt).replace(/,/g, '').trim();
 uploadThen('עורכים', e.name, files.file, function (url) {
-var params = { editor: e.name, date: v.date, amount: v.amount, bonus: bonus, invoiceUrl: url, notes: v.notes, paidBy: v.who || undefined,
+var params = { editor: e.name, date: v.date, amount: v.amount, bonus: bonus, invoiceUrl: url, notes: v.notes, paidBy: v.who || undefined, bonusIds: bids,
 keys: ks.filter(function (k) { return k.indexOf('v:') === 0; }).map(function (k) { return k.slice(2); }),
 projectIds: ks.filter(function (k) { return k.indexOf('p:') === 0; }).map(function (k) { return k.slice(2); }) };
 runAct({ title: 'שילמתי לעורך', fn: 'actionEditorPaid', receipt: 1, args: function (cf) { return [getToken(), params, cf]; } });
@@ -1935,6 +1967,10 @@ bonusTxt = c.getAttribute('aria-pressed') === 'true' ? '' : c.getAttribute('data
 $('bn-in').value = bonusTxt; sync();
 };
 $('bn-in').oninput = function () { bonusTxt = $('bn-in').value; sync(); };
+if ($('pb-list')) $('pb-list').onclick = function (ev) {
+var b = ev.target.closest('[data-pb]'); if (!b) return;
+var id = b.getAttribute('data-pb'); bsel[id] = !bsel[id]; b.setAttribute('aria-checked', bsel[id] ? 'true' : 'false'); sync();
+};
 amt.oninput = sync;
 sync();
 }
@@ -2444,7 +2480,8 @@ var items = p.videos.map(function (v) { return { kind: 'v', client: v.client, ty
 .concat(p.projects.map(function (x) { return { kind: 'p', client: x.client, pname: x.name, amount: x.amount }; }));
 S.screen = { t: 'שלום ' + p.name, large: 1 };
 setMain(
-hero('מגיע לך עכשיו', money(p.due.amount), nOf(p.due.count, 'פריט', 'פריטים') + ' מאז התשלום האחרון') +
+hero('מגיע לך עכשיו', money(p.due.amount), nOf(p.due.count, 'פריט', 'פריטים') + ' מאז התשלום האחרון' + ((p.bonuses || []).length ? ' · ' + nOf(p.bonuses.length, 'בונוס', 'בונוסים') : '')) +
+((p.bonuses || []).length ? grp('בונוסים', p.bonuses.map(function (b) { return bonusRow(b, false); }).join(''), 'נכנסים לתשלום הבא.') : '') +
 (p.due.missing ? '<div class="msg w t-sub">' + nOf(p.due.missing, 'פריט', 'פריטים') + ' עוד בלי מחיר. הסכום יתעדכן כשיוסף ישלים.</div>' : '') +
 openList(items) +
 earnGrp(p.earnings, 'הכסף שלי לפי לקוח', 'הכסף שלי לפי לקוח', 'לפי מה ששולם לך בתקופה', 'שולם לך', function () { renderMy(p); }) +
